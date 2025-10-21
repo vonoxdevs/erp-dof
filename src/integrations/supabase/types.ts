@@ -14,7 +14,410 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bank_accounts: {
+        Row: {
+          account_digit: string | null
+          account_number: string
+          account_type: string | null
+          agency_number: string
+          allow_negative_balance: boolean | null
+          api_credentials: Json | null
+          auto_sync: boolean | null
+          available_balance: number | null
+          bank_code: string
+          bank_name: string
+          blocked_balance: number | null
+          company_id: string
+          created_at: string | null
+          current_balance: number | null
+          holder_document: string
+          holder_name: string
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          last_sync: string | null
+          overdraft_limit: number | null
+          sync_frequency: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_digit?: string | null
+          account_number: string
+          account_type?: string | null
+          agency_number: string
+          allow_negative_balance?: boolean | null
+          api_credentials?: Json | null
+          auto_sync?: boolean | null
+          available_balance?: number | null
+          bank_code: string
+          bank_name: string
+          blocked_balance?: number | null
+          company_id: string
+          created_at?: string | null
+          current_balance?: number | null
+          holder_document: string
+          holder_name: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_sync?: string | null
+          overdraft_limit?: number | null
+          sync_frequency?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_digit?: string | null
+          account_number?: string
+          account_type?: string | null
+          agency_number?: string
+          allow_negative_balance?: boolean | null
+          api_credentials?: Json | null
+          auto_sync?: boolean | null
+          available_balance?: number | null
+          bank_code?: string
+          bank_name?: string
+          blocked_balance?: number | null
+          company_id?: string
+          created_at?: string | null
+          current_balance?: number | null
+          holder_document?: string
+          holder_name?: string
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          last_sync?: string | null
+          overdraft_limit?: number | null
+          sync_frequency?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          color: string | null
+          company_id: string
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          sort_order: number | null
+          type: string
+        }
+        Insert: {
+          color?: string | null
+          company_id: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          sort_order?: number | null
+          type: string
+        }
+        Update: {
+          color?: string | null
+          company_id?: string
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          sort_order?: number | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          address: Json | null
+          cnpj: string
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          responsible: Json | null
+          settings: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: Json | null
+          cnpj: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          responsible?: Json | null
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: Json | null
+          cnpj?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          responsible?: Json | null
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      contacts: {
+        Row: {
+          address: Json | null
+          bank_details: Json | null
+          company_id: string
+          created_at: string | null
+          credit_limit: number | null
+          discount_percentage: number | null
+          document: string
+          document_type: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          payment_terms: number | null
+          phone: string | null
+          tags: string[] | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: Json | null
+          bank_details?: Json | null
+          company_id: string
+          created_at?: string | null
+          credit_limit?: number | null
+          discount_percentage?: number | null
+          document: string
+          document_type: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          tags?: string[] | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: Json | null
+          bank_details?: Json | null
+          company_id?: string
+          created_at?: string | null
+          credit_limit?: number | null
+          discount_percentage?: number | null
+          document?: string
+          document_type?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          payment_terms?: number | null
+          phone?: string | null
+          tags?: string[] | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          attachments: Json | null
+          bank_account_id: string | null
+          category_id: string | null
+          company_id: string
+          contact_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          due_date: string
+          id: string
+          is_recurring: boolean | null
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          recurrence_config: Json | null
+          recurring_contract_id: string | null
+          reference_number: string | null
+          status: string
+          tags: string[] | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          attachments?: Json | null
+          bank_account_id?: string | null
+          category_id?: string | null
+          company_id: string
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          due_date: string
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          recurrence_config?: Json | null
+          recurring_contract_id?: string | null
+          reference_number?: string | null
+          status?: string
+          tags?: string[] | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          attachments?: Json | null
+          bank_account_id?: string | null
+          category_id?: string | null
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          due_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          recurrence_config?: Json | null
+          recurring_contract_id?: string | null
+          reference_number?: string | null
+          status?: string
+          tags?: string[] | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          avatar_url: string | null
+          company_id: string
+          created_at: string | null
+          full_name: string
+          id: string
+          last_login_at: string | null
+          permissions: Json | null
+          role: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          company_id: string
+          created_at?: string | null
+          full_name: string
+          id: string
+          last_login_at?: string | null
+          permissions?: Json | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          company_id?: string
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          last_login_at?: string | null
+          permissions?: Json | null
+          role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
