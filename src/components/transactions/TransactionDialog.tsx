@@ -105,7 +105,9 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         .eq("id", user.id)
         .single();
 
-      if (!profile) throw new Error("Perfil não encontrado");
+      if (!profile) {
+        throw new Error("Perfil não encontrado. Por favor, faça logout e login novamente.");
+      }
 
       // Validate form data with zod schema
       const validationResult = transactionSchema.safeParse({

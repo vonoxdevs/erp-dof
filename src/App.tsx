@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ProfileGuard } from "@/components/auth/ProfileGuard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -37,10 +38,29 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/bank-accounts" element={<BankAccounts />} />
-          <Route path="/ai-assistant" element={<AIAssistant />} />
+          
+          {/* Rotas protegidas com ProfileGuard */}
+          <Route path="/dashboard" element={
+            <ProfileGuard>
+              <Dashboard />
+            </ProfileGuard>
+          } />
+          <Route path="/transactions" element={
+            <ProfileGuard>
+              <Transactions />
+            </ProfileGuard>
+          } />
+          <Route path="/bank-accounts" element={
+            <ProfileGuard>
+              <BankAccounts />
+            </ProfileGuard>
+          } />
+          <Route path="/ai-assistant" element={
+            <ProfileGuard>
+              <AIAssistant />
+            </ProfileGuard>
+          } />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
