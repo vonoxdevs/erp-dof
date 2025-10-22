@@ -20,6 +20,32 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { z } from "zod";
+
+// Validation schema
+const transactionSchema = z.object({
+  type: z.enum(["revenue", "expense", "transfer"], {
+    errorMap: () => ({ message: "Tipo de transação inválido" })
+  }),
+  amount: z.number()
+    .positive("O valor deve ser maior que zero")
+    .max(999999999, "Valor muito alto")
+    .finite("O valor deve ser um número válido"),
+  description: z.string()
+    .trim()
+    .min(1, "Descrição é obrigatória")
+    .max(500, "Descrição deve ter no máximo 500 caracteres"),
+  due_date: z.string()
+    .min(1, "Data de vencimento é obrigatória")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de vencimento inválida"),
+  payment_date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data de pagamento inválida")
+    .nullable()
+    .optional(),
+  status: z.enum(["pending", "paid", "overdue", "cancelled"], {
+    errorMap: () => ({ message: "Status inválido" })
+  }),
+});
 
 interface Transaction {
   id?: string;
@@ -81,20 +107,32 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
 
       if (!profile) throw new Error("Perfil não encontrado");
 
-      // Validate required fields
-      if (!formData.type || !formData.amount || !formData.description || !formData.due_date || !formData.status) {
-        throw new Error("Preencha todos os campos obrigatórios");
-      }
-
-      const dataToSave = {
+      // Validate form data with zod schema
+      const validationResult = transactionSchema.safeParse({
         type: formData.type,
         amount: formData.amount,
         description: formData.description,
         due_date: formData.due_date,
+        payment_date: formData.payment_date || null,
         status: formData.status,
+      });
+
+      if (!validationResult.success) {
+        const errorMessages = validationResult.error.errors.map(err => err.message).join(", ");
+        throw new Error(errorMessages);
+      }
+
+      const validatedData = validationResult.data;
+
+      const dataToSave = {
+        type: validatedData.type,
+        amount: validatedData.amount,
+        description: validatedData.description,
+        due_date: validatedData.due_date,
+        status: validatedData.status,
         company_id: profile.company_id,
         created_by: user.id,
-        payment_date: formData.payment_date || null,
+        payment_date: validatedData.payment_date || null,
         category_id: formData.category_id || null,
         bank_account_id: formData.bank_account_id || null,
         contact_id: formData.contact_id || null,
@@ -116,7 +154,9 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
       }
       onClose(true);
     } catch (error: any) {
-      toast.error("Erro: " + error.message);
+      // Display user-friendly error messages without exposing internal details
+      const errorMessage = error.message || "Erro ao processar a solicitação";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

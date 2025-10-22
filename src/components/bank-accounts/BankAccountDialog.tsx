@@ -14,6 +14,48 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { z } from "zod";
+
+// Validation schema
+const bankAccountSchema = z.object({
+  bank_name: z.string()
+    .trim()
+    .min(1, "Nome do banco é obrigatório")
+    .max(100, "Nome do banco deve ter no máximo 100 caracteres"),
+  bank_code: z.string()
+    .trim()
+    .max(20, "Código do banco deve ter no máximo 20 caracteres")
+    .optional(),
+  agency_number: z.string()
+    .trim()
+    .max(20, "Número da agência deve ter no máximo 20 caracteres")
+    .optional(),
+  account_number: z.string()
+    .trim()
+    .min(1, "Número da conta é obrigatório")
+    .max(30, "Número da conta deve ter no máximo 30 caracteres"),
+  account_digit: z.string()
+    .trim()
+    .max(5, "Dígito da conta deve ter no máximo 5 caracteres")
+    .optional(),
+  account_type: z.enum(["checking", "savings", "investment"], {
+    errorMap: () => ({ message: "Tipo de conta inválido" })
+  }),
+  holder_name: z.string()
+    .trim()
+    .max(100, "Nome do titular deve ter no máximo 100 caracteres")
+    .optional(),
+  holder_document: z.string()
+    .trim()
+    .max(20, "Documento do titular deve ter no máximo 20 caracteres")
+    .optional(),
+  current_balance: z.number()
+    .min(-999999999, "Saldo inválido")
+    .max(999999999, "Saldo muito alto")
+    .finite("Saldo deve ser um número válido"),
+  is_active: z.boolean(),
+  is_default: z.boolean(),
+});
 
 interface BankAccount {
   id?: string;
@@ -78,22 +120,40 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
 
       if (!profile) throw new Error("Perfil não encontrado");
 
-      if (!formData.bank_name || !formData.account_number) {
-        throw new Error("Preencha todos os campos obrigatórios");
-      }
-
-      const dataToSave = {
+      // Validate form data with zod schema
+      const validationResult = bankAccountSchema.safeParse({
         bank_name: formData.bank_name,
-        bank_code: formData.bank_code || "000",
-        agency_number: formData.agency_number || "0000",
+        bank_code: formData.bank_code,
+        agency_number: formData.agency_number,
         account_number: formData.account_number,
-        account_digit: formData.account_digit || "0",
+        account_digit: formData.account_digit,
         account_type: formData.account_type || "checking",
-        holder_name: formData.holder_name || user.user_metadata?.full_name || "Titular",
-        holder_document: formData.holder_document || "00000000000",
+        holder_name: formData.holder_name,
+        holder_document: formData.holder_document,
         current_balance: formData.current_balance || 0,
         is_active: formData.is_active !== false,
         is_default: formData.is_default || false,
+      });
+
+      if (!validationResult.success) {
+        const errorMessages = validationResult.error.errors.map(err => err.message).join(", ");
+        throw new Error(errorMessages);
+      }
+
+      const validatedData = validationResult.data;
+
+      const dataToSave = {
+        bank_name: validatedData.bank_name,
+        bank_code: validatedData.bank_code || "000",
+        agency_number: validatedData.agency_number || "0000",
+        account_number: validatedData.account_number,
+        account_digit: validatedData.account_digit || "0",
+        account_type: validatedData.account_type,
+        holder_name: validatedData.holder_name || user.user_metadata?.full_name || "Titular",
+        holder_document: validatedData.holder_document || "00000000000",
+        current_balance: validatedData.current_balance,
+        is_active: validatedData.is_active,
+        is_default: validatedData.is_default,
         company_id: profile.company_id,
       };
 
@@ -111,7 +171,9 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
       }
       onClose(true);
     } catch (error: any) {
-      toast.error("Erro: " + error.message);
+      // Display user-friendly error messages without exposing internal details
+      const errorMessage = error.message || "Erro ao processar a solicitação";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

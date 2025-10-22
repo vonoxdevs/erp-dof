@@ -8,6 +8,34 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Building2, TrendingUp, Shield, Zap } from "lucide-react";
+import { z } from "zod";
+
+// Validation schemas
+const signInSchema = z.object({
+  email: z.string()
+    .trim()
+    .min(1, "Email é obrigatório")
+    .email("Email inválido")
+    .max(255, "Email deve ter no máximo 255 caracteres"),
+  password: z.string()
+    .min(6, "A senha deve ter no mínimo 6 caracteres")
+    .max(72, "A senha deve ter no máximo 72 caracteres"),
+});
+
+const signUpSchema = z.object({
+  fullName: z.string()
+    .trim()
+    .min(1, "Nome completo é obrigatório")
+    .max(100, "Nome deve ter no máximo 100 caracteres"),
+  email: z.string()
+    .trim()
+    .min(1, "Email é obrigatório")
+    .email("Email inválido")
+    .max(255, "Email deve ter no máximo 255 caracteres"),
+  password: z.string()
+    .min(6, "A senha deve ter no mínimo 6 caracteres")
+    .max(72, "A senha deve ter no máximo 72 caracteres"),
+});
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -39,15 +67,28 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      // Validate input with zod schema
+      const validationResult = signInSchema.safeParse({
         email,
         password,
+      });
+
+      if (!validationResult.success) {
+        const errorMessages = validationResult.error.errors.map(err => err.message).join(", ");
+        throw new Error(errorMessages);
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: validationResult.data.email,
+        password: validationResult.data.password,
       });
 
       if (error) throw error;
       toast.success("Login realizado com sucesso!");
     } catch (error: any) {
-      toast.error(error.message || "Erro ao fazer login");
+      // Display user-friendly error messages
+      const errorMessage = error.message || "Erro ao fazer login";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -58,13 +99,25 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      // Validate input with zod schema
+      const validationResult = signUpSchema.safeParse({
+        fullName,
         email,
         password,
+      });
+
+      if (!validationResult.success) {
+        const errorMessages = validationResult.error.errors.map(err => err.message).join(", ");
+        throw new Error(errorMessages);
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email: validationResult.data.email,
+        password: validationResult.data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
-            full_name: fullName,
+            full_name: validationResult.data.fullName,
           },
         },
       });
@@ -72,7 +125,9 @@ const Auth = () => {
       if (error) throw error;
       toast.success("Conta criada! Verifique seu email para confirmar.");
     } catch (error: any) {
-      toast.error(error.message || "Erro ao criar conta");
+      // Display user-friendly error messages
+      const errorMessage = error.message || "Erro ao criar conta";
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
