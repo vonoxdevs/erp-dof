@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Building2, TrendingUp, Shield, Zap } from "lucide-react";
 import { z } from "zod";
+import { sanitizeError } from "@/lib/errorMapping";
 
 // Validation schemas
 const signInSchema = z.object({
@@ -86,9 +87,7 @@ const Auth = () => {
       if (error) throw error;
       toast.success("Login realizado com sucesso!");
     } catch (error: any) {
-      // Display user-friendly error messages
-      const errorMessage = error.message || "Erro ao fazer login";
-      toast.error(errorMessage);
+      toast.error(sanitizeError(error));
     } finally {
       setLoading(false);
     }
@@ -125,9 +124,7 @@ const Auth = () => {
       if (error) throw error;
       toast.success("Conta criada! Verifique seu email para confirmar.");
     } catch (error: any) {
-      // Display user-friendly error messages
-      const errorMessage = error.message || "Erro ao criar conta";
-      toast.error(errorMessage);
+      toast.error(sanitizeError(error));
     } finally {
       setLoading(false);
     }

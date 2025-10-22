@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
+import { sanitizeError } from "@/lib/errorMapping";
 
 interface Transaction {
   id: string;
@@ -58,7 +59,7 @@ const Transactions = () => {
       if (error) throw error;
       setTransactions((data || []) as Transaction[]);
     } catch (error: any) {
-      toast.error("Erro ao carregar transações: " + error.message);
+      toast.error(sanitizeError(error));
     } finally {
       setLoading(false);
     }
@@ -78,7 +79,7 @@ const Transactions = () => {
       toast.success("Transação excluída com sucesso!");
       loadTransactions();
     } catch (error: any) {
-      toast.error("Erro ao excluir transação: " + error.message);
+      toast.error(sanitizeError(error));
     }
   };
 

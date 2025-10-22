@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
+import { sanitizeError } from "@/lib/errorMapping";
 
 // Validation schema
 const bankAccountSchema = z.object({
@@ -171,9 +172,7 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
       }
       onClose(true);
     } catch (error: any) {
-      // Display user-friendly error messages without exposing internal details
-      const errorMessage = error.message || "Erro ao processar a solicitação";
-      toast.error(errorMessage);
+      toast.error(sanitizeError(error));
     } finally {
       setLoading(false);
     }

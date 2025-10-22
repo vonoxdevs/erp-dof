@@ -6,6 +6,7 @@ import { Plus, Building2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { BankAccountDialog } from "@/components/bank-accounts/BankAccountDialog";
 import { BankAccountCard } from "@/components/bank-accounts/BankAccountCard";
+import { sanitizeError } from "@/lib/errorMapping";
 
 interface BankAccount {
   id: string;
@@ -49,7 +50,7 @@ const BankAccounts = () => {
       if (error) throw error;
       setAccounts(data || []);
     } catch (error: any) {
-      toast.error("Erro ao carregar contas: " + error.message);
+      toast.error(sanitizeError(error));
     } finally {
       setLoading(false);
     }
@@ -69,7 +70,7 @@ const BankAccounts = () => {
       toast.success("Conta excluída com sucesso!");
       loadAccounts();
     } catch (error: any) {
-      toast.error("Erro ao excluir conta: " + error.message);
+      toast.error(sanitizeError(error));
     }
   };
 

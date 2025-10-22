@@ -5,13 +5,94 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Validation constants
+const MAX_MESSAGES = 50;
+const MAX_MESSAGE_LENGTH = 4000;
+const VALID_ROLES = ['user', 'assistant', 'system'];
+
+// Validate message structure and content
+function validateMessages(messages: any): { valid: boolean; error?: string } {
+  // Check if messages is an array
+  if (!Array.isArray(messages)) {
+    return { valid: false, error: "Messages must be an array" };
+  }
+
+  // Check array length
+  if (messages.length === 0) {
+    return { valid: false, error: "Messages array cannot be empty" };
+  }
+
+  if (messages.length > MAX_MESSAGES) {
+    return { valid: false, error: `Messages array exceeds maximum length of ${MAX_MESSAGES}` };
+  }
+
+  // Validate each message
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+
+    // Check message structure
+    if (typeof msg !== 'object' || msg === null) {
+      return { valid: false, error: `Message at index ${i} is not an object` };
+    }
+
+    // Check required fields
+    if (!msg.role || !msg.content) {
+      return { valid: false, error: `Message at index ${i} is missing role or content` };
+    }
+
+    // Validate role
+    if (!VALID_ROLES.includes(msg.role)) {
+      return { valid: false, error: `Message at index ${i} has invalid role` };
+    }
+
+    // Validate content
+    if (typeof msg.content !== 'string') {
+      return { valid: false, error: `Message at index ${i} has invalid content type` };
+    }
+
+    // Check content length
+    if (msg.content.length > MAX_MESSAGE_LENGTH) {
+      return { valid: false, error: `Message at index ${i} exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` };
+    }
+  }
+
+  return { valid: true };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { messages } = await req.json();
+    // Parse and validate request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const { messages } = body;
+
+    // Validate messages
+    const validation = validateMessages(messages);
+    if (!validation.valid) {
+      console.error("Validation error:", validation.error);
+      return new Response(
+        JSON.stringify({ error: "Entrada inválida. Por favor, verifique sua mensagem e tente novamente." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
