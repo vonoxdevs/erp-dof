@@ -15,10 +15,10 @@ export async function getUserCompanyId(): Promise<string> {
     .from('user_profiles')
     .select('company_id')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (profileError || !profile) {
-    throw new Error('Perfil não encontrado. Por favor, contate o administrador do sistema.');
+    throw new Error('Perfil não encontrado. Aguarde alguns segundos e tente novamente.');
   }
 
   return profile.company_id;
@@ -38,7 +38,7 @@ export async function getUserProfile() {
     .from('user_profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (profileError || !profile) {
     throw new Error('Perfil não encontrado');

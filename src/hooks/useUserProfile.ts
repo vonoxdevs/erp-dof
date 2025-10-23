@@ -26,15 +26,16 @@ export const useUserProfile = () => {
         .from('user_profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Erro ao buscar perfil:', error);
-        throw new Error('Perfil não encontrado. Por favor, contate o administrador.');
+        throw new Error('Erro ao carregar perfil. Tente novamente.');
       }
 
       if (!profile) {
-        throw new Error('Perfil não encontrado. Por favor, faça logout e login novamente.');
+        // Perfil não existe, aguardar criação pelo trigger
+        throw new Error('Perfil está sendo criado. Por favor, aguarde alguns segundos e faça login novamente.');
       }
 
       return profile as UserProfile;
