@@ -35,12 +35,13 @@ export const useUserProfile = () => {
 
       if (!profile) {
         // Perfil não existe, aguardar criação pelo trigger
-        throw new Error('Perfil está sendo criado. Por favor, aguarde alguns segundos e faça login novamente.');
+        throw new Error('Perfil está sendo criado. Por favor, aguarde alguns segundos.');
       }
 
       return profile as UserProfile;
     },
-    retry: 1,
+    retry: 3, // Tentar 3 vezes antes de falhar
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Delay exponencial até 5 segundos
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 };
