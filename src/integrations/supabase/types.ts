@@ -624,24 +624,7 @@ export type Database = {
       }
     }
     Views: {
-      dashboard_stats: {
-        Row: {
-          company_id: string | null
-          overdue_count: number | null
-          pending_count: number | null
-          total_expenses: number | null
-          total_revenue: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "transactions_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
+      [_ in never]: never
     }
     Functions: {
       auth_user_company_id: { Args: never; Returns: string }
@@ -659,6 +642,7 @@ export type Database = {
           total_revenue: number
         }[]
       }
+      get_user_company_id: { Args: never; Returns: string }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
