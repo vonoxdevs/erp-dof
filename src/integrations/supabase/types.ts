@@ -21,7 +21,6 @@ export type Database = {
           account_type: string | null
           agency_number: string
           allow_negative_balance: boolean | null
-          api_credentials: Json | null
           auto_sync: boolean | null
           available_balance: number | null
           bank_code: string
@@ -29,10 +28,12 @@ export type Database = {
           blocked_balance: number | null
           company_id: string
           created_at: string | null
+          currency: string | null
           current_balance: number | null
           holder_document: string
           holder_name: string
           id: string
+          initial_balance: number | null
           is_active: boolean | null
           is_default: boolean | null
           last_sync: string | null
@@ -46,7 +47,6 @@ export type Database = {
           account_type?: string | null
           agency_number: string
           allow_negative_balance?: boolean | null
-          api_credentials?: Json | null
           auto_sync?: boolean | null
           available_balance?: number | null
           bank_code: string
@@ -54,10 +54,12 @@ export type Database = {
           blocked_balance?: number | null
           company_id: string
           created_at?: string | null
+          currency?: string | null
           current_balance?: number | null
           holder_document: string
           holder_name: string
           id?: string
+          initial_balance?: number | null
           is_active?: boolean | null
           is_default?: boolean | null
           last_sync?: string | null
@@ -71,7 +73,6 @@ export type Database = {
           account_type?: string | null
           agency_number?: string
           allow_negative_balance?: boolean | null
-          api_credentials?: Json | null
           auto_sync?: boolean | null
           available_balance?: number | null
           bank_code?: string
@@ -79,10 +80,12 @@ export type Database = {
           blocked_balance?: number | null
           company_id?: string
           created_at?: string | null
+          currency?: string | null
           current_balance?: number | null
           holder_document?: string
           holder_name?: string
           id?: string
+          initial_balance?: number | null
           is_active?: boolean | null
           is_default?: boolean | null
           last_sync?: string | null
@@ -100,6 +103,51 @@ export type Database = {
           },
         ]
       }
+      bank_api_credentials: {
+        Row: {
+          api_credentials: Json
+          bank_account_id: string
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          api_credentials: Json
+          bank_account_id: string
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          api_credentials?: Json
+          bank_account_id?: string
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_api_credentials_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_api_credentials_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string | null
@@ -109,6 +157,7 @@ export type Database = {
           icon: string | null
           id: string
           is_active: boolean | null
+          is_system: boolean | null
           name: string
           parent_id: string | null
           sort_order: number | null
@@ -122,6 +171,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean | null
+          is_system?: boolean | null
           name: string
           parent_id?: string | null
           sort_order?: number | null
@@ -135,6 +185,7 @@ export type Database = {
           icon?: string | null
           id?: string
           is_active?: boolean | null
+          is_system?: boolean | null
           name?: string
           parent_id?: string | null
           sort_order?: number | null
@@ -164,11 +215,15 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string
+          industry: string | null
           is_active: boolean | null
+          legal_name: string
+          logo_url: string | null
           name: string
           phone: string | null
           responsible: Json | null
           settings: Json | null
+          size: string | null
           updated_at: string | null
         }
         Insert: {
@@ -177,11 +232,15 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          industry?: string | null
           is_active?: boolean | null
+          legal_name: string
+          logo_url?: string | null
           name: string
           phone?: string | null
           responsible?: Json | null
           settings?: Json | null
+          size?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -190,11 +249,15 @@ export type Database = {
           created_at?: string | null
           email?: string | null
           id?: string
+          industry?: string | null
           is_active?: boolean | null
+          legal_name?: string
+          logo_url?: string | null
           name?: string
           phone?: string | null
           responsible?: Json | null
           settings?: Json | null
+          size?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -270,6 +333,107 @@ export type Database = {
           },
         ]
       }
+      contracts: {
+        Row: {
+          amount: number
+          auto_generate: boolean | null
+          bank_account_id: string | null
+          category_id: string | null
+          company_id: string
+          contact_id: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          end_date: string | null
+          frequency: string
+          generation_day: number | null
+          id: string
+          is_active: boolean | null
+          last_generated_date: string | null
+          name: string
+          payment_method: string | null
+          start_date: string
+          total_installments: number | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          auto_generate?: boolean | null
+          bank_account_id?: string | null
+          category_id?: string | null
+          company_id: string
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          frequency: string
+          generation_day?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_generated_date?: string | null
+          name: string
+          payment_method?: string | null
+          start_date: string
+          total_installments?: number | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          auto_generate?: boolean | null
+          bank_account_id?: string | null
+          category_id?: string | null
+          company_id?: string
+          contact_id?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          end_date?: string | null
+          frequency?: string
+          generation_day?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_generated_date?: string | null
+          name?: string
+          payment_method?: string | null
+          start_date?: string
+          total_installments?: number | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number
@@ -278,20 +442,25 @@ export type Database = {
           category_id: string | null
           company_id: string
           contact_id: string | null
+          contract_id: string | null
           created_at: string | null
           created_by: string | null
           description: string
           due_date: string
           id: string
+          installment_number: number | null
           is_recurring: boolean | null
           notes: string | null
+          paid_date: string | null
           payment_date: string | null
           payment_method: string | null
           recurrence_config: Json | null
           recurring_contract_id: string | null
           reference_number: string | null
-          status: string
+          status: string | null
           tags: string[] | null
+          total_installments: number | null
+          transfer_to_account_id: string | null
           type: string
           updated_at: string | null
         }
@@ -302,20 +471,25 @@ export type Database = {
           category_id?: string | null
           company_id: string
           contact_id?: string | null
+          contract_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description: string
           due_date: string
           id?: string
+          installment_number?: number | null
           is_recurring?: boolean | null
           notes?: string | null
+          paid_date?: string | null
           payment_date?: string | null
           payment_method?: string | null
           recurrence_config?: Json | null
           recurring_contract_id?: string | null
           reference_number?: string | null
-          status?: string
+          status?: string | null
           tags?: string[] | null
+          total_installments?: number | null
+          transfer_to_account_id?: string | null
           type: string
           updated_at?: string | null
         }
@@ -326,20 +500,25 @@ export type Database = {
           category_id?: string | null
           company_id?: string
           contact_id?: string | null
+          contract_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string
           due_date?: string
           id?: string
+          installment_number?: number | null
           is_recurring?: boolean | null
           notes?: string | null
+          paid_date?: string | null
           payment_date?: string | null
           payment_method?: string | null
           recurrence_config?: Json | null
           recurring_contract_id?: string | null
           reference_number?: string | null
-          status?: string
+          status?: string | null
           tags?: string[] | null
+          total_installments?: number | null
+          transfer_to_account_id?: string | null
           type?: string
           updated_at?: string | null
         }
@@ -372,12 +551,19 @@ export type Database = {
             referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "transactions_transfer_to_account_id_fkey"
+            columns: ["transfer_to_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_profiles: {
         Row: {
           avatar_url: string | null
-          company_id: string
+          company_id: string | null
           created_at: string | null
           full_name: string
           id: string
@@ -388,7 +574,7 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
-          company_id: string
+          company_id?: string | null
           created_at?: string | null
           full_name: string
           id: string
@@ -399,7 +585,7 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
-          company_id?: string
+          company_id?: string | null
           created_at?: string | null
           full_name?: string
           id?: string
@@ -461,6 +647,10 @@ export type Database = {
       }
     }
     Functions: {
+      create_default_categories: {
+        Args: { p_company_id: string }
+        Returns: undefined
+      }
       get_dashboard_stats: {
         Args: { user_company_id: string }
         Returns: {
@@ -471,7 +661,7 @@ export type Database = {
           total_revenue: number
         }[]
       }
-      get_user_company_id: { Args: { _user_id: string }; Returns: string }
+      get_user_company_id: { Args: never; Returns: string }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]
