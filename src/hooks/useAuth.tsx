@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     needsOnboarding: false,
   });
 
-  const loadUserProfile = useCallback(async (user: User | null) => {
+  const loadUserProfile = useCallback(async (user: User | null, retries = 3) => {
     if (!user) {
       setState({
         user: null,
@@ -50,6 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // OTIMIZAÇÃO: checkUserStatus agora faz apenas 1 query com JOIN
+      // Antes: 3 queries separadas (user → profile → company)
+      // Agora: 1 query apenas!
       const status = await authService.checkUserStatus();
       
       setState({
@@ -67,7 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
-      toast.error('Erro ao carregar perfil');
+      
+      // Retry logic com exponential backoff
+      if (retries > 0) {
+        const delay = (4 - retries) * 1000; // 1s, 2s, 3s
+        console.log(`Tentando novamente em ${delay}ms... (${retries} tentativas restantes)`);
+        setTimeout(() => loadUserProfile(user, retries - 1), delay);
+        return;
+      }
+      
+      // Após todas as tentativas falharem
+      toast.error('Erro ao carregar perfil. Por favor, tente fazer login novamente.');
       setState({
         user,
         profile: null,

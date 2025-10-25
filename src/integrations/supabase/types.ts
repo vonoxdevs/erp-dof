@@ -569,7 +569,6 @@ export type Database = {
           id: string
           last_login_at: string | null
           permissions: Json | null
-          role: string | null
           updated_at: string | null
         }
         Insert: {
@@ -580,7 +579,6 @@ export type Database = {
           id: string
           last_login_at?: string | null
           permissions?: Json | null
-          role?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -591,7 +589,6 @@ export type Database = {
           id?: string
           last_login_at?: string | null
           permissions?: Json | null
-          role?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -647,6 +644,7 @@ export type Database = {
       }
     }
     Functions: {
+      auth_user_company_id: { Args: never; Returns: string }
       create_default_categories: {
         Args: { p_company_id: string }
         Returns: undefined
@@ -661,7 +659,6 @@ export type Database = {
           total_revenue: number
         }[]
       }
-      get_user_company_id: { Args: never; Returns: string }
       has_any_role: {
         Args: {
           _roles: Database["public"]["Enums"]["app_role"][]

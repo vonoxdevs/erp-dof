@@ -126,6 +126,23 @@ class AuthService {
     return data as UserProfile | null;
   }
   
+  async getUserProfileWithCompany(userId?: string) {
+    const id = userId || (await supabase.auth.getUser()).data.user?.id;
+    if (!id) return null;
+    
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select(`
+        *,
+        companies (*)
+      `)
+      .eq('id', id)
+      .maybeSingle();
+      
+    if (error) throw error;
+    return data;
+  }
+  
   async updateUserProfile(userId: string, updates: Partial<UserProfile>) {
     const { data, error } = await supabase
       .from('user_profiles')
@@ -224,9 +241,12 @@ class AuthService {
       };
     }
     
-    const profile = await this.getUserProfile(user.id);
+    // OTIMIZAÇÃO: Uma única query com JOIN para buscar profile E company
+    // Antes: 3 queries separadas (user → profile → company)
+    // Agora: 1 query apenas!
+    const data = await this.getUserProfileWithCompany(user.id);
     
-    if (!profile) {
+    if (!data) {
       return {
         needsOnboarding: true,
         profile: null,
@@ -234,18 +254,21 @@ class AuthService {
       };
     }
     
-    if (!profile.company_id) {
-      return {
-        needsOnboarding: true,
-        profile,
-        company: null,
-      };
-    }
+    const profile = {
+      id: data.id,
+      company_id: data.company_id,
+      full_name: data.full_name,
+      permissions: data.permissions,
+      avatar_url: data.avatar_url,
+      last_login_at: data.last_login_at,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+    } as UserProfile;
     
-    const company = await this.getUserCompany(profile.company_id);
+    const company = data.companies as Company | null;
     
     return {
-      needsOnboarding: false,
+      needsOnboarding: !profile.company_id,
       profile,
       company,
     };
