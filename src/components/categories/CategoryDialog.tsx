@@ -103,8 +103,26 @@ export function CategoryDialog({ open, onClose, category }: Props) {
     }
   };
 
-  const commonIcons = ["💰", "🛠️", "📊", "📈", "👥", "🏪", "🏢", "📢", "💻", "📉", "📁", "🎯"];
-  const commonColors = ["#10b981", "#3b82f6", "#8b5cf6", "#06b6d4", "#ef4444", "#f97316", "#eab308", "#ec4899"];
+  const transactionTypes = [
+    { value: "income", label: "Receita", description: "Entradas de dinheiro" },
+    { value: "expense", label: "Despesa", description: "Saídas de dinheiro" },
+    { value: "transfer", label: "Transferência", description: "Movimentações entre contas" },
+  ];
+
+  const iconsByType = {
+    income: ["💰", "📈", "💵", "🤑", "💸", "🏦", "💳", "💴", "💶", "💷"],
+    expense: ["💳", "🛒", "🏪", "🏢", "📢", "💻", "👥", "📉", "🔧", "🚗"],
+    transfer: ["🔄", "↔️", "💱", "🔀", "⚡", "🔁", "➡️", "⬅️", "🔃", "💫"],
+  };
+
+  const colorsByType = {
+    income: ["#10b981", "#22c55e", "#16a34a", "#15803d"],
+    expense: ["#ef4444", "#dc2626", "#f97316", "#ea580c"],
+    transfer: ["#3b82f6", "#2563eb", "#8b5cf6", "#7c3aed"],
+  };
+
+  const currentIcons = iconsByType[formData.type as keyof typeof iconsByType] || iconsByType.income;
+  const currentColors = colorsByType[formData.type as keyof typeof colorsByType] || colorsByType.income;
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
@@ -126,32 +144,47 @@ export function CategoryDialog({ open, onClose, category }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type">Tipo *</Label>
+            <Label htmlFor="type">Tipo de Transação *</Label>
             <Select
               value={formData.type}
-              onValueChange={(value) => setFormData({ ...formData, type: value })}
+              onValueChange={(value) => {
+                const newType = value;
+                const newIcons = iconsByType[newType as keyof typeof iconsByType];
+                const newColors = colorsByType[newType as keyof typeof colorsByType];
+                setFormData({ 
+                  ...formData, 
+                  type: newType,
+                  icon: newIcons[0],
+                  color: newColors[0]
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="income">Receita</SelectItem>
-                <SelectItem value="expense">Despesa</SelectItem>
-                <SelectItem value="transfer">Transferência</SelectItem>
+                {transactionTypes.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    <div>
+                      <div className="font-medium">{type.label}</div>
+                      <div className="text-xs text-muted-foreground">{type.description}</div>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
             <Label>Ícone</Label>
-            <div className="grid grid-cols-6 gap-2">
-              {commonIcons.map((icon) => (
+            <div className="grid grid-cols-5 gap-2">
+              {currentIcons.map((icon) => (
                 <button
                   key={icon}
                   type="button"
                   onClick={() => setFormData({ ...formData, icon })}
-                  className={`p-2 text-2xl border rounded-lg hover:bg-muted transition-colors ${
-                    formData.icon === icon ? "border-primary bg-muted" : "border-border"
+                  className={`p-3 text-2xl border-2 rounded-lg hover:bg-muted transition-all ${
+                    formData.icon === icon ? "border-primary bg-muted scale-105" : "border-border"
                   }`}
                 >
                   {icon}
@@ -162,14 +195,14 @@ export function CategoryDialog({ open, onClose, category }: Props) {
 
           <div className="space-y-2">
             <Label>Cor</Label>
-            <div className="grid grid-cols-8 gap-2">
-              {commonColors.map((color) => (
+            <div className="flex gap-3">
+              {currentColors.map((color) => (
                 <button
                   key={color}
                   type="button"
                   onClick={() => setFormData({ ...formData, color })}
-                  className={`w-8 h-8 rounded-full border-2 transition-all ${
-                    formData.color === color ? "border-primary scale-110" : "border-transparent"
+                  className={`w-10 h-10 rounded-lg border-2 transition-all hover:scale-110 ${
+                    formData.color === color ? "border-primary ring-2 ring-primary/20 scale-110" : "border-border"
                   }`}
                   style={{ backgroundColor: color }}
                 />

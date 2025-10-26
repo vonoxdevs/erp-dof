@@ -25,6 +25,7 @@ const Categories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
 
@@ -100,12 +101,13 @@ const Categories = () => {
     if (refresh) loadCategories();
   };
 
-  const filteredCategories = categories.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCategories = categories
+    .filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .filter((c) => typeFilter === "all" || c.type === typeFilter);
 
-  const incomeCategories = filteredCategories.filter((c) => c.type === "income");
-  const expenseCategories = filteredCategories.filter((c) => c.type === "expense");
+  const incomeCategories = categories.filter((c) => c.type === "income");
+  const expenseCategories = categories.filter((c) => c.type === "expense");
+  const transferCategories = categories.filter((c) => c.type === "transfer");
 
   if (loading) {
     return (
@@ -130,31 +132,67 @@ const Categories = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Categorias de Receita</p>
-          <p className="text-2xl font-bold text-accent">{incomeCategories.length}</p>
+          <p className="text-sm text-muted-foreground">Receitas</p>
+          <p className="text-2xl font-bold text-green-600">{incomeCategories.length}</p>
         </Card>
         <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Categorias de Despesa</p>
-          <p className="text-2xl font-bold text-destructive">{expenseCategories.length}</p>
+          <p className="text-sm text-muted-foreground">Despesas</p>
+          <p className="text-2xl font-bold text-red-600">{expenseCategories.length}</p>
         </Card>
         <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Total de Categorias</p>
+          <p className="text-sm text-muted-foreground">Transferências</p>
+          <p className="text-2xl font-bold text-blue-600">{transferCategories.length}</p>
+        </Card>
+        <Card className="p-4 glass">
+          <p className="text-sm text-muted-foreground">Total</p>
           <p className="text-2xl font-bold">{categories.length}</p>
         </Card>
       </div>
 
-      {/* Search */}
+      {/* Search and Filters */}
       <Card className="p-4 glass">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar categorias..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar categorias..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={typeFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTypeFilter("all")}
+            >
+              Todas
+            </Button>
+            <Button
+              variant={typeFilter === "income" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTypeFilter("income")}
+            >
+              Receitas
+            </Button>
+            <Button
+              variant={typeFilter === "expense" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTypeFilter("expense")}
+            >
+              Despesas
+            </Button>
+            <Button
+              variant={typeFilter === "transfer" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTypeFilter("transfer")}
+            >
+              Transferências
+            </Button>
+          </div>
         </div>
       </Card>
 
