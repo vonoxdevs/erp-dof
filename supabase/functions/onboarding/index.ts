@@ -238,24 +238,24 @@ serve(async (req) => {
 
     console.log(`Company created: ${newCompany.id}`);
 
-    // 2. Criar perfil do usuário
+    // 2. Atualizar perfil do usuário existente (criado pelo trigger)
     const { error: profileError } = await supabase
       .from('user_profiles')
-      .insert({
-        id: user.id,
+      .update({
         company_id: newCompany.id,
         full_name: responsible.name,
         permissions: { all: true }
-      });
+      })
+      .eq('id', user.id);
 
     if (profileError) {
-      console.error('Error creating profile:', profileError);
+      console.error('Error updating profile:', profileError);
       // Rollback: deletar empresa
       await supabase.from('companies').delete().eq('id', newCompany.id);
-      throw new Error('Erro ao criar perfil');
+      throw new Error('Erro ao atualizar perfil');
     }
 
-    console.log('User profile created');
+    console.log('User profile updated with company_id');
 
     // 3. Criar role de owner
     const { error: roleError } = await supabase
