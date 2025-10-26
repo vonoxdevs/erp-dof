@@ -24,6 +24,7 @@ import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
 import NotFound from "./pages/NotFound";
+import AppLayout from "./components/layout/AppLayout";
 
 const App = () => {
   // Create QueryClient with useMemo to avoid recreation
@@ -61,71 +62,17 @@ const App = () => {
               {/* Onboarding (requer autenticação) */}
               <Route path="/onboarding" element={<OnboardingPage />} />
               
-              {/* Rotas protegidas */}
-              <Route
-                path="/dashboard"
-                element={
-                  <AuthGuard>
-                    <Dashboard />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/transactions"
-                element={
-                  <AuthGuard>
-                    <Transactions />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/bank-accounts"
-                element={
-                  <AuthGuard>
-                    <BankAccounts />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/contracts"
-                element={
-                  <AuthGuard>
-                    <Contracts />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/categories"
-                element={
-                  <AuthGuard>
-                    <Categories />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <AuthGuard>
-                    <Profile />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <AuthGuard>
-                    <Reports />
-                  </AuthGuard>
-                }
-              />
-              <Route
-                path="/ai-assistant"
-                element={
-                  <AuthGuard>
-                    <AIAssistant />
-                  </AuthGuard>
-                }
-              />
+              {/* Rotas protegidas com AppLayout */}
+              <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/transactions" element={<Transactions />} />
+                <Route path="/bank-accounts" element={<BankAccounts />} />
+                <Route path="/contracts" element={<Contracts />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/ai-assistant" element={<AIAssistant />} />
+              </Route>
               
               {/* 404 */}
               <Route path="*" element={<NotFound />} />
