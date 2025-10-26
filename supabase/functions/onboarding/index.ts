@@ -131,34 +131,73 @@ serve(async (req) => {
     }
 
     console.log('✅ CPF válido');
+    console.log('✅ Validações passaram, processando dados...');
 
     // Verificar se usuário já tem empresa
-    const { data: existingProfile } = await supabase
+    console.log('🔍 Verificando se usuário já tem empresa...');
+    const { data: existingProfile, error: profileCheckError } = await supabase
       .from('user_profiles')
       .select('company_id')
       .eq('id', user.id)
       .maybeSingle();
 
-    if (existingProfile?.company_id) {
+    if (profileCheckError) {
+      console.error('❌ Erro ao verificar perfil existente:', profileCheckError);
       return new Response(
-        JSON.stringify({ error: 'Usuário já possui empresa vinculada' }),
+        JSON.stringify({ 
+          error: 'Erro ao verificar perfil',
+          details: profileCheckError.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (existingProfile?.company_id) {
+      console.error('❌ Usuário já possui empresa:', existingProfile.company_id);
+      return new Response(
+        JSON.stringify({ error: 'Usuário já possui uma empresa vinculada.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('✅ Usuário não tem empresa');
+
     // Verificar se CNPJ já existe
-    const { data: existingCompany } = await supabase
+    console.log('🔍 Verificando se CNPJ já existe:', company.cnpj);
+    const { data: existingCompany, error: companyCheckError } = await supabase
       .from('companies')
-      .select('id')
+      .select('id, name')
       .eq('cnpj', company.cnpj)
       .maybeSingle();
 
-    if (existingCompany) {
+    if (companyCheckError) {
+      console.error('❌ Erro ao verificar CNPJ:', companyCheckError);
       return new Response(
-        JSON.stringify({ error: 'CNPJ já cadastrado' }),
+        JSON.stringify({ 
+          error: 'Erro ao verificar CNPJ',
+          details: companyCheckError.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (existingCompany) {
+      console.error('❌ CNPJ já cadastrado:', {
+        cnpj: company.cnpj,
+        existing_company_id: existingCompany.id,
+        existing_company_name: existingCompany.name
+      });
+      return new Response(
+        JSON.stringify({ 
+          error: 'Este CNPJ já está cadastrado no sistema.',
+          details: `O CNPJ ${company.cnpj} já está vinculado à empresa "${existingCompany.name}". Use outro CNPJ ou entre em contato com o suporte.`
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('✅ CNPJ disponível para uso');
+    console.log('🚀 Iniciando criação da empresa...');
 
     // Iniciar transação atômica
     // 1. Criar empresa
