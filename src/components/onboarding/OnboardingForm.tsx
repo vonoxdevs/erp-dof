@@ -219,6 +219,13 @@ export const OnboardingForm = () => {
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900">Complete seu Cadastro</h1>
             <p className="text-gray-600 mt-2">Preencha os dados da sua empresa para começar</p>
+            
+            {/* Dados de teste */}
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-left">
+              <p className="text-sm font-semibold text-blue-900 mb-1">📋 Dados válidos para teste:</p>
+              <p className="text-xs text-blue-800">CNPJ: <code className="bg-blue-100 px-1 py-0.5 rounded">11.222.333/0001-81</code></p>
+              <p className="text-xs text-blue-800">CPF: <code className="bg-blue-100 px-1 py-0.5 rounded">123.456.789-09</code></p>
+            </div>
           </div>
 
           {/* SEÇÃO EMPRESA */}

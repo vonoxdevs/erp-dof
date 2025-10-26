@@ -108,17 +108,27 @@ export const useOnboarding = () => {
       if (functionError) {
         console.error('❌ [Onboarding] Erro da função:', functionError);
         
+        // Tentar extrair mensagem do resultado
+        let errorMessage = functionError.message || 'Erro ao processar onboarding.';
+        
+        // Se o resultado tem uma mensagem de erro mais específica, usar ela
+        if (result && typeof result === 'object') {
+          if ('error' in result) {
+            errorMessage = result.error as string;
+          }
+        }
+        
         // Mensagens de erro específicas
-        if (functionError.message?.includes('CNPJ')) {
-          throw new Error('CNPJ inválido. Verifique e tente novamente.');
-        } else if (functionError.message?.includes('CPF')) {
-          throw new Error('CPF inválido. Verifique e tente novamente.');
-        } else if (functionError.message?.includes('já cadastrado')) {
+        if (errorMessage.includes('CNPJ')) {
+          throw new Error(errorMessage);
+        } else if (errorMessage.includes('CPF')) {
+          throw new Error(errorMessage);
+        } else if (errorMessage.includes('já cadastrado')) {
           throw new Error('Este CNPJ já está cadastrado no sistema.');
-        } else if (functionError.message?.includes('não autenticado')) {
+        } else if (errorMessage.includes('não autenticado')) {
           throw new Error('Sessão expirada. Faça login novamente.');
         } else {
-          throw new Error(functionError.message || 'Erro ao processar onboarding.');
+          throw new Error(errorMessage);
         }
       }
 

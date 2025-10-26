@@ -86,23 +86,51 @@ serve(async (req) => {
     console.log(`Onboarding started for user: ${user.id}`);
 
     const body = await req.json();
+    console.log('📦 Received body:', JSON.stringify(body, null, 2));
+    
     const { company, address, responsible } = body;
+
+    // Validar se dados obrigatórios foram enviados
+    if (!company || !responsible) {
+      console.error('❌ Missing required fields:', { hasCompany: !!company, hasResponsible: !!responsible });
+      return new Response(
+        JSON.stringify({ error: 'Dados obrigatórios faltando (company ou responsible)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('🔍 Validating CNPJ:', company.cnpj);
 
     // Validar CNPJ
     if (!validateCNPJ(company.cnpj)) {
+      console.error('❌ Invalid CNPJ:', company.cnpj);
       return new Response(
-        JSON.stringify({ error: 'CNPJ inválido' }),
+        JSON.stringify({ 
+          error: 'CNPJ inválido. Verifique os dígitos e tente novamente.',
+          details: 'O CNPJ fornecido não passou na validação dos dígitos verificadores. Use um CNPJ válido.',
+          received: company.cnpj
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log('✅ CNPJ válido');
+    console.log('🔍 Validating CPF:', responsible.cpf);
+
     // Validar CPF do responsável
     if (!validateCPF(responsible.cpf)) {
+      console.error('❌ Invalid CPF:', responsible.cpf);
       return new Response(
-        JSON.stringify({ error: 'CPF do responsável inválido' }),
+        JSON.stringify({ 
+          error: 'CPF do responsável inválido. Verifique os dígitos e tente novamente.',
+          details: 'O CPF fornecido não passou na validação dos dígitos verificadores. Use um CPF válido.',
+          received: responsible.cpf
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('✅ CPF válido');
 
     // Verificar se usuário já tem empresa
     const { data: existingProfile } = await supabase
