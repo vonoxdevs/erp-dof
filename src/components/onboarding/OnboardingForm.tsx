@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -42,6 +44,7 @@ const estadosBrasileiros = [
 ];
 
 export const OnboardingForm = () => {
+  const navigate = useNavigate();
   const { completeOnboarding, loading } = useOnboarding();
   
   const [formData, setFormData] = useState({
@@ -71,6 +74,37 @@ export const OnboardingForm = () => {
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loadingCEP, setLoadingCEP] = useState(false);
+
+  // Verificar se email foi confirmado
+  useEffect(() => {
+    checkEmailConfirmation();
+  }, []);
+
+  const checkEmailConfirmation = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        console.log('⚠️ Não autenticado, redirecionando para /auth');
+        toast.error('Você precisa estar autenticado.');
+        navigate('/auth');
+        return;
+      }
+
+      if (!session.user.email_confirmed_at) {
+        console.log('⚠️ Email não confirmado, redirecionando para /auth');
+        toast.error('Por favor, confirme seu email antes de continuar.');
+        navigate('/auth');
+        return;
+      }
+
+      console.log('✅ Email confirmado, pode continuar com onboarding');
+    } catch (err) {
+      console.error('❌ Erro ao verificar email:', err);
+      toast.error('Erro ao verificar autenticação.');
+      navigate('/auth');
+    }
+  };
 
   const handleInputChange = (field: string, value: string, formatter?: (v: string) => string) => {
     const formattedValue = formatter ? formatter(value) : value;

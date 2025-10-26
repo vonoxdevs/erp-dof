@@ -47,35 +47,106 @@ export const useOnboarding = () => {
     setError(null);
 
     try {
-      // Obter sessão atual
+      console.log('🔍 [Onboarding] Iniciando processo...');
+      
+      // VALIDAÇÃO 1: Verificar session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (sessionError || !session) {
-        throw new Error('Sessão não encontrada. Faça login novamente.');
+      if (sessionError) {
+        console.error('❌ [Onboarding] Erro ao obter session:', sessionError);
+        throw new Error('Erro de autenticação. Faça login novamente.');
+      }
+      
+      if (!session) {
+        console.error('❌ [Onboarding] Nenhuma session ativa');
+        throw new Error('Você precisa estar autenticado. Faça login novamente.');
       }
 
-      // Chamar edge function com token de autenticação
-      const { data: result, error: invokeError } = await supabase.functions.invoke('onboarding', {
+      console.log('✅ [Onboarding] Session ativa:', session.user.id);
+
+      // VALIDAÇÃO 2: Verificar se email foi confirmado
+      if (!session.user.email_confirmed_at) {
+        console.error('❌ [Onboarding] Email não confirmado');
+        toast.error('Por favor, confirme seu email antes de continuar.');
+        navigate('/auth');
+        throw new Error('Por favor, confirme seu email antes de continuar.');
+      }
+
+      console.log('✅ [Onboarding] Email confirmado:', session.user.email);
+
+      // VALIDAÇÃO 3: Verificar se já tem empresa
+      const { data: existingProfile } = await supabase
+        .from('user_profiles')
+        .select('company_id')
+        .eq('id', session.user.id)
+        .maybeSingle();
+
+      if (existingProfile?.company_id) {
+        console.log('⚠️ [Onboarding] Usuário já tem empresa');
+        toast.info('Você já possui uma empresa cadastrada.');
+        navigate('/dashboard');
+        throw new Error('Você já possui uma empresa cadastrada.');
+      }
+
+      console.log('✅ [Onboarding] Validações OK, chamando Edge Function...');
+      console.log('📦 [Onboarding] Dados:', {
+        company_name: data.company.name,
+        cnpj: data.company.cnpj,
+        responsible_name: data.responsible.name
+      });
+
+      // Chamar Edge Function com token
+      const { data: result, error: functionError } = await supabase.functions.invoke('onboarding', {
         body: data,
         headers: {
           Authorization: `Bearer ${session.access_token}`
         }
       });
 
-      if (invokeError) {
-        throw invokeError;
+      console.log('📥 [Onboarding] Resposta da função:', result);
+
+      if (functionError) {
+        console.error('❌ [Onboarding] Erro da função:', functionError);
+        
+        // Mensagens de erro específicas
+        if (functionError.message?.includes('CNPJ')) {
+          throw new Error('CNPJ inválido. Verifique e tente novamente.');
+        } else if (functionError.message?.includes('CPF')) {
+          throw new Error('CPF inválido. Verifique e tente novamente.');
+        } else if (functionError.message?.includes('já cadastrado')) {
+          throw new Error('Este CNPJ já está cadastrado no sistema.');
+        } else if (functionError.message?.includes('não autenticado')) {
+          throw new Error('Sessão expirada. Faça login novamente.');
+        } else {
+          throw new Error(functionError.message || 'Erro ao processar onboarding.');
+        }
       }
 
-      if (result.error) {
+      if (result?.error) {
+        console.error('❌ [Onboarding] Erro no resultado:', result.error);
         throw new Error(result.error);
       }
+
+      if (!result?.success) {
+        console.error('❌ [Onboarding] Resultado não indica sucesso');
+        throw new Error('Erro ao criar empresa. Tente novamente.');
+      }
+
+      console.log('✅ [Onboarding] Concluído com sucesso!');
+      console.log('📊 [Onboarding] Empresa criada:', result.company_id);
 
       toast.success('Onboarding concluído com sucesso!');
       navigate('/dashboard');
       
       return { success: true, data: result };
     } catch (err: any) {
-      const errorMessage = err.message || 'Erro ao completar onboarding';
+      const errorMessage = err.message || 'Erro ao completar onboarding. Tente novamente.';
+      console.error('❌ [Onboarding] ERRO COMPLETO:', {
+        message: err.message,
+        stack: err.stack,
+        details: err
+      });
+      
       setError(errorMessage);
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
