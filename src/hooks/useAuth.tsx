@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, loading: true }));
       await authService.signUp(email, password, fullName);
-      toast.success('Conta criada! Complete o onboarding para começar.');
+      // Mensagem de sucesso será exibida pelo componente que chama esta função
     } catch (error: any) {
       console.error('Erro no registro:', error);
       toast.error(error.message || 'Erro ao criar conta');

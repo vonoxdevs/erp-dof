@@ -46,6 +46,12 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await register(formData.email, formData.password, formData.fullName);
+      
+      // Redirecionar para login após cadastro bem-sucedido
+      toast.success("Cadastro realizado! Verifique seu email para confirmar sua conta.");
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (error) {
       // Erro já tratado no hook
     } finally {
