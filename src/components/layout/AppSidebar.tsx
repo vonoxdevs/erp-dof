@@ -4,12 +4,10 @@ import {
   Receipt,
   Building2,
   Tags,
-  Users,
   FileText,
   BarChart3,
-  Settings,
-  Repeat,
   MessageSquare,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,19 +24,15 @@ import {
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Transações", url: "/transactions", icon: Receipt },
+  { title: "Contratos", url: "/contracts", icon: FileText },
   { title: "Contas Bancárias", url: "/bank-accounts", icon: Building2 },
   { title: "Categorias", url: "/categories", icon: Tags },
-  { title: "Contatos", url: "/contacts", icon: Users },
 ];
 
-const automationItems = [
-  { title: "Contratos Recorrentes", url: "/recurring-contracts", icon: Repeat },
-  { title: "Importar Extratos", url: "/import", icon: FileText },
-];
-
-const analyticsItems = [
-  { title: "Relatórios", url: "/reports", icon: BarChart3 },
+const supportItems = [
   { title: "Assistente IA", url: "/ai-assistant", icon: MessageSquare },
+  { title: "Relatórios", url: "/reports", icon: BarChart3 },
+  { title: "Perfil", url: "/profile", icon: User },
 ];
 
 export function AppSidebar() {
@@ -74,12 +68,12 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Automation */}
+        {/* Support & Tools */}
         <SidebarGroup>
-          <SidebarGroupLabel>Automação</SidebarGroupLabel>
+          <SidebarGroupLabel>Suporte & Ferramentas</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {automationItems.map((item) => (
+              {supportItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavClass(item.url)}>
@@ -89,41 +83,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Analytics */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Analytics</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {analyticsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavClass(item.url)}>
-                      <item.icon className="w-4 h-4" />
-                      {open && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        {/* Settings */}
-        <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <NavLink to="/settings" className={getNavClass("/settings")}>
-                    <Settings className="w-4 h-4" />
-                    {open && <span>Configurações</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

@@ -72,7 +72,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Transaction>>({
     type: "expense",
-    amount: 0,
+    amount: undefined,
     description: "",
     due_date: new Date().toISOString().split("T")[0],
     status: "pending",
@@ -84,7 +84,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
     } else {
       setFormData({
         type: "expense",
-        amount: 0,
+        amount: undefined,
         description: "",
         due_date: new Date().toISOString().split("T")[0],
         status: "pending",
@@ -232,9 +232,9 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
               <Input
                 type="number"
                 step="0.01"
-                value={formData.amount}
+                value={formData.amount || ""}
                 onChange={(e) =>
-                  setFormData({ ...formData, amount: parseFloat(e.target.value) })
+                  setFormData({ ...formData, amount: e.target.value ? parseFloat(e.target.value) : undefined })
                 }
                 placeholder="0,00"
                 required

@@ -18,6 +18,10 @@ import OnboardingPage from "./pages/OnboardingPage";
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
 import BankAccounts from "./pages/BankAccounts";
+import Contracts from "./pages/Contracts";
+import Categories from "./pages/Categories";
+import Profile from "./pages/Profile";
+import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
 import NotFound from "./pages/NotFound";
 
@@ -79,6 +83,38 @@ const App = () => {
                 element={
                   <AuthGuard>
                     <BankAccounts />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/contracts"
+                element={
+                  <AuthGuard>
+                    <Contracts />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/categories"
+                element={
+                  <AuthGuard>
+                    <Categories />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <AuthGuard>
+                    <Profile />
+                  </AuthGuard>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <AuthGuard>
+                    <Reports />
                   </AuthGuard>
                 }
               />
