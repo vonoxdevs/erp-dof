@@ -132,8 +132,15 @@ export const useOnboarding = () => {
       console.log('✅ [Onboarding] Concluído com sucesso!');
       console.log('📊 [Onboarding] Empresa criada:', result.company_id);
 
-      toast.success('Onboarding concluído com sucesso!');
-      navigate('/dashboard');
+      toast.success('Empresa cadastrada com sucesso! Redirecionando...');
+      
+      // Recarregar sessão para atualizar dados do usuário
+      await supabase.auth.refreshSession();
+      
+      // Pequeno delay para garantir que o toast seja visto
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 1500);
       
       return { success: true, data: result };
     } catch (err: any) {
