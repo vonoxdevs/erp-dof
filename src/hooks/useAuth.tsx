@@ -65,8 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       // Redirecionar conforme necessário
-      if (status.needsOnboarding) {
+      const currentPath = window.location.pathname;
+      const isAuthPage = ['/login', '/register', '/'].includes(currentPath);
+      
+      if (status.needsOnboarding && isAuthPage) {
         navigate('/onboarding');
+      } else if (!status.needsOnboarding && isAuthPage) {
+        navigate('/dashboard');
       }
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
@@ -113,12 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setState(prev => ({ ...prev, loading: true }));
       await authService.signIn(email, password);
       toast.success('Login realizado com sucesso!');
+      // O onAuthStateChange vai lidar com o resto e definir loading: false
     } catch (error: any) {
       console.error('Erro no login:', error);
       toast.error(error.message || 'Erro ao fazer login');
+      setState(prev => ({ ...prev, loading: false })); // Só define false em caso de erro
       throw error;
-    } finally {
-      setState(prev => ({ ...prev, loading: false }));
     }
   };
 
