@@ -76,27 +76,13 @@ class AuthService {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: `${window.location.origin}/`,
       },
     });
     
     if (error) throw error;
     
-    // Criar perfil manualmente (sem company_id ainda)
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .insert({
-          id: data.user.id,
-          full_name: fullName,
-          company_id: null, // Será preenchido no onboarding
-        });
-        
-      if (profileError) {
-        console.error('Erro ao criar perfil:', profileError);
-        throw new Error('Erro ao criar perfil. Tente novamente.');
-      }
-    }
-    
+    // Perfil será criado automaticamente pelo trigger do banco
     return data;
   }
   
