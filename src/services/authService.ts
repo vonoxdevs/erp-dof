@@ -181,12 +181,12 @@ class AuthService {
       
     if (error) throw error;
     
-    // Atribuir role de owner
+    // Atribuir role de admin
     const { error: roleError } = await supabase
       .from('user_roles')
       .insert({
         user_id: userId,
-        role: 'owner',
+        role: 'admin',
       });
       
     if (roleError) throw roleError;
