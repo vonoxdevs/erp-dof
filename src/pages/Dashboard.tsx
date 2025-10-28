@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
-  LogOut,
   TrendingUp,
   TrendingDown,
   DollarSign,
@@ -107,10 +106,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logout realizado com sucesso!");
-  };
 
   if (loading) {
     return (
@@ -122,25 +117,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <header className="border-b border-border/50 glass-strong">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">LSFIN v2.0</h1>
-              <p className="text-xs text-muted-foreground">ERP Financeiro Corporativo</p>
-            </div>
-          </div>
-
-          <Button variant="outline" size="sm" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sair
-          </Button>
-        </div>
-      </header>
-
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8 animate-fade-in">
           <h2 className="text-3xl font-bold mb-2">Dashboard Executivo</h2>
