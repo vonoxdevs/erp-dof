@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
-import OverdueTransactionsModal from "@/components/business/OverdueTransactionsModal";
+
+// Lazy load do modal para evitar problemas de contexto
+const OverdueTransactionsModal = lazy(() => import("@/components/business/OverdueTransactionsModal"));
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -296,12 +298,21 @@ const Dashboard = () => {
 
       {/* Modal de Transações Vencidas */}
       {showOverdueModal && (
-        <OverdueTransactionsModal 
-          onClose={() => {
-            setShowOverdueModal(false);
-            loadStats(); // Recarregar dados após fechar
-          }}
-        />
+        <Suspense fallback={
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-background rounded-lg shadow-2xl p-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="text-center mt-4 text-muted-foreground">Carregando...</p>
+            </div>
+          </div>
+        }>
+          <OverdueTransactionsModal 
+            onClose={() => {
+              setShowOverdueModal(false);
+              loadStats(); // Recarregar dados após fechar
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
