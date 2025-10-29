@@ -103,15 +103,63 @@ const Profile = () => {
     if (!e.target.files || !e.target.files[0] || !company) return;
 
     const file = e.target.files[0];
+    
+    // Validar tipo de arquivo
+    if (!file.type.startsWith('image/')) {
+      toast.error("Por favor, selecione uma imagem válida");
+      return;
+    }
+
+    // Validar tamanho (máximo 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 2MB");
+      return;
+    }
+
     const fileExt = file.name.split(".").pop();
-    const fileName = `${company.id}-${Math.random()}.${fileExt}`;
+    const fileName = `${company.id}/logo.${fileExt}`;
 
     setUploading(true);
     try {
-      toast.info("Funcionalidade de upload de logo em desenvolvimento");
-      // TODO: Implementar upload para Supabase Storage
+      // Remover logo anterior se existir
+      if (companyData.logo_url) {
+        const oldPath = companyData.logo_url.split('/company-logos/')[1];
+        if (oldPath) {
+          await supabase.storage
+            .from('company-logos')
+            .remove([oldPath]);
+        }
+      }
+
+      // Upload da nova logo
+      const { error: uploadError } = await supabase.storage
+        .from('company-logos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(fileName);
+
+      // Atualizar banco de dados
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({ logo_url: publicUrl })
+        .eq('id', company.id);
+
+      if (updateError) throw updateError;
+
+      setCompanyData({ ...companyData, logo_url: publicUrl });
+      toast.success("Logo atualizada com sucesso!");
+      await refreshProfile();
     } catch (error: any) {
-      toast.error(error.message || "Erro ao fazer upload do logo");
+      console.error('Erro ao fazer upload:', error);
+      toast.error(error.message || "Erro ao fazer upload da logo");
     } finally {
       setUploading(false);
     }
@@ -171,14 +219,18 @@ const Profile = () => {
             <div className="space-y-2">
               <Label>Logo da Empresa</Label>
               <div className="flex items-center gap-4">
-                {companyData.logo_url && (
-                  <img
-                    src={companyData.logo_url}
-                    alt="Logo"
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                )}
-                <div>
+                <div className="w-20 h-20 rounded-lg border-2 border-dashed border-muted flex items-center justify-center overflow-hidden bg-muted/30">
+                  {companyData.logo_url ? (
+                    <img
+                      src={companyData.logo_url}
+                      alt="Logo da empresa"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Building2 className="w-10 h-10 text-muted-foreground" />
+                  )}
+                </div>
+                <div className="flex-1">
                   <input
                     type="file"
                     id="logo"
@@ -197,8 +249,11 @@ const Profile = () => {
                     ) : (
                       <Upload className="w-4 h-4 mr-2" />
                     )}
-                    Upload Logo
+                    {companyData.logo_url ? "Alterar Logo" : "Upload Logo"}
                   </Button>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Formatos: JPG, PNG. Tamanho máximo: 2MB
+                  </p>
                 </div>
               </div>
             </div>
