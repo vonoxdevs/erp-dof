@@ -8,9 +8,11 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogOut, Building2, Home } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
+import { useAuth } from "@/hooks/useAuth";
 
 const AppLayout = () => {
   const navigate = useNavigate();
+  const { company } = useAuth();
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
@@ -51,11 +53,19 @@ const AppLayout = () => {
                 <span className="hidden sm:inline">Dashboard</span>
               </Button>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-primary-foreground" />
+                <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+                  {company?.logo_url ? (
+                    <img 
+                      src={company.logo_url} 
+                      alt={company.name || "Logo da empresa"} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Building2 className="w-5 h-5 text-primary-foreground" />
+                  )}
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-lg font-bold">LSFIN v2.0</h1>
+                  <h1 className="text-lg font-bold">{company?.name || "LSFIN v2.0"}</h1>
                   <p className="text-xs text-muted-foreground">ERP Financeiro Corporativo</p>
                 </div>
               </div>
