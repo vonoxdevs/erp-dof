@@ -66,23 +66,35 @@ const Dashboard = () => {
 
       if (!profile) return;
 
-      // Load transactions
-      const { data: transactions } = await supabase
+      // Calcular data de 30 dias atrás
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
+
+      // Load transactions dos últimos 30 dias para receitas e despesas
+      const { data: recentTransactions } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("company_id", profile.company_id)
+        .gte("due_date", dateFilter);
+
+      // Load todas as transações para pendentes/vencidas
+      const { data: allTransactions } = await supabase
         .from("transactions")
         .select("*")
         .eq("company_id", profile.company_id);
 
-      if (transactions) {
-        const revenue = transactions
+      if (recentTransactions && allTransactions) {
+        const revenue = recentTransactions
           .filter((t) => t.type === "revenue" && t.status === "paid")
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
-        const expenses = transactions
+        const expenses = recentTransactions
           .filter((t) => t.type === "expense" && t.status === "paid")
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
-        const pending = transactions.filter((t) => t.status === "pending").length;
-        const overdue = transactions.filter((t) => t.status === "overdue").length;
+        const pending = allTransactions.filter((t) => t.status === "pending").length;
+        const overdue = allTransactions.filter((t) => t.status === "overdue").length;
 
         // Load bank accounts
         const { data: accounts } = await supabase
