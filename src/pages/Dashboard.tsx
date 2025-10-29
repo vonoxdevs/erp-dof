@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -19,14 +19,10 @@ import {
 import type { User } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 
-// Lazy load do modal para evitar problemas de contexto
-const OverdueTransactionsModal = lazy(() => import("@/components/business/OverdueTransactionsModal"));
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showOverdueModal, setShowOverdueModal] = useState(false);
   const [stats, setStats] = useState({
     totalBalance: 0,
     monthlyRevenue: 0,
@@ -198,10 +194,7 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          <Card 
-            className="p-6 glass border-l-4 border-l-warning hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => setShowOverdueModal(true)}
-          >
+          <Card className="p-6 glass border-l-4 border-l-warning hover:shadow-xl transition-all">
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-warning" />
@@ -215,7 +208,7 @@ const Dashboard = () => {
               {stats.pendingCount} / {stats.overdueCount}
             </p>
             <div className="flex items-center gap-1 text-warning text-sm">
-              <span>Clique para ver detalhes →</span>
+              <span>Requer atenção</span>
             </div>
           </Card>
         </div>
@@ -295,25 +288,6 @@ const Dashboard = () => {
           </div>
         </Card>
       </main>
-
-      {/* Modal de Transações Vencidas */}
-      {showOverdueModal && (
-        <Suspense fallback={
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-background rounded-lg shadow-2xl p-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="text-center mt-4 text-muted-foreground">Carregando...</p>
-            </div>
-          </div>
-        }>
-          <OverdueTransactionsModal 
-            onClose={() => {
-              setShowOverdueModal(false);
-              loadStats(); // Recarregar dados após fechar
-            }}
-          />
-        </Suspense>
-      )}
     </div>
   );
 };

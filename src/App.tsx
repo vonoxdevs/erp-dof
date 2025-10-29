@@ -25,7 +25,6 @@ import AIAssistant from "./pages/AIAssistant";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
 
-// Create QueryClient outside component to avoid recreation
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -37,7 +36,6 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
