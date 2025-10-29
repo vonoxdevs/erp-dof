@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,21 +25,18 @@ import AIAssistant from "./pages/AIAssistant";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
 
+// Create QueryClient outside component to avoid recreation
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
 const App = () => {
-  // Create QueryClient with useMemo to avoid recreation
-  const queryClient = useMemo(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 60 * 1000,
-            refetchOnWindowFocus: false,
-            retry: 1,
-          },
-        },
-      }),
-    []
-  );
 
   return (
     <QueryClientProvider client={queryClient}>
