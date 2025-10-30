@@ -24,6 +24,7 @@ import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
+import OverduePage from "./pages/OverduePage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -58,14 +59,15 @@ const App = () => {
               
               {/* Rotas protegidas com AppLayout */}
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/transactions" element={<Transactions />} />
-                <Route path="/bank-accounts" element={<BankAccounts />} />
-                <Route path="/contracts" element={<Contracts />} />
-                <Route path="/categories" element={<Categories />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/ai-assistant" element={<AIAssistant />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/overdue" element={<OverduePage />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/bank-accounts" element={<BankAccounts />} />
+            <Route path="/contracts" element={<Contracts />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/ai-assistant" element={<AIAssistant />} />
               </Route>
               
               {/* 404 */}

@@ -194,7 +194,10 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-6 glass border-l-4 border-l-warning hover:shadow-xl transition-all">
+          <Card 
+            className="p-6 glass border-l-4 border-l-warning hover:shadow-xl transition-all cursor-pointer"
+            onClick={() => navigate('/dashboard/overdue')}
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-warning" />
@@ -208,7 +211,7 @@ const Dashboard = () => {
               {stats.pendingCount} / {stats.overdueCount}
             </p>
             <div className="flex items-center gap-1 text-warning text-sm">
-              <span>Requer atenção</span>
+              <span>Clique para ver detalhes →</span>
             </div>
           </Card>
         </div>
