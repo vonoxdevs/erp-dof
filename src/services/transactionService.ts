@@ -92,7 +92,7 @@ export async function getTransactions() {
         *,
         category:categories(*),
         contact:contacts(*),
-        bank_account:bank_accounts(*)
+        bank_account:bank_accounts!transactions_bank_account_id_fkey(*)
       `)
       .eq('company_id', company_id)
       .order('due_date', { ascending: false });
@@ -151,7 +151,7 @@ export async function getOverdueTransactions() {
         *,
         category:categories(name, icon, color),
         contact:contacts(name, document),
-        bank_account:bank_accounts(bank_name, account_number)
+        bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number)
       `)
       .eq('company_id', company_id)
       .eq('status', 'pending')
