@@ -9,7 +9,7 @@ import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { sanitizeError } from "@/lib/errorMapping";
-import { convertTransactionsToCSV, downloadCSV } from "@/lib/exportUtils";
+import { exportTransactionsToPDF } from "@/lib/exportUtils";
 
 interface Transaction {
   id: string;
@@ -33,6 +33,7 @@ const Transactions = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [companyName, setCompanyName] = useState<string>("Minha Empresa");
 
   useEffect(() => {
     loadTransactions();
@@ -50,6 +51,15 @@ const Transactions = () => {
         .single();
 
       if (!profile) return;
+
+      // Buscar nome da empresa
+      const { data: company } = await supabase
+        .from("companies")
+        .select("name")
+        .eq("id", profile.company_id)
+        .single();
+
+      if (company) setCompanyName(company.name);
 
       const { data, error } = await supabase
         .from("transactions")
@@ -97,17 +107,9 @@ const Transactions = () => {
         return;
       }
 
-      // Converter para CSV
-      const csvContent = convertTransactionsToCSV(filteredTransactions);
+      exportTransactionsToPDF(filteredTransactions, companyName);
       
-      // Gerar nome do arquivo com data atual
-      const today = new Date().toISOString().split('T')[0];
-      const filename = `transacoes_${today}.csv`;
-      
-      // Fazer download
-      downloadCSV(csvContent, filename);
-      
-      toast.success(`${filteredTransactions.length} transações exportadas com sucesso!`);
+      toast.success(`${filteredTransactions.length} transações exportadas em PDF!`);
     } catch (error) {
       console.error('Erro ao exportar transações:', error);
       toast.error("Erro ao exportar transações");
@@ -197,7 +199,7 @@ const Transactions = () => {
           </Button>
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
-            Exportar
+            Exportar PDF
           </Button>
         </div>
         {showFilters && <TransactionFilters />}
