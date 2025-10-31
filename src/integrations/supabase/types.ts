@@ -630,6 +630,33 @@ export type Database = {
           },
         ]
       }
+      security_audit_metadata: {
+        Row: {
+          applied_at: string | null
+          applied_by: string | null
+          fix_description: string
+          id: string
+          migration_name: string
+          severity: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_by?: string | null
+          fix_description: string
+          id?: string
+          migration_name: string
+          severity: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_by?: string | null
+          fix_description?: string
+          id?: string
+          migration_name?: string
+          severity?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           ai_classification: Json | null
@@ -853,6 +880,13 @@ export type Database = {
         }[]
       }
       get_user_company_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "manager" | "analyst" | "accountant"
