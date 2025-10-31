@@ -24,7 +24,12 @@ const OverduePage = () => {
     refetch: refetchOverdue,
   } = useQuery({
     queryKey: ['overdue-transactions'],
-    queryFn: getOverdueTransactions,
+    queryFn: async () => {
+      console.log('🔍 Fetching overdue transactions...');
+      const result = await getOverdueTransactions();
+      console.log('📊 Overdue data received:', result);
+      return result;
+    },
     staleTime: 30000,
     enabled: activeTab === 'overdue',
   });
@@ -36,7 +41,12 @@ const OverduePage = () => {
     refetch: refetchPending,
   } = useQuery({
     queryKey: ['pending-transactions'],
-    queryFn: getPendingTransactions,
+    queryFn: async () => {
+      console.log('🔍 Fetching pending transactions...');
+      const result = await getPendingTransactions();
+      console.log('📊 Pending data received:', result);
+      return result;
+    },
     staleTime: 30000,
     enabled: activeTab === 'all',
   });
@@ -80,6 +90,15 @@ const OverduePage = () => {
     currentData &&
     currentData.revenues.count === 0 &&
     currentData.expenses.count === 0;
+
+  console.log('🎯 Current state:', {
+    activeTab,
+    isLoading,
+    hasData: !!currentData,
+    hasNoTransactions,
+    revenues: currentData?.revenues,
+    expenses: currentData?.expenses
+  });
 
   if (isLoading) {
     return (
