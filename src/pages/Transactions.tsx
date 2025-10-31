@@ -9,6 +9,7 @@ import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { sanitizeError } from "@/lib/errorMapping";
+import { convertTransactionsToCSV, downloadCSV } from "@/lib/exportUtils";
 
 interface Transaction {
   id: string;
@@ -87,6 +88,30 @@ const Transactions = () => {
     setDialogOpen(false);
     setSelectedTransaction(null);
     if (refresh) loadTransactions();
+  };
+
+  const handleExport = () => {
+    try {
+      if (filteredTransactions.length === 0) {
+        toast.warning("Não há transações para exportar");
+        return;
+      }
+
+      // Converter para CSV
+      const csvContent = convertTransactionsToCSV(filteredTransactions);
+      
+      // Gerar nome do arquivo com data atual
+      const today = new Date().toISOString().split('T')[0];
+      const filename = `transacoes_${today}.csv`;
+      
+      // Fazer download
+      downloadCSV(csvContent, filename);
+      
+      toast.success(`${filteredTransactions.length} transações exportadas com sucesso!`);
+    } catch (error) {
+      console.error('Erro ao exportar transações:', error);
+      toast.error("Erro ao exportar transações");
+    }
   };
 
   const filteredTransactions = transactions.filter((t) =>
@@ -170,7 +195,7 @@ const Transactions = () => {
             <Filter className="w-4 h-4 mr-2" />
             Filtros
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             Exportar
           </Button>
