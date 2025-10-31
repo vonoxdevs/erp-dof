@@ -155,7 +155,7 @@ export async function getOverdueTransactions() {
     `)
     .eq('company_id', company_id)
     .in('status', ['pending', 'overdue'])
-    .lt('due_date', today)
+    .lte('due_date', today)
     .order('due_date', { ascending: true });
 
     if (error) {
@@ -245,7 +245,7 @@ export async function getPendingTransactions() {
       const dueDate = new Date(t.due_date);
       const todayDate = new Date(today);
       const daysOverdue = Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-      const isOverdue = daysOverdue > 0;
+      const isOverdue = daysOverdue >= 0;
       
       let severity: 'warning' | 'danger' | 'critical' | 'on-time';
       if (!isOverdue) severity = 'on-time';
