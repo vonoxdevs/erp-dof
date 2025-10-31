@@ -12,7 +12,7 @@ interface Transaction {
   due_date: string;
   type: 'revenue' | 'expense';
   daysOverdue: number;
-  severity: 'warning' | 'danger' | 'critical';
+  severity: 'warning' | 'danger' | 'critical' | 'on-time';
   partyName: string;
   category?: {
     name: string;
@@ -41,9 +41,15 @@ export function OverdueTransactionItem({
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h4 className="font-semibold text-sm">{transaction.description}</h4>
-          <Badge className={getBadgeClasses(transaction.severity)}>
-            {transaction.daysOverdue} {transaction.daysOverdue === 1 ? 'dia' : 'dias'}
-          </Badge>
+          {transaction.severity === 'on-time' ? (
+            <Badge className="bg-green-100 text-green-800 border-green-300">
+              No prazo
+            </Badge>
+          ) : (
+            <Badge className={getBadgeClasses(transaction.severity)}>
+              {transaction.daysOverdue} {transaction.daysOverdue === 1 ? 'dia' : 'dias'}
+            </Badge>
+          )}
         </div>
 
         <p className={`text-2xl font-bold mb-3 ${valueColorClass}`}>

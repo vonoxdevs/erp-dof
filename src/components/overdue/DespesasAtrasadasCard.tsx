@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { TrendingDown, CheckCircle } from 'lucide-react';
+import { TrendingDown, CheckCircle, AlertCircle } from 'lucide-react';
 import { OverdueTransactionItem } from './OverdueTransactionItem';
 import { formatCurrency, formatDate, OVERDUE_COLORS } from '@/lib/overdueHelpers';
 
@@ -10,6 +10,8 @@ interface OverdueData {
   averageDaysOverdue: number;
   oldestDate: Date | null;
   transactions: any[];
+  countOverdue?: number;
+  countOnTime?: number;
 }
 
 interface DespesasAtrasadasCardProps {
@@ -17,6 +19,8 @@ interface DespesasAtrasadasCardProps {
   onMarkAsPaid: (id: string) => void;
   onEdit: (id: string) => void;
   isMarkingAsPaid?: boolean;
+  title?: string;
+  showBreakdown?: boolean;
 }
 
 export function DespesasAtrasadasCard({
@@ -24,6 +28,8 @@ export function DespesasAtrasadasCard({
   onMarkAsPaid,
   onEdit,
   isMarkingAsPaid = false,
+  title = 'Despesas Atrasadas',
+  showBreakdown = false,
 }: DespesasAtrasadasCardProps) {
   const hasTransactions = data.count > 0;
 
@@ -35,7 +41,7 @@ export function DespesasAtrasadasCard({
             <TrendingDown className="h-6 w-6 text-red-700" />
           </div>
           <div className="flex-1">
-            <CardTitle className="text-red-800">Despesas Atrasadas</CardTitle>
+            <CardTitle className="text-red-800">{title}</CardTitle>
             <p className={`text-2xl font-bold mt-1 ${OVERDUE_COLORS.expense.text}`}>
               {formatCurrency(data.total)}
             </p>
@@ -45,7 +51,22 @@ export function DespesasAtrasadasCard({
           </div>
         </div>
 
-        {hasTransactions && (
+        {hasTransactions && showBreakdown && data.countOnTime !== undefined && data.countOverdue !== undefined && (
+          <div className="mt-4 pt-4 border-t border-red-200">
+            <div className="flex gap-4 text-sm mb-3">
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <span className="text-green-700">{data.countOnTime} no prazo</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <AlertCircle className="h-4 w-4 text-orange-600" />
+                <span className="text-orange-700">{data.countOverdue} vencidas</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasTransactions && !showBreakdown && (
           <div className="mt-4 pt-4 border-t border-red-200 grid grid-cols-2 gap-4 text-sm">
             <div>
               <p className="text-red-600">Média de atraso</p>
