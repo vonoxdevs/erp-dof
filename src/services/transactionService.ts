@@ -145,18 +145,18 @@ export async function getOverdueTransactions() {
     const company_id = await getUserCompanyId();
     const today = new Date().toISOString().split('T')[0];
 
-    const { data, error } = await supabase
-      .from('transactions')
-      .select(`
-        *,
-        category:categories(name, icon, color),
-        contact:contacts(name, document),
-        bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number)
-      `)
-      .eq('company_id', company_id)
-      .eq('status', 'pending')
-      .lt('due_date', today)
-      .order('due_date', { ascending: true });
+  const { data, error } = await supabase
+    .from('transactions')
+    .select(`
+      *,
+      category:categories(name, icon, color),
+      contact:contacts(name, document),
+      bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number)
+    `)
+    .eq('company_id', company_id)
+    .in('status', ['pending', 'overdue'])
+    .lt('due_date', today)
+    .order('due_date', { ascending: true });
 
     if (error) {
       console.error('Erro ao buscar transações vencidas:', error);
@@ -232,7 +232,7 @@ export async function getPendingTransactions() {
         bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number)
       `)
       .eq('company_id', company_id)
-      .eq('status', 'pending')
+      .in('status', ['pending', 'overdue'])
       .order('due_date', { ascending: true });
 
     if (error) {
