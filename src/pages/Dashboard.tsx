@@ -95,9 +95,9 @@ const Dashboard = () => {
 
         const today = new Date().toISOString().split('T')[0];
         
-        const pending = allTransactions.filter((t) => t.status === "pending").length;
+        const pending = allTransactions.filter((t) => t.status === "pending" || t.status === "overdue").length;
         const overdue = allTransactions.filter((t) => 
-          t.status === "pending" && t.due_date < today
+          (t.status === "pending" || t.status === "overdue") && t.due_date < today
         ).length;
 
         // Load bank accounts
