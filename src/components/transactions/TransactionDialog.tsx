@@ -120,6 +120,8 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         status: formData.status,
       });
 
+      console.log('✅ Dados validados:', validationResult);
+
       if (!validationResult.success) {
         const errorMessages = validationResult.error.errors.map(err => err.message).join(", ");
         throw new Error(errorMessages);
@@ -141,6 +143,8 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         contact_id: formData.contact_id || null,
       };
 
+      console.log('💾 Dados a serem salvos:', dataToSave);
+
       if (transaction?.id) {
         // Update
         const { error } = await supabase
@@ -153,6 +157,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         // Create
         const { error } = await supabase.from("transactions").insert([dataToSave]);
         if (error) throw error;
+        console.log('🎉 Transação criada com sucesso');
         toast.success("Transação criada com sucesso!");
       }
       onClose(true);

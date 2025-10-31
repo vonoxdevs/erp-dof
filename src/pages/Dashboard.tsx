@@ -15,6 +15,7 @@ import {
   Receipt,
   Users,
   FileText,
+  Clock,
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
@@ -29,6 +30,7 @@ const Dashboard = () => {
     monthlyExpenses: 0,
     pendingCount: 0,
     overdueCount: 0,
+    pendingRevenue: 0,
   });
 
   useEffect(() => {
@@ -85,8 +87,12 @@ const Dashboard = () => {
         .eq("company_id", profile.company_id);
 
       if (recentTransactions && allTransactions) {
-        const revenue = recentTransactions
+        const paidRevenue = recentTransactions
           .filter((t) => t.type === "revenue" && t.status === "paid")
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const pendingRevenue = allTransactions
+          .filter((t) => t.type === "revenue" && (t.status === "pending" || t.status === "overdue"))
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
         const expenses = recentTransactions
@@ -111,10 +117,11 @@ const Dashboard = () => {
 
         setStats({
           totalBalance,
-          monthlyRevenue: revenue,
+          monthlyRevenue: paidRevenue,
           monthlyExpenses: expenses,
           pendingCount: pending,
           overdueCount: overdue,
+          pendingRevenue,
         });
       }
     } catch (error: any) {
@@ -140,7 +147,7 @@ const Dashboard = () => {
         </div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-slide-up">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 animate-slide-up">
           <Card className="p-6 glass border-l-4 border-l-primary hover:shadow-xl transition-all">
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -169,13 +176,32 @@ const Dashboard = () => {
                 Receitas
               </span>
             </div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Pagas</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Recebidas (30d)</h3>
             <p className="text-3xl font-bold mb-2 text-accent">
               R$ {stats.monthlyRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </p>
             <div className="flex items-center gap-1 text-accent text-sm">
               <ArrowUpRight className="w-4 h-4" />
               <span>Performance positiva</span>
+            </div>
+          </Card>
+
+          <Card className="p-6 glass border-l-4 border-l-info hover:shadow-xl transition-all">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-info" />
+              </div>
+              <span className="text-xs px-2 py-1 rounded-full bg-info/10 text-info font-medium">
+                A Receber
+              </span>
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Pendentes</h3>
+            <p className="text-3xl font-bold mb-2 text-info">
+              R$ {stats.pendingRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </p>
+            <div className="flex items-center gap-1 text-info text-sm">
+              <ArrowUpRight className="w-4 h-4" />
+              <span>Aguardando recebimento</span>
             </div>
           </Card>
 
