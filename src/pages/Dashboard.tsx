@@ -93,12 +93,12 @@ const Dashboard = () => {
           .filter((t) => t.type === "expense" && t.status === "paid")
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
-    const today = new Date().toISOString().split('T')[0];
-    
-    const pending = allTransactions.filter((t) => t.status === "pending").length;
-    const overdue = allTransactions.filter((t) => 
-      t.status === "pending" && t.due_date < today
-    ).length;
+        const today = new Date().toISOString().split('T')[0];
+        
+        const pending = allTransactions.filter((t) => t.status === "pending").length;
+        const overdue = allTransactions.filter((t) => 
+          t.status === "pending" && t.due_date < today
+        ).length;
 
         // Load bank accounts
         const { data: accounts } = await supabase
