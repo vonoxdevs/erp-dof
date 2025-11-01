@@ -505,6 +505,50 @@ export type Database = {
           },
         ]
       }
+      generated_reports: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          file_url: string
+          id: string
+          metadata: Json | null
+          period_end: string
+          period_start: string
+          report_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          file_url: string
+          id?: string
+          metadata?: Json | null
+          period_end: string
+          period_start: string
+          report_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          file_url?: string
+          id?: string
+          metadata?: Json | null
+          period_end?: string
+          period_start?: string
+          report_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       imports: {
         Row: {
           bank_account_id: string
