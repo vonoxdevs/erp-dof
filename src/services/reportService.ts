@@ -53,8 +53,7 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
     .select(`
       *,
       categories (name, color),
-      contacts (name),
-      bank_accounts (bank_name, account_number)
+      contacts (name)
     `)
     .eq('company_id', companyId)
     .gte('due_date', format(startDate, 'yyyy-MM-dd'))
@@ -62,7 +61,12 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
     .order('due_date', { ascending: false });
 
   if (error || !transactions) {
-    console.error('Error fetching transactions:', error);
+    console.error('❌ Error fetching transactions:', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint
+    });
     return null;
   }
 
@@ -250,8 +254,7 @@ export async function getMonthlyReportData(year: number, month: number): Promise
     .select(`
       *,
       categories (name, color),
-      contacts (name),
-      bank_accounts (bank_name, account_number)
+      contacts (name)
     `)
     .eq('company_id', companyId)
     .gte('due_date', format(startDate, 'yyyy-MM-dd'))
@@ -259,7 +262,12 @@ export async function getMonthlyReportData(year: number, month: number): Promise
     .order('due_date', { ascending: false });
 
   if (error || !transactions) {
-    console.error('Error fetching monthly transactions:', error);
+    console.error('❌ Error fetching monthly transactions:', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint
+    });
     return null;
   }
 

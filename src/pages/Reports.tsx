@@ -17,14 +17,21 @@ const Reports = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const loadReportData = async (days: number) => {
     setLoading(true);
+    setError(null);
     try {
       const data = await getReportData(days);
+      if (!data) {
+        setError("Não foi possível carregar os dados do relatório");
+        toast.error("Erro ao carregar relatório");
+      }
       setReportData(data);
-    } catch (error) {
-      console.error('Error loading report data:', error);
+    } catch (err) {
+      console.error('Error loading report data:', err);
+      setError("Erro ao carregar relatório");
       toast.error("Erro ao carregar relatório");
     } finally {
       setLoading(false);
@@ -150,6 +157,12 @@ const Reports = () => {
         </TabsList>
 
         <TabsContent value={selectedPeriod.toString()} className="space-y-6 mt-6">
+          {error && (
+            <Card className="p-6 glass border-destructive">
+              <p className="text-destructive font-semibold">⚠️ {error}</p>
+            </Card>
+          )}
+          
           {reportData && (
             <>
               {/* Cards de Resumo */}
