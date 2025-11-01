@@ -24,6 +24,11 @@ interface Transaction {
   bank_account_id: string | null;
   contact_id: string | null;
   created_at: string;
+  categories?: {
+    name: string;
+    icon?: string;
+    color?: string;
+  } | null;
 }
 
 const Transactions = () => {
@@ -34,6 +39,9 @@ const Transactions = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [companyName, setCompanyName] = useState<string>("Minha Empresa");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   useEffect(() => {
     loadTransactions();
@@ -68,7 +76,10 @@ const Transactions = () => {
 
       const { data, error } = await supabase
         .from("transactions")
-        .select("*")
+        .select(`
+          *,
+          categories(name, icon, color)
+        `)
         .eq("company_id", profile.company_id)
         .order("due_date", { ascending: false });
 
@@ -121,9 +132,14 @@ const Transactions = () => {
     }
   };
 
-  const filteredTransactions = transactions.filter((t) =>
-    t.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTransactions = transactions.filter((t) => {
+    const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = typeFilter === "all" || t.type === typeFilter;
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    const matchesCategory = categoryFilter === "all" || t.category_id === categoryFilter;
+    
+    return matchesSearch && matchesType && matchesStatus && matchesCategory;
+  });
 
   if (loading) {
     return (
@@ -207,7 +223,16 @@ const Transactions = () => {
             Exportar PDF
           </Button>
         </div>
-        {showFilters && <TransactionFilters />}
+        {showFilters && (
+          <TransactionFilters
+            typeFilter={typeFilter}
+            statusFilter={statusFilter}
+            categoryFilter={categoryFilter}
+            onTypeChange={setTypeFilter}
+            onStatusChange={setStatusFilter}
+            onCategoryChange={setCategoryFilter}
+          />
+        )}
       </Card>
 
       {/* Table */}

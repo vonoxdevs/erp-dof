@@ -357,7 +357,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                 </SelectTrigger>
                 <SelectContent>
                   {categories
-                    .filter(cat => cat.type === formData.type || cat.type === 'both')
+                    .filter(cat => cat.type === formData.type)
                     .map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         <div className="flex items-center gap-2">

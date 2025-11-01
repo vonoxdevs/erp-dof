@@ -19,6 +19,11 @@ interface Transaction {
   description: string;
   due_date: string;
   status: "pending" | "paid" | "overdue" | "cancelled";
+  categories?: {
+    name: string;
+    icon?: string;
+    color?: string;
+  } | null;
 }
 
 interface Props {
@@ -83,6 +88,7 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
         <TableRow>
           <TableHead>Tipo</TableHead>
           <TableHead>Descrição</TableHead>
+          <TableHead>Categoria</TableHead>
           <TableHead>Valor</TableHead>
           <TableHead>Vencimento</TableHead>
           <TableHead>Status</TableHead>
@@ -99,6 +105,16 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
               </div>
             </TableCell>
             <TableCell className="font-medium">{transaction.description}</TableCell>
+            <TableCell>
+              {transaction.categories ? (
+                <div className="flex items-center gap-2">
+                  {transaction.categories.icon && <span>{transaction.categories.icon}</span>}
+                  <span className="text-sm">{transaction.categories.name}</span>
+                </div>
+              ) : (
+                <span className="text-muted-foreground text-sm">-</span>
+              )}
+            </TableCell>
             <TableCell>
               <span
                 className={
