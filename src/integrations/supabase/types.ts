@@ -713,6 +713,7 @@ export type Database = {
           contract_id: string | null
           created_at: string | null
           created_by: string | null
+          customer_name: string | null
           deleted_at: string | null
           description: string
           due_date: string
@@ -727,6 +728,7 @@ export type Database = {
           recurring_contract_id: string | null
           reference_number: string | null
           status: string | null
+          supplier_name: string | null
           tags: string[] | null
           total_installments: number | null
           transfer_to_account_id: string | null
@@ -744,6 +746,7 @@ export type Database = {
           contract_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          customer_name?: string | null
           deleted_at?: string | null
           description: string
           due_date: string
@@ -758,6 +761,7 @@ export type Database = {
           recurring_contract_id?: string | null
           reference_number?: string | null
           status?: string | null
+          supplier_name?: string | null
           tags?: string[] | null
           total_installments?: number | null
           transfer_to_account_id?: string | null
@@ -775,6 +779,7 @@ export type Database = {
           contract_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          customer_name?: string | null
           deleted_at?: string | null
           description?: string
           due_date?: string
@@ -789,6 +794,7 @@ export type Database = {
           recurring_contract_id?: string | null
           reference_number?: string | null
           status?: string | null
+          supplier_name?: string | null
           tags?: string[] | null
           total_installments?: number | null
           transfer_to_account_id?: string | null

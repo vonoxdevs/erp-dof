@@ -46,6 +46,16 @@ const transactionSchema = z.object({
   status: z.enum(["pending", "paid", "overdue", "cancelled"], {
     errorMap: () => ({ message: "Status inválido" })
   }),
+  customer_name: z.string()
+    .trim()
+    .max(200, "Nome do cliente deve ter no máximo 200 caracteres")
+    .nullable()
+    .optional(),
+  supplier_name: z.string()
+    .trim()
+    .max(200, "Nome do fornecedor deve ter no máximo 200 caracteres")
+    .nullable()
+    .optional(),
 });
 
 interface Transaction {
@@ -60,6 +70,8 @@ interface Transaction {
   category_id?: string | null;
   bank_account_id?: string | null;
   contact_id?: string | null;
+  customer_name?: string | null;
+  supplier_name?: string | null;
 }
 
 interface Props {
@@ -177,6 +189,8 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         due_date: formData.due_date,
         payment_date: formData.payment_date || null,
         status: formData.status,
+        customer_name: formData.customer_name || null,
+        supplier_name: formData.supplier_name || null,
       });
 
       console.log('✅ Dados validados:', validationResult);
@@ -200,6 +214,8 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         category_id: formData.category_id || null,
         bank_account_id: formData.bank_account_id || null,
         contact_id: formData.contact_id || null,
+        customer_name: validatedData.customer_name || null,
+        supplier_name: validatedData.supplier_name || null,
       };
 
       console.log('💾 Dados a serem salvos:', dataToSave);
@@ -376,34 +392,31 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
             </div>
           </div>
 
-          {(formData.type === 'expense' || formData.type === 'revenue') && (
+          {formData.type === 'expense' && (
             <div className="space-y-2">
-              <Label>
-                {formData.type === 'expense' ? 'Fornecedor' : 'Cliente'}
-              </Label>
-              <Select
-                value={formData.contact_id || ""}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, contact_id: value || null })
+              <Label>Fornecedor</Label>
+              <Input
+                value={formData.supplier_name || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, supplier_name: e.target.value })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={`Selecione um ${formData.type === 'expense' ? 'fornecedor' : 'cliente'}`} />
-                </SelectTrigger>
-                <SelectContent>
-                  {contacts
-                    .filter(contact => 
-                      formData.type === 'expense' 
-                        ? contact.type === 'supplier' || contact.type === 'both'
-                        : contact.type === 'customer' || contact.type === 'both'
-                    )
-                    .map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                placeholder="Digite o nome do fornecedor"
+                maxLength={200}
+              />
+            </div>
+          )}
+
+          {formData.type === 'revenue' && (
+            <div className="space-y-2">
+              <Label>Cliente</Label>
+              <Input
+                value={formData.customer_name || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, customer_name: e.target.value })
+                }
+                placeholder="Digite o nome do cliente"
+                maxLength={200}
+              />
             </div>
           )}
 
