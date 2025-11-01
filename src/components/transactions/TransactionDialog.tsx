@@ -340,7 +340,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                   <SelectValue placeholder="Selecione uma categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
                   {categories
                     .filter(cat => cat.type === formData.type || cat.type === 'both')
                     .map((category) => (
@@ -367,7 +366,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                   <SelectValue placeholder="Selecione uma conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
                   {bankAccounts.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.bank_name} - {account.account_number}
@@ -393,7 +391,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                   <SelectValue placeholder={`Selecione um ${formData.type === 'expense' ? 'fornecedor' : 'cliente'}`} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
                   {contacts
                     .filter(contact => 
                       formData.type === 'expense' 
