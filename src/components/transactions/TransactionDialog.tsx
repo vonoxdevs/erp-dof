@@ -77,8 +77,67 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
     due_date: new Date().toISOString().split("T")[0],
     status: "pending",
   });
+  const [categories, setCategories] = useState<any[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [loadingData, setLoadingData] = useState(false);
+
+  const loadFormData = async () => {
+    setLoadingData(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.company_id) return;
+
+      // Buscar categorias ativas
+      const { data: categoriesData } = await supabase
+        .from("categories")
+        .select("id, name, type, icon, color")
+        .eq("company_id", profile.company_id)
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .order("name");
+
+      // Buscar contas bancárias ativas
+      const { data: accountsData } = await supabase
+        .from("bank_accounts")
+        .select("id, bank_name, account_number")
+        .eq("company_id", profile.company_id)
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .order("bank_name");
+
+      // Buscar contatos ativos
+      const { data: contactsData } = await supabase
+        .from("contacts")
+        .select("id, name, type")
+        .eq("company_id", profile.company_id)
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .order("name");
+
+      setCategories(categoriesData || []);
+      setBankAccounts(accountsData || []);
+      setContacts(contactsData || []);
+    } catch (error) {
+      console.error("Erro ao carregar dados do formulário:", error);
+    } finally {
+      setLoadingData(false);
+    }
+  };
 
   useEffect(() => {
+    if (open) {
+      loadFormData();
+    }
+    
     if (transaction) {
       setFormData(transaction);
     } else {
@@ -177,6 +236,15 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
           </DialogTitle>
         </DialogHeader>
 
+        {loadingData && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">
+              Carregando opções...
+            </span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -258,6 +326,89 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
               />
             </div>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select
+                value={formData.category_id || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, category_id: value || null })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {categories
+                    .filter(cat => cat.type === formData.type || cat.type === 'both')
+                    .map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <div className="flex items-center gap-2">
+                          {category.icon && <span>{category.icon}</span>}
+                          <span>{category.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Conta Bancária</Label>
+              <Select
+                value={formData.bank_account_id || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, bank_account_id: value || null })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhuma</SelectItem>
+                  {bankAccounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.bank_name} - {account.account_number}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {(formData.type === 'expense' || formData.type === 'revenue') && (
+            <div className="space-y-2">
+              <Label>
+                {formData.type === 'expense' ? 'Fornecedor' : 'Cliente'}
+              </Label>
+              <Select
+                value={formData.contact_id || ""}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, contact_id: value || null })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={`Selecione um ${formData.type === 'expense' ? 'fornecedor' : 'cliente'}`} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {contacts
+                    .filter(contact => 
+                      formData.type === 'expense' 
+                        ? contact.type === 'supplier' || contact.type === 'both'
+                        : contact.type === 'customer' || contact.type === 'both'
+                    )
+                    .map((contact) => (
+                      <SelectItem key={contact.id} value={contact.id}>
+                        {contact.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {formData.status === "paid" && (
             <div className="space-y-2">
