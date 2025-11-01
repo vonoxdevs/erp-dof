@@ -93,7 +93,8 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
   const balance = totalRevenue - totalExpenses;
 
   const transactionCount = transactions.length;
-  const averageTicket = transactionCount > 0 ? (totalRevenue + totalExpenses) / transactionCount : 0;
+  const paidRevenueCount = transactions.filter(t => t.type === 'revenue' && t.status === 'paid').length;
+  const averageTicket = paidRevenueCount > 0 ? totalRevenue / paidRevenueCount : 0;
 
   const pendingCount = transactions.filter(t => t.status === 'pending').length;
   const overdueCount = transactions.filter(t => t.status === 'overdue').length;
@@ -291,7 +292,9 @@ export async function getMonthlyReportData(year: number, month: number): Promise
       totalExpenses,
       balance: totalRevenue - totalExpenses,
       transactionCount: transactions.length,
-      averageTicket: transactions.length > 0 ? (totalRevenue + totalExpenses) / transactions.length : 0,
+      averageTicket: transactions.filter(t => t.type === 'revenue' && t.status === 'paid').length > 0 
+        ? totalRevenue / transactions.filter(t => t.type === 'revenue' && t.status === 'paid').length 
+        : 0,
       pendingCount: transactions.filter(t => t.status === 'pending').length,
       overdueCount: transactions.filter(t => t.status === 'overdue').length
     },
