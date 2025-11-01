@@ -66,7 +66,11 @@ const Dashboard = () => {
         .eq("id", user.id)
         .single();
 
-      if (!profile) return;
+      if (!profile || !profile.company_id) {
+        console.error('❌ Usuário sem empresa associada');
+        toast.error('Complete o cadastro da empresa primeiro');
+        return;
+      }
 
       // Calcular data de 30 dias atrás
       const thirtyDaysAgo = new Date();

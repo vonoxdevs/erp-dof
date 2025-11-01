@@ -75,36 +75,8 @@ export const OnboardingForm = () => {
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [loadingCEP, setLoadingCEP] = useState(false);
 
-  // Verificar se email foi confirmado
-  useEffect(() => {
-    checkEmailConfirmation();
-  }, []);
-
-  const checkEmailConfirmation = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        console.log('⚠️ Não autenticado, redirecionando para /auth');
-        toast.error('Você precisa estar autenticado.');
-        navigate('/auth');
-        return;
-      }
-
-      if (!session.user.email_confirmed_at) {
-        console.log('⚠️ Email não confirmado, redirecionando para /auth');
-        toast.error('Por favor, confirme seu email antes de continuar.');
-        navigate('/auth');
-        return;
-      }
-
-      console.log('✅ Email confirmado, pode continuar com onboarding');
-    } catch (err) {
-      console.error('❌ Erro ao verificar email:', err);
-      toast.error('Erro ao verificar autenticação.');
-      navigate('/auth');
-    }
-  };
+  // Não precisa mais de verificação de email aqui
+  // O AuthGuard já garante que o usuário está autenticado
 
   const handleInputChange = (field: string, value: string, formatter?: (v: string) => string) => {
     const formattedValue = formatter ? formatter(value) : value;

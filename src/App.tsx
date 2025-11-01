@@ -54,8 +54,15 @@ const App = () => {
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               
-              {/* Onboarding (requer autenticação) */}
-              <Route path="/onboarding" element={<OnboardingPage />} />
+              {/* Onboarding (requer autenticação mas não empresa) */}
+              <Route 
+                path="/onboarding" 
+                element={
+                  <AuthGuard requireCompany={false}>
+                    <OnboardingPage />
+                  </AuthGuard>
+                } 
+              />
               
               {/* Rotas protegidas com AppLayout */}
               <Route element={<AuthGuard><AppLayout /></AuthGuard>}>

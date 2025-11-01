@@ -64,16 +64,6 @@ export const useOnboarding = () => {
 
       console.log('✅ [Onboarding] Session ativa:', session.user.id);
 
-      // VALIDAÇÃO 2: Verificar se email foi confirmado
-      if (!session.user.email_confirmed_at) {
-        console.error('❌ [Onboarding] Email não confirmado');
-        toast.error('Por favor, confirme seu email antes de continuar.');
-        navigate('/auth');
-        throw new Error('Por favor, confirme seu email antes de continuar.');
-      }
-
-      console.log('✅ [Onboarding] Email confirmado:', session.user.email);
-
       // VALIDAÇÃO 3: Verificar se já tem empresa
       const { data: existingProfile } = await supabase
         .from('user_profiles')
@@ -82,10 +72,10 @@ export const useOnboarding = () => {
         .maybeSingle();
 
       if (existingProfile?.company_id) {
-        console.log('⚠️ [Onboarding] Usuário já tem empresa');
+        console.log('⚠️ [Onboarding] Usuário já tem empresa, redirecionando...');
         toast.info('Você já possui uma empresa cadastrada.');
         navigate('/dashboard');
-        throw new Error('Você já possui uma empresa cadastrada.');
+        return { success: false, error: 'Você já possui uma empresa cadastrada.' };
       }
 
       console.log('✅ [Onboarding] Validações OK, chamando Edge Function...');

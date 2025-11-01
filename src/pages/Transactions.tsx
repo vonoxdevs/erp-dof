@@ -50,7 +50,12 @@ const Transactions = () => {
         .eq("id", user.id)
         .single();
 
-      if (!profile) return;
+      if (!profile || !profile.company_id) {
+        console.error('❌ Usuário sem empresa associada');
+        toast.error('Complete o cadastro da empresa primeiro');
+        setLoading(false);
+        return;
+      }
 
       // Buscar nome da empresa
       const { data: company } = await supabase

@@ -203,19 +203,39 @@ export function useAuth() {
 }
 
 // AuthGuard para proteger rotas
-export function AuthGuard({ children }: { children: ReactNode }) {
-  const { user, loading, initialized, needsOnboarding } = useAuth();
+interface AuthGuardProps {
+  children: ReactNode;
+  requireCompany?: boolean; // Se true, redireciona para onboarding se não tiver empresa
+}
+
+export function AuthGuard({ children, requireCompany = true }: AuthGuardProps) {
+  const { user, loading, initialized, needsOnboarding, profile } = useAuth();
   const navigate = useNavigate();
+  const currentPath = window.location.pathname;
 
   useEffect(() => {
     if (initialized && !loading) {
+      // Se não está autenticado, vai para login
       if (!user) {
         navigate('/login');
-      } else if (needsOnboarding) {
+        return;
+      }
+      
+      // Se requer empresa e precisa de onboarding, vai para onboarding
+      if (requireCompany && needsOnboarding && currentPath !== '/onboarding') {
+        console.log('🔄 Redirecionando para onboarding: usuário sem empresa');
         navigate('/onboarding');
+        return;
+      }
+      
+      // Se está no onboarding mas já tem empresa, vai para dashboard
+      if (currentPath === '/onboarding' && !needsOnboarding && profile?.company_id) {
+        console.log('✅ Usuário já tem empresa, redirecionando para dashboard');
+        navigate('/dashboard');
+        return;
       }
     }
-  }, [initialized, loading, user, needsOnboarding, navigate]);
+  }, [initialized, loading, user, needsOnboarding, requireCompany, navigate, currentPath, profile]);
 
   if (!initialized || loading) {
     return (
@@ -228,7 +248,13 @@ export function AuthGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user || needsOnboarding) {
+  // Se não está autenticado, não renderiza nada (vai redirecionar)
+  if (!user) {
+    return null;
+  }
+  
+  // Se requer empresa mas não tem, não renderiza (vai redirecionar para onboarding)
+  if (requireCompany && needsOnboarding && currentPath !== '/onboarding') {
     return null;
   }
 
