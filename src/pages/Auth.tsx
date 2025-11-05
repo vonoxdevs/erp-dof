@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Loader2, Building2, TrendingUp, Shield, Zap, Mail, CheckCircle2 } from "lucide-react";
+import { Loader2, Building2, TrendingUp, Shield, Zap, Mail, CheckCircle2, Clock } from "lucide-react";
 import { z } from "zod";
 import { sanitizeError } from "@/lib/errorMapping";
+import { EmailConfirmationHelp } from "@/components/auth/EmailConfirmationHelp";
 
 type AuthState = 'signup' | 'signin' | 'confirming' | 'confirmed';
 
@@ -52,6 +53,7 @@ const Auth = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [autoCheckCountdown, setAutoCheckCountdown] = useState(10);
 
   useEffect(() => {
     checkAuth();
@@ -70,6 +72,47 @@ const Auth = () => {
       return () => clearTimeout(timer);
     }
   }, [resendCooldown]);
+
+  // Auto-check de confirmação a cada 10 segundos
+  useEffect(() => {
+    if (authState !== 'confirming') return;
+
+    const autoCheckInterval = setInterval(async () => {
+      console.log('🔄 Auto-verificando confirmação de email...');
+      
+      try {
+        const { data: { session } } = await supabase.auth.refreshSession();
+        
+        if (session?.user?.email_confirmed_at) {
+          console.log('✅ Email confirmado automaticamente!');
+          setAuthState('confirmed');
+          setSuccess('Email confirmado com sucesso! Redirecionando...');
+          toast.success('Email confirmado!', {
+            description: 'Bem-vindo ao LSFIN! 🎉'
+          });
+          
+          setTimeout(() => {
+            navigate('/onboarding');
+          }, 2000);
+        }
+      } catch (err) {
+        console.error('Erro na verificação automática:', err);
+      }
+    }, 10000); // 10 segundos
+
+    // Countdown visual
+    const countdownInterval = setInterval(() => {
+      setAutoCheckCountdown(prev => {
+        if (prev <= 1) return 10;
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(autoCheckInterval);
+      clearInterval(countdownInterval);
+    };
+  }, [authState, navigate]);
 
   const checkAuth = async () => {
     try {
@@ -232,7 +275,10 @@ const Auth = () => {
       // Mudar para estado de confirmação
       setAuthState('confirming');
       setSuccess('Email de confirmação enviado! Verifique sua caixa de entrada.');
-      toast.success('Conta criada! Verifique seu email para confirmar.');
+      toast.success('Conta criada com sucesso!', {
+        description: 'Verifique seu email para confirmar. Não esqueça de olhar o spam! 📧',
+        duration: 6000,
+      });
 
     } catch (err: any) {
       console.error('❌ Erro completo:', err);
@@ -279,7 +325,10 @@ const Auth = () => {
       console.log('✅ Email reenviado com sucesso');
       setSuccess('Email reenviado! Verifique sua caixa de entrada e spam.');
       setResendCooldown(60); // 60 segundos de cooldown
-      toast.success('Email reenviado com sucesso!');
+      toast.success('Email reenviado!', {
+        description: 'Verifique sua caixa de entrada e pasta de spam.',
+        duration: 5000,
+      });
 
     } catch (err: any) {
       console.error('❌ Erro completo:', err);
@@ -339,9 +388,9 @@ const Auth = () => {
   if (authState === 'confirming') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-        <Card className="glass-strong max-w-md w-full p-8">
+        <Card className="glass-strong max-w-2xl w-full p-8">
           <div className="text-center mb-6">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4 animate-pulse">
               <Mail className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-2xl font-bold mb-2">
@@ -350,24 +399,41 @@ const Auth = () => {
             <p className="text-muted-foreground">
               Enviamos um link de confirmação para:
             </p>
-            <p className="text-primary font-semibold mt-2">
+            <p className="text-primary font-semibold mt-2 text-lg">
               {email}
             </p>
           </div>
 
           <div className="space-y-4">
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
-              <p className="text-sm">
-                📧 Verifique sua caixa de entrada e clique no link de confirmação.
-              </p>
-              <p className="text-sm mt-2">
-                ⚠️ Não esqueça de verificar a pasta de spam!
-              </p>
+            {/* Status de Auto-verificação */}
+            <div className="bg-info/10 border border-info/20 rounded-lg p-4 flex items-center gap-3">
+              <Clock className="w-5 h-5 text-info animate-pulse" />
+              <div className="flex-1">
+                <p className="text-sm font-medium">Verificação automática ativa</p>
+                <p className="text-xs text-muted-foreground">
+                  Próxima verificação em {autoCheckCountdown}s
+                </p>
+              </div>
+            </div>
+
+            {/* Instruções Visuais */}
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 space-y-3">
+              <p className="text-sm font-semibold">📋 Passo a passo:</p>
+              <ol className="space-y-2 text-sm pl-4 list-decimal">
+                <li>Abra seu email ({email})</li>
+                <li>Procure o email de <strong>noreply@mail.app.supabase.io</strong></li>
+                <li>⚠️ Verifique a pasta de <strong>Spam</strong> se não encontrar</li>
+                <li>Clique no link de confirmação no email</li>
+                <li>Aguarde o redirecionamento automático</li>
+              </ol>
             </div>
 
             {success && (
-              <div className="bg-success/10 border border-success/20 rounded-lg p-4">
-                <p className="text-sm text-success">{success}</p>
+              <div className="bg-success/10 border border-success/20 rounded-lg p-4 animate-scale-in">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-success" />
+                  <p className="text-sm text-success font-medium">{success}</p>
+                </div>
               </div>
             )}
 
@@ -377,49 +443,60 @@ const Auth = () => {
               </div>
             )}
 
-            <Button
-              onClick={handleCheckConfirmation}
-              disabled={loading}
-              className="w-full"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verificando...
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 className="mr-2 h-4 w-4" />
-                  Já confirmei meu email
-                </>
-              )}
-            </Button>
+            {/* Botões de Ação */}
+            <div className="space-y-2 pt-2">
+              <Button
+                onClick={handleCheckConfirmation}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verificando...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Já confirmei meu email
+                  </>
+                )}
+              </Button>
 
-            <Button
-              onClick={handleResendEmail}
-              disabled={loading || resendCooldown > 0}
-              variant="outline"
-              className="w-full"
-            >
-              {resendCooldown > 0 
-                ? `Reenviar email (${resendCooldown}s)` 
-                : loading 
-                  ? 'Enviando...' 
-                  : 'Reenviar email de confirmação'}
-            </Button>
+              <Button
+                onClick={handleResendEmail}
+                disabled={loading || resendCooldown > 0}
+                variant="outline"
+                className="w-full"
+              >
+                {resendCooldown > 0 
+                  ? `Aguarde ${resendCooldown}s para reenviar` 
+                  : loading 
+                    ? 'Enviando...' 
+                    : 'Reenviar email de confirmação'}
+              </Button>
+            </div>
 
-            <Button
-              onClick={() => {
-                supabase.auth.signOut();
-                setAuthState('signin');
-                setError(null);
-                setSuccess(null);
-              }}
-              variant="ghost"
-              className="w-full"
-            >
-              Voltar para login
-            </Button>
+            {/* Help Section */}
+            <div className="pt-4 border-t border-border">
+              <EmailConfirmationHelp />
+            </div>
+
+            {/* Botão de Logout */}
+            <div className="pt-4">
+              <Button
+                onClick={() => {
+                  supabase.auth.signOut();
+                  setAuthState('signin');
+                  setError(null);
+                  setSuccess(null);
+                }}
+                variant="ghost"
+                className="w-full"
+              >
+                Voltar para login
+              </Button>
+            </div>
           </div>
         </Card>
       </div>

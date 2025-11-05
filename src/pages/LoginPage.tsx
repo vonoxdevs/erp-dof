@@ -175,13 +175,21 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="text-center">
+              <div className="text-center space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Não tem uma conta?{" "}
                   <Link to="/register" className="text-primary hover:underline font-semibold">
                     Criar conta grátis
                   </Link>
                 </p>
+                <Button
+                  type="button"
+                  variant="link"
+                  className="text-xs"
+                  onClick={() => navigate('/auth?tab=confirming')}
+                >
+                  Não recebeu o email de confirmação?
+                </Button>
               </div>
             </form>
           </CardContent>
