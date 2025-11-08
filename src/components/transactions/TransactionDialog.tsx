@@ -19,9 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2, ArrowUpFromLine, ArrowDownToLine, ArrowRightLeft, AlertCircle } from "lucide-react";
 import { z } from "zod";
 import { sanitizeError } from "@/lib/errorMapping";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 // Validation schema
 const transactionSchema = z.object({
@@ -56,7 +60,25 @@ const transactionSchema = z.object({
     .max(200, "Nome do fornecedor deve ter no máximo 200 caracteres")
     .nullable()
     .optional(),
-});
+  account_from_id: z.string().uuid().optional().nullable(),
+  account_to_id: z.string().uuid().optional().nullable(),
+}).refine(
+  (data) => {
+    if (data.type === 'expense') return !!data.account_from_id;
+    if (data.type === 'revenue') return !!data.account_to_id;
+    if (data.type === 'transfer') return !!data.account_from_id && !!data.account_to_id;
+    return true;
+  },
+  { message: "Selecione a(s) conta(s) necessária(s)", path: ["account_from_id"] }
+).refine(
+  (data) => {
+    if (data.type === 'transfer' && data.account_from_id === data.account_to_id) {
+      return false;
+    }
+    return true;
+  },
+  { message: "Contas devem ser diferentes em transferências", path: ["account_to_id"] }
+);
 
 interface Transaction {
   id?: string;
@@ -69,6 +91,8 @@ interface Transaction {
   status: "pending" | "paid" | "overdue" | "cancelled";
   category_id?: string | null;
   bank_account_id?: string | null;
+  account_from_id?: string | null;
+  account_to_id?: string | null;
   contact_id?: string | null;
   customer_name?: string | null;
   supplier_name?: string | null;
@@ -90,9 +114,27 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
     status: "pending",
   });
   const [categories, setCategories] = useState<any[]>([]);
-  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
+  
+  // Usar hook de contas bancárias
+  const { accounts: bankAccounts, isLoading: accountsLoading } = useBankAccounts();
+  
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+  
+  const getNewBalance = (accountId: string | null | undefined, isDebit: boolean) => {
+    if (!accountId || !formData.amount) return null;
+    const account = bankAccounts?.find(acc => acc.id === accountId);
+    if (!account) return null;
+    return isDebit 
+      ? account.current_balance - formData.amount 
+      : account.current_balance + formData.amount;
+  };
 
   const loadFormData = async () => {
     setLoadingData(true);
@@ -117,15 +159,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         .is("deleted_at", null)
         .order("name");
 
-      // Buscar contas bancárias ativas
-      const { data: accountsData } = await supabase
-        .from("bank_accounts")
-        .select("id, bank_name, account_number")
-        .eq("company_id", profile.company_id)
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("bank_name");
-
       // Buscar contatos ativos
       const { data: contactsData } = await supabase
         .from("contacts")
@@ -136,7 +169,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         .order("name");
 
       setCategories(categoriesData || []);
-      setBankAccounts(accountsData || []);
       setContacts(contactsData || []);
     } catch (error) {
       console.error("Erro ao carregar dados do formulário:", error);
@@ -191,6 +223,8 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         status: formData.status,
         customer_name: formData.customer_name || null,
         supplier_name: formData.supplier_name || null,
+        account_from_id: formData.account_from_id || null,
+        account_to_id: formData.account_to_id || null,
       });
 
       console.log('✅ Dados validados:', validationResult);
@@ -216,6 +250,8 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         contact_id: formData.contact_id || null,
         customer_name: validatedData.customer_name || null,
         supplier_name: validatedData.supplier_name || null,
+        account_from_id: validatedData.account_from_id || null,
+        account_to_id: validatedData.account_to_id || null,
       };
 
       console.log('💾 Dados a serem salvos:', dataToSave);
@@ -371,7 +407,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label>Conta Bancária</Label>
+              <Label>Conta Bancária (Legado)</Label>
               <Select
                 value={formData.bank_account_id || ""}
                 onValueChange={(value) =>
@@ -382,7 +418,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                   <SelectValue placeholder="Selecione uma conta" />
                 </SelectTrigger>
                 <SelectContent>
-                  {bankAccounts.map((account) => (
+                  {bankAccounts?.map((account) => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.bank_name} - {account.account_number}
                     </SelectItem>
@@ -391,6 +427,108 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
               </Select>
             </div>
           </div>
+
+          {/* Alerta se não houver contas */}
+          {!accountsLoading && (!bankAccounts || bankAccounts.length === 0) && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Cadastre pelo menos uma conta bancária antes de registrar transações.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Conta Origem - Despesas e Transferências */}
+          {(formData.type === 'expense' || formData.type === 'transfer') && (
+            <Card className="border-destructive/30 bg-destructive/5">
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Conta de Origem (Débito) *
+                  </Label>
+                  <Select 
+                    value={formData.account_from_id || ""}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, account_from_id: value || null })
+                    }
+                    disabled={accountsLoading || !bankAccounts?.length}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta de origem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts?.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex justify-between items-center w-full gap-4">
+                            <span>{account.bank_name} - {account.account_number}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatCurrency(account.current_balance)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.account_from_id && formData.amount && (
+                    <p className={cn(
+                      "text-sm mt-2 font-medium",
+                      getNewBalance(formData.account_from_id, true)! < 0 ? "text-destructive" : "text-foreground"
+                    )}>
+                      Novo saldo: {formatCurrency(getNewBalance(formData.account_from_id, true) || 0)}
+                      {getNewBalance(formData.account_from_id, true)! < 0 && (
+                        <span className="ml-2">(⚠️ Ficará negativo!)</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Conta Destino - Receitas e Transferências */}
+          {(formData.type === 'revenue' || formData.type === 'transfer') && (
+            <Card className="border-accent/30 bg-accent/5">
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Conta de Destino (Crédito) *
+                  </Label>
+                  <Select 
+                    value={formData.account_to_id || ""}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, account_to_id: value || null })
+                    }
+                    disabled={accountsLoading || !bankAccounts?.length}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a conta de destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {bankAccounts?.filter(acc => 
+                        formData.type !== 'transfer' || acc.id !== formData.account_from_id
+                      ).map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex justify-between items-center w-full gap-4">
+                            <span>{account.bank_name} - {account.account_number}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatCurrency(account.current_balance)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.account_to_id && formData.amount && (
+                    <p className="text-sm mt-2 font-medium text-foreground">
+                      Novo saldo: {formatCurrency(getNewBalance(formData.account_to_id, false) || 0)}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {formData.type === 'expense' && (
             <div className="space-y-2">
@@ -437,7 +575,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
             <Button type="button" variant="outline" onClick={() => onClose()}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !bankAccounts?.length}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {transaction ? "Atualizar" : "Criar"}
             </Button>

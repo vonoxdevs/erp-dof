@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, ArrowUpRight, ArrowDownRight, ArrowRightLeft } from "lucide-react";
+import { Edit, Trash2, ArrowUpRight, ArrowDownRight, ArrowRightLeft, Building2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -23,6 +23,16 @@ interface Transaction {
     name: string;
     icon?: string;
     color?: string;
+  } | null;
+  account_from?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
+  account_to?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
   } | null;
 }
 
@@ -89,6 +99,7 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
           <TableHead>Tipo</TableHead>
           <TableHead>Descrição</TableHead>
           <TableHead>Categoria</TableHead>
+          <TableHead>Conta(s)</TableHead>
           <TableHead>Valor</TableHead>
           <TableHead>Vencimento</TableHead>
           <TableHead>Status</TableHead>
@@ -114,6 +125,27 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
               ) : (
                 <span className="text-muted-foreground text-sm">-</span>
               )}
+            </TableCell>
+            <TableCell>
+              <div className="text-xs space-y-1">
+                {transaction.account_from && (
+                  <div className="flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    <span className="text-destructive font-medium">De:</span>
+                    <span>{transaction.account_from.bank_name}</span>
+                  </div>
+                )}
+                {transaction.account_to && (
+                  <div className="flex items-center gap-1">
+                    <Building2 className="h-3 w-3" />
+                    <span className="text-accent font-medium">Para:</span>
+                    <span>{transaction.account_to.bank_name}</span>
+                  </div>
+                )}
+                {!transaction.account_from && !transaction.account_to && (
+                  <span className="text-muted-foreground">-</span>
+                )}
+              </div>
             </TableCell>
             <TableCell>
               <span

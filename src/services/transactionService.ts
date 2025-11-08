@@ -11,6 +11,9 @@ export interface TransactionData {
   category_id?: string | null;
   contact_id?: string | null;
   bank_account_id?: string | null;
+  // Novos campos para sistema de contas duplas
+  account_from_id?: string | null;
+  account_to_id?: string | null;
   notes?: string;
   tags?: string[];
   payment_method?: string;
@@ -92,7 +95,9 @@ export async function getTransactions() {
         *,
         category:categories(*),
         contact:contacts(*),
-        bank_account:bank_accounts!transactions_bank_account_id_fkey(*)
+        bank_account:bank_accounts!transactions_bank_account_id_fkey(*),
+        account_from:bank_accounts!transactions_account_from_id_fkey(id, bank_name, account_number, current_balance),
+        account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number, current_balance)
       `)
       .eq('company_id', company_id)
       .order('due_date', { ascending: false });
@@ -151,7 +156,9 @@ export async function getOverdueTransactions() {
       *,
       category:categories(name, icon, color),
       contact:contacts(name, document),
-      bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number)
+      bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number),
+      account_from:bank_accounts!transactions_account_from_id_fkey(id, bank_name, account_number),
+      account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number)
     `)
     .eq('company_id', company_id)
     .in('status', ['pending', 'overdue'])
@@ -229,7 +236,9 @@ export async function getPendingTransactions() {
         *,
         category:categories(name, icon, color),
         contact:contacts(name, document),
-        bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number)
+        bank_account:bank_accounts!transactions_bank_account_id_fkey(bank_name, account_number),
+        account_from:bank_accounts!transactions_account_from_id_fkey(id, bank_name, account_number),
+        account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number)
       `)
       .eq('company_id', company_id)
       .in('status', ['pending', 'overdue'])

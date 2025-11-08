@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
+import { AccountsBalance } from "@/components/dashboard/AccountsBalance";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -149,6 +150,9 @@ const Dashboard = () => {
           <h2 className="text-3xl font-bold mb-2">Dashboard Executivo</h2>
           <p className="text-muted-foreground">Visão 360° das suas finanças em tempo real</p>
         </div>
+
+        {/* Saldos das Contas Bancárias */}
+        <AccountsBalance />
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 animate-slide-up">

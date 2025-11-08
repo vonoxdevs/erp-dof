@@ -703,6 +703,8 @@ export type Database = {
       }
       transactions: {
         Row: {
+          account_from_id: string | null
+          account_to_id: string | null
           ai_classification: Json | null
           amount: number
           attachments: Json | null
@@ -736,6 +738,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          account_from_id?: string | null
+          account_to_id?: string | null
           ai_classification?: Json | null
           amount: number
           attachments?: Json | null
@@ -769,6 +773,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          account_from_id?: string | null
+          account_to_id?: string | null
           ai_classification?: Json | null
           amount?: number
           attachments?: Json | null
@@ -802,6 +808,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_account_from_id_fkey"
+            columns: ["account_from_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_account_to_id_fkey"
+            columns: ["account_to_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_bank_account_id_fkey"
             columns: ["bank_account_id"]
