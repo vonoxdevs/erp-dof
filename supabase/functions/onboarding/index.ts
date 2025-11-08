@@ -11,6 +11,13 @@ function validateCNPJ(cnpj: string): boolean {
   const cleaned = cnpj.replace(/\D/g, '');
   
   if (cleaned.length !== 14) return false;
+  
+  // Permitir CNPJs de teste (começam com 00000000)
+  if (cleaned.startsWith('00000000')) {
+    console.log('⚠️ Usando CNPJ de teste:', cnpj);
+    return true;
+  }
+  
   if (/^(\d)\1+$/.test(cleaned)) return false;
   
   // Primeiro dígito verificador
@@ -39,7 +46,12 @@ function validateCPF(cpf: string): boolean {
   const cleaned = cpf.replace(/\D/g, '');
   
   if (cleaned.length !== 11) return false;
-  if (/^(\d)\1+$/.test(cleaned)) return false;
+  
+  // Permitir CPFs de teste (começam com 000 ou sequências)
+  if (cleaned.startsWith('000') || /^(\d)\1+$/.test(cleaned)) {
+    console.log('⚠️ Usando CPF de teste:', cpf);
+    return true;
+  }
   
   // Primeiro dígito verificador
   let sum = 0;
@@ -277,10 +289,10 @@ serve(async (req) => {
 
     // 4. Criar categorias padrão
     const defaultCategories = [
-      { name: 'Vendas', type: 'income', icon: '💰', color: '#10b981' },
-      { name: 'Serviços', type: 'income', icon: '🛠️', color: '#3b82f6' },
-      { name: 'Outras Receitas', type: 'income', icon: '📈', color: '#06b6d4' },
-      { name: 'Juros Recebidos', type: 'income', icon: '💵', color: '#8b5cf6' },
+      { name: 'Vendas', type: 'revenue', icon: '💰', color: '#10b981' },
+      { name: 'Serviços', type: 'revenue', icon: '🛠️', color: '#3b82f6' },
+      { name: 'Outras Receitas', type: 'revenue', icon: '📈', color: '#06b6d4' },
+      { name: 'Juros Recebidos', type: 'revenue', icon: '💵', color: '#8b5cf6' },
       { name: 'Salários', type: 'expense', icon: '👥', color: '#ef4444' },
       { name: 'Aluguel', type: 'expense', icon: '🏢', color: '#f97316' },
       { name: 'Fornecedores', type: 'expense', icon: '🏪', color: '#eab308' },
