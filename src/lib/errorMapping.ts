@@ -48,6 +48,23 @@ const errorMappings: ErrorMapping[] = [
     pattern: /User already registered/i,
     message: "Este email já está cadastrado"
   },
+  // Password reset errors
+  {
+    pattern: /User not found|email not found/i,
+    message: "Email não encontrado no sistema"
+  },
+  {
+    pattern: /Password reset too many requests/i,
+    message: "Muitas tentativas. Aguarde alguns minutos antes de tentar novamente"
+  },
+  {
+    pattern: /Invalid recovery token|Token expired/i,
+    message: "Link de recuperação expirado. Solicite um novo"
+  },
+  {
+    pattern: /New password should be different/i,
+    message: "A nova senha deve ser diferente da anterior"
+  },
   // Profile errors
   {
     pattern: /Perfil não encontrado/i,

@@ -7,6 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, TrendingUp, BarChart3, Shield, Zap } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { authService } from "@/services/authService";
+import { sanitizeError } from "@/lib/errorMapping";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -16,6 +26,12 @@ export default function LoginPage() {
     email: "",
     password: "",
   });
+  
+  // Estado do modal de recuperação
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +48,56 @@ export default function LoginPage() {
       // Erro já tratado no hook
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validar email
+    if (!resetEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail)) {
+      toast.error("Por favor, digite um email válido");
+      return;
+    }
+
+    // Verificar cooldown
+    if (cooldown > 0) {
+      toast.error(`Aguarde ${cooldown} segundos antes de enviar novamente`);
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      await authService.resetPassword(resetEmail);
+      
+      toast.success("Email enviado com sucesso!", {
+        description: "Verifique sua caixa de entrada e também a pasta de SPAM",
+        duration: 8000,
+      });
+
+      // Iniciar cooldown de 60 segundos
+      setCooldown(60);
+      const interval = setInterval(() => {
+        setCooldown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Fechar modal após 2 segundos
+      setTimeout(() => {
+        setResetModalOpen(false);
+        setResetEmail("");
+      }, 2000);
+    } catch (error: any) {
+      console.error("Erro ao enviar email de recuperação:", error);
+      toast.error(sanitizeError(error));
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -133,9 +199,75 @@ export default function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-medium">Senha</Label>
-                  <a href="#" className="text-sm text-primary hover:underline">
-                    Esqueceu?
-                  </a>
+                  <Dialog open={resetModalOpen} onOpenChange={setResetModalOpen}>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Esqueceu?
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Recuperar Senha</DialogTitle>
+                        <DialogDescription>
+                          Digite seu email para receber instruções de recuperação de senha
+                        </DialogDescription>
+                      </DialogHeader>
+                      
+                      <form onSubmit={handleResetPassword} className="space-y-4 mt-4">
+                        <div className="space-y-2">
+                          <Input
+                            type="email"
+                            placeholder="seu@email.com"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                            required
+                            disabled={resetLoading}
+                          />
+                        </div>
+
+                        {/* Instruções visuais */}
+                        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                          <p className="text-xs font-medium">📧 Como funciona:</p>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            <li>1. ✅ Digite seu email cadastrado</li>
+                            <li>2. 📨 Receba o link de recuperação</li>
+                            <li>3. 🔍 Verifique também a pasta de SPAM</li>
+                            <li>4. 🔗 Clique no link do email</li>
+                            <li>5. 🔑 Defina sua nova senha</li>
+                          </ul>
+                          <p className="text-xs text-muted-foreground pt-1">
+                            ⚠️ O link expira em 1 hora
+                          </p>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setResetModalOpen(false)}
+                            disabled={resetLoading}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button type="submit" disabled={resetLoading || cooldown > 0}>
+                            {resetLoading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Enviando...
+                              </>
+                            ) : cooldown > 0 ? (
+                              `Aguarde ${cooldown}s`
+                            ) : (
+                              "Enviar Email"
+                            )}
+                          </Button>
+                        </div>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 <Input
                   id="password"

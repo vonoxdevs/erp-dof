@@ -12,6 +12,7 @@ import RegisterPage from "./pages/RegisterPage";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import OnboardingPage from "./pages/OnboardingPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 
 // Páginas protegidas
 import Dashboard from "./pages/Dashboard";
@@ -53,6 +54,7 @@ const App = () => {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Onboarding (requer autenticação mas não empresa) */}
               <Route 
