@@ -32,7 +32,7 @@ export function CategoryTable({ categories, onEdit, onDelete, onToggleActive }: 
   };
 
   const getTypeBadgeVariant = (type: string) => {
-    if (type === "income") return "default";
+    if (type === "revenue") return "default";
     if (type === "expense") return "destructive";
     return "secondary";
   };

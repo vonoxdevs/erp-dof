@@ -67,7 +67,7 @@ export function ContractTable({ contracts, onEdit, onDelete, onGenerateInvoice, 
           <TableRow key={contract.id}>
             <TableCell className="font-medium">{contract.name}</TableCell>
             <TableCell>
-              <Badge variant={contract.type === "income" ? "default" : "destructive"}>
+              <Badge variant={contract.type === "revenue" ? "default" : "destructive"}>
                 {getTypeLabel(contract.type)}
               </Badge>
             </TableCell>

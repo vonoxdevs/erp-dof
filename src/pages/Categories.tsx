@@ -12,7 +12,7 @@ interface Category {
   id: string;
   company_id: string;
   name: string;
-  type: "income" | "expense" | "transfer";
+  type: "revenue" | "expense" | "transfer";
   icon: string | null;
   color: string | null;
   is_active: boolean;
@@ -105,7 +105,7 @@ const Categories = () => {
     .filter((c) => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .filter((c) => typeFilter === "all" || c.type === typeFilter);
 
-  const incomeCategories = categories.filter((c) => c.type === "income");
+  const revenueCategories = categories.filter((c) => c.type === "revenue");
   const expenseCategories = categories.filter((c) => c.type === "expense");
   const transferCategories = categories.filter((c) => c.type === "transfer");
 
@@ -135,7 +135,7 @@ const Categories = () => {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4 glass">
           <p className="text-sm text-muted-foreground">Receitas</p>
-          <p className="text-2xl font-bold text-green-600">{incomeCategories.length}</p>
+          <p className="text-2xl font-bold text-green-600">{revenueCategories.length}</p>
         </Card>
         <Card className="p-4 glass">
           <p className="text-sm text-muted-foreground">Despesas</p>
@@ -172,9 +172,9 @@ const Categories = () => {
               Todas
             </Button>
             <Button
-              variant={typeFilter === "income" ? "default" : "outline"}
+              variant={typeFilter === "revenue" ? "default" : "outline"}
               size="sm"
-              onClick={() => setTypeFilter("income")}
+              onClick={() => setTypeFilter("revenue")}
             >
               Receitas
             </Button>

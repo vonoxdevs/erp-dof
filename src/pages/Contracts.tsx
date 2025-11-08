@@ -102,7 +102,7 @@ const Contracts = () => {
 
   const activeContracts = filteredContracts.filter((c) => c.is_active);
   const totalMonthlyRevenue = activeContracts
-    .filter((c) => c.type === "income")
+    .filter((c) => c.type === "revenue")
     .reduce((acc, c) => acc + Number(c.amount), 0);
 
   if (loading) {

@@ -29,7 +29,7 @@ export function CategoryDialog({ open, onClose, category }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    type: "income",
+    type: "revenue",
     icon: "📁",
     color: "#3B82F6",
     description: "",
@@ -47,7 +47,7 @@ export function CategoryDialog({ open, onClose, category }: Props) {
     } else {
       setFormData({
         name: "",
-        type: "income",
+        type: "revenue",
         icon: "📁",
         color: "#3B82F6",
         description: "",
@@ -104,25 +104,25 @@ export function CategoryDialog({ open, onClose, category }: Props) {
   };
 
   const transactionTypes = [
-    { value: "income", label: "Receita", description: "Entradas de dinheiro" },
+    { value: "revenue", label: "Receita", description: "Entradas de dinheiro" },
     { value: "expense", label: "Despesa", description: "Saídas de dinheiro" },
     { value: "transfer", label: "Transferência", description: "Movimentações entre contas" },
   ];
 
   const iconsByType = {
-    income: ["💰", "📈", "💵", "🤑", "💸", "🏦", "💳", "💴", "💶", "💷"],
+    revenue: ["💰", "📈", "💵", "🤑", "💸", "🏦", "💳", "💴", "💶", "💷"],
     expense: ["💳", "🛒", "🏪", "🏢", "📢", "💻", "👥", "📉", "🔧", "🚗"],
     transfer: ["🔄", "↔️", "💱", "🔀", "⚡", "🔁", "➡️", "⬅️", "🔃", "💫"],
   };
 
   const colorsByType = {
-    income: ["#10b981", "#22c55e", "#16a34a", "#15803d"],
+    revenue: ["#10b981", "#22c55e", "#16a34a", "#15803d"],
     expense: ["#ef4444", "#dc2626", "#f97316", "#ea580c"],
     transfer: ["#3b82f6", "#2563eb", "#8b5cf6", "#7c3aed"],
   };
 
-  const currentIcons = iconsByType[formData.type as keyof typeof iconsByType] || iconsByType.income;
-  const currentColors = colorsByType[formData.type as keyof typeof colorsByType] || colorsByType.income;
+  const currentIcons = iconsByType[formData.type as keyof typeof iconsByType] || iconsByType.revenue;
+  const currentColors = colorsByType[formData.type as keyof typeof colorsByType] || colorsByType.revenue;
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
