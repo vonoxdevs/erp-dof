@@ -10,6 +10,7 @@ interface AuthState {
   user: User | null;
   profile: UserProfile | null;
   company: Company | null;
+  roles: string[];
   loading: boolean;
   initialized: boolean;
   needsOnboarding: boolean;
@@ -21,6 +22,9 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   completeOnboarding: (companyData: CompanyData) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  hasPermission: (module: string, action?: string) => boolean;
+  hasRole: (role: string | string[]) => boolean;
+  isActive: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user: null,
     profile: null,
     company: null,
+    roles: [],
     loading: true,
     initialized: false,
     needsOnboarding: false,
@@ -42,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: null,
         profile: null,
         company: null,
+        roles: [],
         loading: false,
         initialized: true,
         needsOnboarding: false,
@@ -55,10 +61,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Agora: 1 query apenas!
       const status = await authService.checkUserStatus();
       
+      // Buscar roles do usuário
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      
+      const userRoles = rolesData?.map(r => r.role) || [];
+      
       setState({
         user,
         profile: status.profile,
         company: status.company,
+        roles: userRoles,
         loading: false,
         initialized: true,
         needsOnboarding: status.needsOnboarding,
@@ -90,6 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         profile: null,
         company: null,
+        roles: [],
         loading: false,
         initialized: true,
         needsOnboarding: true,
@@ -178,6 +194,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Verificar se usuário tem permissão para módulo/ação
+  const hasPermission = (module: string, action: string = 'read'): boolean => {
+    if (!state.profile) return false;
+    
+    // Admin tem acesso total
+    if (state.roles.includes('admin')) return true;
+    
+    const permissions = state.profile.permissions as any;
+    const modules = permissions?.modules || {};
+    const actions = permissions?.actions || {};
+    
+    return modules[module] && actions[action];
+  };
+
+  // Verificar se usuário tem role específica
+  const hasRole = (role: string | string[]): boolean => {
+    if (Array.isArray(role)) {
+      return role.some(r => state.roles.includes(r));
+    }
+    return state.roles.includes(role);
+  };
+
+  // Verificar se conta está ativa
+  const isActive = (): boolean => {
+    return (state.profile as any)?.is_active === true;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -187,6 +230,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         completeOnboarding,
         refreshProfile,
+        hasPermission,
+        hasRole,
+        isActive,
       }}
     >
       {children}

@@ -23,9 +23,11 @@ import Categories from "./pages/Categories";
 import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
+import UsersPage from "./pages/UsersPage";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
 import OverduePage from "./pages/OverduePage";
+import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -77,6 +79,14 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
+            <Route 
+              path="/users" 
+              element={
+                <ProtectedRoute roles={['admin', 'moderator']}>
+                  <UsersPage />
+                </ProtectedRoute>
+              } 
+            />
               </Route>
               
               {/* 404 */}

@@ -8,6 +8,7 @@ import {
   BarChart3,
   MessageSquare,
   User,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -20,6 +21,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@/hooks/useAuth";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -38,6 +40,7 @@ const supportItems = [
 export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
+  const { hasRole } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -86,6 +89,25 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Section */}
+        {hasRole(['admin', 'moderator']) && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administração</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/users" className={getNavClass("/users")}>
+                      <Users className="w-4 h-4" />
+                      {open && <span>Usuários</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
