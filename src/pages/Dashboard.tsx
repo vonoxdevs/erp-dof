@@ -4,23 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import {
-  TrendingUp,
-  TrendingDown,
-  DollarSign,
-  Building2,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight,
-  Receipt,
-  Users,
-  FileText,
-  Clock,
-} from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Building2, Calendar, ArrowUpRight, ArrowDownRight, Receipt, Users, FileText, Clock } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 import { AccountsBalance } from "@/components/dashboard/AccountsBalance";
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -31,11 +18,14 @@ const Dashboard = () => {
     monthlyExpenses: 0,
     pendingCount: 0,
     overdueCount: 0,
-    pendingRevenue: 0,
+    pendingRevenue: 0
   });
-
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({
+      data: {
+        session
+      }
+    }) => {
       if (!session) {
         navigate("/auth");
       } else {
@@ -44,29 +34,30 @@ const Dashboard = () => {
         setLoading(false);
       }
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: {
+        subscription
+      }
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         navigate("/auth");
       } else if (session) {
         setUser(session.user);
       }
     });
-
     return () => subscription.unsubscribe();
   }, [navigate]);
-
   const loadStats = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("company_id")
-        .eq("id", user.id)
-        .single();
-
+      const {
+        data: profile
+      } = await supabase.from("user_profiles").select("company_id").eq("id", user.id).single();
       if (!profile || !profile.company_id) {
         console.error('❌ Usuário sem empresa associada');
         toast.error('Complete o cadastro da empresa primeiro');
@@ -79,72 +70,46 @@ const Dashboard = () => {
       const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
 
       // Load transactions dos últimos 30 dias para receitas e despesas
-      const { data: recentTransactions } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("company_id", profile.company_id)
-        .gte("due_date", dateFilter);
+      const {
+        data: recentTransactions
+      } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id).gte("due_date", dateFilter);
 
       // Load todas as transações para pendentes/vencidas
-      const { data: allTransactions } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("company_id", profile.company_id);
-
+      const {
+        data: allTransactions
+      } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id);
       if (recentTransactions && allTransactions) {
-        const paidRevenue = recentTransactions
-          .filter((t) => t.type === "revenue" && t.status === "paid")
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const pendingRevenue = allTransactions
-          .filter((t) => t.type === "revenue" && (t.status === "pending" || t.status === "overdue"))
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
-        const expenses = recentTransactions
-          .filter((t) => t.type === "expense" && t.status === "paid")
-          .reduce((sum, t) => sum + Number(t.amount), 0);
-
+        const paidRevenue = recentTransactions.filter(t => t.type === "revenue" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
+        const pendingRevenue = allTransactions.filter(t => t.type === "revenue" && (t.status === "pending" || t.status === "overdue")).reduce((sum, t) => sum + Number(t.amount), 0);
+        const expenses = recentTransactions.filter(t => t.type === "expense" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
         const today = new Date().toISOString().split('T')[0];
-        
-        const pending = allTransactions.filter((t) => t.status === "pending" || t.status === "overdue").length;
-        const overdue = allTransactions.filter((t) => 
-          (t.status === "pending" || t.status === "overdue") && t.due_date < today
-        ).length;
+        const pending = allTransactions.filter(t => t.status === "pending" || t.status === "overdue").length;
+        const overdue = allTransactions.filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today).length;
 
         // Load bank accounts
-        const { data: accounts } = await supabase
-          .from("bank_accounts")
-          .select("current_balance")
-          .eq("company_id", profile.company_id)
-          .eq("is_active", true);
-
+        const {
+          data: accounts
+        } = await supabase.from("bank_accounts").select("current_balance").eq("company_id", profile.company_id).eq("is_active", true);
         const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.current_balance), 0) || 0;
-
         setStats({
           totalBalance,
           monthlyRevenue: paidRevenue,
           monthlyExpenses: expenses,
           pendingCount: pending,
           overdueCount: overdue,
-          pendingRevenue,
+          pendingRevenue
         });
       }
     } catch (error: any) {
       console.error("Error loading stats:", error);
     }
   };
-
-
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <main className="container mx-auto px-6 py-8">
         <div className="mb-8 animate-fade-in">
           <h2 className="text-3xl font-bold mb-2">Dashboard Executivo</h2>
@@ -167,7 +132,9 @@ const Dashboard = () => {
             </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-1">Saldo Total</h3>
             <p className="text-3xl font-bold mb-2">
-              R$ {stats.totalBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {stats.totalBalance.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2
+            })}
             </p>
             <div className="flex items-center gap-1 text-accent text-sm">
               <ArrowUpRight className="w-4 h-4" />
@@ -186,7 +153,9 @@ const Dashboard = () => {
             </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Recebidas (30d)</h3>
             <p className="text-3xl font-bold mb-2 text-accent">
-              R$ {stats.monthlyRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {stats.monthlyRevenue.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2
+            })}
             </p>
             <div className="flex items-center gap-1 text-accent text-sm">
               <ArrowUpRight className="w-4 h-4" />
@@ -205,7 +174,9 @@ const Dashboard = () => {
             </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Pendentes</h3>
             <p className="text-3xl font-bold mb-2 text-info">
-              R$ {stats.pendingRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {stats.pendingRevenue.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2
+            })}
             </p>
             <div className="flex items-center gap-1 text-info text-sm">
               <ArrowUpRight className="w-4 h-4" />
@@ -224,7 +195,9 @@ const Dashboard = () => {
             </div>
             <h3 className="text-sm font-medium text-muted-foreground mb-1">Despesas Pagas</h3>
             <p className="text-3xl font-bold mb-2 text-destructive">
-              R$ {stats.monthlyExpenses.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {stats.monthlyExpenses.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2
+            })}
             </p>
             <div className="flex items-center gap-1 text-muted-foreground text-sm">
               <ArrowDownRight className="w-4 h-4" />
@@ -232,10 +205,7 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          <Card 
-            className="p-6 glass border-l-4 border-l-warning hover:shadow-xl transition-all cursor-pointer"
-            onClick={() => navigate('/dashboard/overdue')}
-          >
+          <Card className="p-6 glass border-l-4 border-l-warning hover:shadow-xl transition-all cursor-pointer" onClick={() => navigate('/dashboard/overdue')}>
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-warning" />
@@ -263,7 +233,7 @@ const Dashboard = () => {
                   <Receipt className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-1">Transações</h3>
+                  <h3 className="font-semibold mb-1">Inserir Transações</h3>
                   <p className="text-sm text-muted-foreground">Gerenciar receitas e despesas</p>
                 </div>
               </div>
@@ -329,8 +299,6 @@ const Dashboard = () => {
           </div>
         </Card>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Dashboard;
