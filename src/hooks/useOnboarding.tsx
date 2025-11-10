@@ -94,15 +94,18 @@ export const useOnboarding = () => {
       });
 
       console.log('📥 [Onboarding] Resposta da função:', result);
+      console.log('📥 [Onboarding] Erro da função:', functionError);
 
-      // Verificar erros no resultado primeiro (mais específico)
+      // Quando a edge function retorna status 400, o Supabase coloca o corpo da resposta em 'result'
+      // e o erro genérico em 'functionError'
       if (result?.error) {
         console.error('❌ [Onboarding] Erro no resultado:', result.error);
+        // Priorizar 'details' se existir, senão usar 'error'
         const errorMessage = result.details || result.error;
         throw new Error(errorMessage);
       }
 
-      // Se houver erro na chamada da função
+      // Se houver erro na chamada da função mas não tem result.error
       if (functionError) {
         console.error('❌ [Onboarding] Erro da função:', functionError);
         throw new Error(functionError.message || 'Erro ao processar onboarding.');
