@@ -270,34 +270,7 @@ const Dashboard = () => {
         </div>
 
         {/* System Status */}
-        <Card className="p-8 text-center glass-strong animate-fade-in">
-          <div className="max-w-2xl mx-auto">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <TrendingUp className="w-8 h-8 text-white" />
-            </div>
-            <h3 className="text-2xl font-bold mb-2">Sistema Operacional</h3>
-            <p className="text-muted-foreground mb-4">
-              Todas as funcionalidades principais estão ativas e prontas para uso
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium">
-                ✓ Transações
-              </span>
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium">
-                ✓ Contas Bancárias
-              </span>
-              <span className="px-3 py-1 rounded-full bg-accent/10 text-accent text-sm font-medium">
-                ✓ Assistente IA
-              </span>
-              <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm font-medium">
-                → Categorias (em breve)
-              </span>
-              <span className="px-3 py-1 rounded-full bg-muted text-muted-foreground text-sm font-medium">
-                → Relatórios (em breve)
-              </span>
-            </div>
-          </div>
-        </Card>
+        
       </main>
     </div>;
 };
