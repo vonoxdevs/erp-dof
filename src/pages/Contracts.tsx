@@ -7,6 +7,7 @@ import { Plus, Search, FileText, Send } from "lucide-react";
 import { toast } from "sonner";
 import { ContractDialog } from "@/components/contracts/ContractDialog";
 import { ContractTable } from "@/components/contracts/ContractTable";
+import { calculateMRR } from "@/lib/recurringCalculations";
 
 interface Contract {
   id: string;
@@ -101,9 +102,7 @@ const Contracts = () => {
   );
 
   const activeContracts = filteredContracts.filter((c) => c.is_active);
-  const totalMonthlyRevenue = activeContracts
-    .filter((c) => c.type === "revenue")
-    .reduce((acc, c) => acc + Number(c.amount), 0);
+  const totalMonthlyRevenue = calculateMRR(contracts);
 
   if (loading) {
     return (
