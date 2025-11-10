@@ -43,7 +43,20 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
+      // Detectar senha padrão antes de fazer login
+      const isDefaultPassword = formData.password === "Admin123@";
+      
       await login(formData.email, formData.password);
+      
+      // Se login foi bem-sucedido e senha é padrão, redirecionar para mudança de senha
+      if (isDefaultPassword) {
+        toast.warning("Senha padrão detectada!", {
+          description: "Por segurança, você deve alterar sua senha agora."
+        });
+        setTimeout(() => {
+          navigate('/forced-password-change');
+        }, 1500);
+      }
     } catch (error) {
       // Erro já tratado no hook
     } finally {

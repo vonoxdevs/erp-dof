@@ -163,6 +163,9 @@ const Auth = () => {
         throw new Error(errorMessages);
       }
 
+      // Detectar senha padrão antes de fazer login
+      const isDefaultPassword = password === "Admin123@";
+
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: validationResult.data.email,
         password: validationResult.data.password,
@@ -185,6 +188,18 @@ const Auth = () => {
         console.log('⚠️ Email ainda não confirmado');
         setAuthState('confirming');
         setSuccess('Verifique seu email para confirmar a conta antes de continuar.');
+        return;
+      }
+
+      // Se senha é padrão, redirecionar para mudança obrigatória
+      if (isDefaultPassword) {
+        console.log('⚠️ Senha padrão detectada, redirecionando para mudança de senha');
+        toast.warning("Senha padrão detectada!", {
+          description: "Por segurança, você deve alterar sua senha agora."
+        });
+        setTimeout(() => {
+          navigate('/forced-password-change');
+        }, 1500);
         return;
       }
 
