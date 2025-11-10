@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { sanitizeError } from "@/lib/errorMapping";
 import { RecurringTransactionDialog } from "@/components/transactions/RecurringTransactionDialog";
+import { calculateMRR, calculateMonthlyExpenses } from "@/lib/recurringCalculations";
 
 interface RecurringContract {
   id: string;
@@ -164,23 +165,67 @@ export default function RecurringTransactions() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Total Ativas</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Total Ativas</p>
+            <Repeat className="w-4 h-4 text-muted-foreground" />
+          </div>
           <p className="text-2xl font-bold">
             {contracts.filter(c => c.is_active).length}
           </p>
-        </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Receitas Recorrentes</p>
-          <p className="text-2xl font-bold text-accent">
-            {contracts.filter(c => c.type === "revenue" && c.is_active).length}
+          <p className="text-xs text-muted-foreground mt-1">
+            contratos recorrentes
           </p>
         </Card>
-        <Card className="p-4">
-          <p className="text-sm text-muted-foreground">Despesas Recorrentes</p>
+        <Card className="p-4 border-l-4 border-l-accent">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Receitas Recorrentes (MRR)</p>
+            <TrendingUp className="w-4 h-4 text-accent" />
+          </div>
+          <p className="text-2xl font-bold text-accent">
+            R$ {calculateMRR(contracts).toLocaleString("pt-BR", { 
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2 
+            })}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {contracts.filter(c => c.type === "revenue" && c.is_active).length} contratos • por mês
+          </p>
+        </Card>
+        <Card className="p-4 border-l-4 border-l-destructive">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Despesas Recorrentes</p>
+            <TrendingDown className="w-4 h-4 text-destructive" />
+          </div>
           <p className="text-2xl font-bold text-destructive">
-            {contracts.filter(c => c.type === "expense" && c.is_active).length}
+            R$ {calculateMonthlyExpenses(contracts).toLocaleString("pt-BR", { 
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2 
+            })}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {contracts.filter(c => c.type === "expense" && c.is_active).length} contratos • por mês
+          </p>
+        </Card>
+        <Card className="p-4 border-l-4 border-l-primary">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-muted-foreground">Balanço Recorrente</p>
+            <TrendingUp className="w-4 h-4 text-primary" />
+          </div>
+          <p className={`text-2xl font-bold ${
+            (calculateMRR(contracts) - calculateMonthlyExpenses(contracts)) >= 0 
+              ? 'text-accent' 
+              : 'text-destructive'
+          }`}>
+            R$ {(calculateMRR(contracts) - calculateMonthlyExpenses(contracts))
+              .toLocaleString("pt-BR", { 
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2 
+              })}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Receitas - Despesas mensais
           </p>
         </Card>
       </div>
