@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Loader2, Building2, TrendingUp, Shield, Zap, Mail, CheckCircle2, Clock } from "lucide-react";
 import { z } from "zod";
 import { sanitizeError } from "@/lib/errorMapping";
 import { EmailConfirmationHelp } from "@/components/auth/EmailConfirmationHelp";
 
-type AuthState = 'signup' | 'signin' | 'confirming' | 'confirmed';
+type AuthState = 'signin' | 'confirming' | 'confirmed';
 
 // Validation schemas
 const signInSchema = z.object({
@@ -26,30 +25,12 @@ const signInSchema = z.object({
     .max(72, "A senha deve ter no máximo 72 caracteres"),
 });
 
-const signUpSchema = z.object({
-  fullName: z.string()
-    .trim()
-    .min(1, "Nome completo é obrigatório")
-    .max(100, "Nome deve ter no máximo 100 caracteres"),
-  email: z.string()
-    .trim()
-    .min(1, "Email é obrigatório")
-    .email("Email inválido")
-    .max(255, "Email deve ter no máximo 255 caracteres"),
-  password: z.string()
-    .min(6, "A senha deve ter no mínimo 6 caracteres")
-    .max(72, "A senha deve ter no máximo 72 caracteres"),
-});
-
 const Auth = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [authState, setAuthState] = useState<AuthState>('signup');
+  const [authState, setAuthState] = useState<AuthState>('signin');
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
@@ -57,12 +38,6 @@ const Auth = () => {
 
   useEffect(() => {
     checkAuth();
-    
-    // Verificar se há erro na URL (redirect do callback)
-    const errorParam = searchParams.get('error');
-    if (errorParam) {
-      setError(decodeURIComponent(errorParam));
-    }
   }, []);
 
   // Cooldown para reenviar email
@@ -231,82 +206,6 @@ const Auth = () => {
         setAuthState('confirming');
       } else {
         setError(err.message || 'Erro ao fazer login. Tente novamente.');
-      }
-      toast.error(sanitizeError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      // Validações
-      if (password.length < 6) {
-        throw new Error('A senha deve ter no mínimo 6 caracteres');
-      }
-
-      if (password !== confirmPassword) {
-        throw new Error('As senhas não coincidem');
-      }
-
-      console.log('🚀 Criando conta para:', email);
-
-      const validationResult = signUpSchema.safeParse({ fullName, email, password });
-
-      if (!validationResult.success) {
-        const errorMessages = validationResult.error.errors.map(err => err.message).join(", ");
-        throw new Error(errorMessages);
-      }
-
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: validationResult.data.email,
-        password: validationResult.data.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            full_name: validationResult.data.fullName,
-            email_confirmed: false
-          },
-        },
-      });
-
-      if (signUpError) {
-        console.error('❌ Erro no signup:', signUpError);
-        throw signUpError;
-      }
-
-      if (!data.user) {
-        throw new Error('Erro ao criar usuário');
-      }
-
-      console.log('✅ Conta criada:', data.user.id);
-      console.log('📧 Email de confirmação enviado para:', email);
-
-      // Mudar para estado de confirmação
-      setAuthState('confirming');
-      setSuccess('Email de confirmação enviado! Verifique sua caixa de entrada.');
-      toast.success('Conta criada com sucesso!', {
-        description: 'Verifique seu email para confirmar. Não esqueça de olhar o spam! 📧',
-        duration: 6000,
-      });
-
-    } catch (err: any) {
-      console.error('❌ Erro completo:', err);
-      
-      // Mensagens de erro amigáveis
-      if (err.message?.includes('already registered')) {
-        setError('Este email já está cadastrado. Tente fazer login.');
-      } else if (err.message?.includes('invalid email')) {
-        setError('Email inválido. Verifique e tente novamente.');
-      } else if (err.message?.includes('weak password')) {
-        setError('Senha muito fraca. Use no mínimo 6 caracteres.');
-      } else {
-        setError(err.message || 'Erro ao criar conta. Tente novamente.');
       }
       toast.error(sanitizeError(err));
     } finally {
@@ -498,18 +397,16 @@ const Auth = () => {
             </div>
 
             {/* Botão de Logout */}
-            <div className="pt-4">
+            <div className="pt-2">
               <Button
-                onClick={() => {
-                  supabase.auth.signOut();
-                  setAuthState('signin');
-                  setError(null);
-                  setSuccess(null);
-                }}
                 variant="ghost"
                 className="w-full"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  navigate('/login');
+                }}
               >
-                Voltar para login
+                Sair e voltar ao login
               </Button>
             </div>
           </div>
@@ -518,6 +415,7 @@ const Auth = () => {
     );
   }
 
+  // Normal render: Login form
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
@@ -578,164 +476,67 @@ const Auth = () => {
           </div>
         </div>
 
-        {/* Right side - Auth Form */}
+        {/* Right side - Login Form */}
         <Card className="glass-strong p-8 animate-scale-in">
-          <Tabs value={authState === 'signin' || authState === 'signup' ? authState : 'signin'} onValueChange={(value) => {
-            setAuthState(value as 'signin' | 'signup');
-            setError(null);
-            setSuccess(null);
-            setConfirmPassword('');
-          }} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-8">
-              <TabsTrigger value="signin">Entrar</TabsTrigger>
-              <TabsTrigger value="signup">Criar Conta</TabsTrigger>
-            </TabsList>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold mb-2">Entrar</h2>
+            <p className="text-muted-foreground">Entre com suas credenciais para acessar sua conta</p>
+          </div>
 
-            <TabsContent value="signin">
-              <form onSubmit={handleSignIn} className="space-y-6">
-                {error && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                    <p className="text-destructive text-sm">{error}</p>
-                  </div>
-                )}
+          <form onSubmit={handleSignIn} className="space-y-6">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                <p className="text-destructive text-sm">{error}</p>
+              </div>
+            )}
 
-                {success && (
-                  <div className="bg-success/10 border border-success/20 rounded-lg p-3">
-                    <p className="text-success text-sm">{success}</p>
-                  </div>
-                )}
+            {success && (
+              <div className="bg-success/10 border border-success/20 rounded-lg p-3">
+                <p className="text-success text-sm">{success}</p>
+              </div>
+            )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="signin-email">Email</Label>
-                  <Input
-                    id="signin-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="signin-email">Email</Label>
+              <Input
+                id="signin-email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signin-password">Senha</Label>
-                  <Input
-                    id="signin-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="signin-password">Senha</Label>
+              <Input
+                id="signin-password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+              />
+            </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Entrando...
-                    </>
-                  ) : (
-                    "Entrar"
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-6">
-                {error && (
-                  <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                    <p className="text-destructive text-sm">{error}</p>
-                  </div>
-                )}
-
-                {success && (
-                  <div className="bg-success/10 border border-success/20 rounded-lg p-3">
-                    <p className="text-success text-sm">{success}</p>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Nome Completo</Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Senha</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    minLength={6}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Mínimo 6 caracteres
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password">Confirmar Senha</Label>
-                  <Input
-                    id="signup-confirm-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    disabled={loading}
-                    minLength={6}
-                  />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Criando conta...
-                    </>
-                  ) : (
-                    "Criar Conta"
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                "Entrar"
+              )}
+            </Button>
+          </form>
         </Card>
       </div>
     </div>

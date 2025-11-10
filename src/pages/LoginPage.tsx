@@ -309,24 +309,7 @@ export default function LoginPage() {
                 )}
               </Button>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">
-                    Novo por aqui?
-                  </span>
-                </div>
-              </div>
-
-              <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Não tem uma conta?{" "}
-                  <Link to="/register" className="text-primary hover:underline font-semibold">
-                    Criar conta grátis
-                  </Link>
-                </p>
+              <div className="text-center mt-2">
                 <Button
                   type="button"
                   variant="link"

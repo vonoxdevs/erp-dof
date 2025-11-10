@@ -70,10 +70,7 @@ export default function HomePage() {
             {/* Desktop CTA */}
             <div className="hidden md:flex items-center gap-3">
               <Link to="/login">
-                <Button variant="outline">Entrar</Button>
-              </Link>
-              <Link to="/register">
-                <Button>Começar Grátis</Button>
+                <Button>Acessar Sistema</Button>
               </Link>
             </div>
 
@@ -109,10 +106,7 @@ export default function HomePage() {
                   Preços
                 </button>
                 <Link to="/login" className="w-full">
-                  <Button variant="outline" className="w-full">Entrar</Button>
-                </Link>
-                <Link to="/register" className="w-full">
-                  <Button className="w-full">Começar Grátis</Button>
+                  <Button className="w-full">Acessar Sistema</Button>
                 </Link>
               </div>
             </div>
@@ -146,9 +140,9 @@ export default function HomePage() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/register">
+                <Link to="/login">
                   <Button size="lg" className="w-full sm:w-auto">
-                    Criar Conta Grátis
+                    Acessar Sistema
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
@@ -374,9 +368,9 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/register">
+            <Link to="/login">
               <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                Criar Conta Grátis
+                Acessar Sistema
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
