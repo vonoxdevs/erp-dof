@@ -374,13 +374,15 @@ export default function HomePage() {
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="w-full sm:w-auto bg-transparent text-white border-white hover:bg-white/10"
-            >
-              Falar com Vendas
-            </Button>
+            <a href="https://wa.me/5518996667483" target="_blank" rel="noopener noreferrer">
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="w-full sm:w-auto bg-transparent text-white border-white hover:bg-white/10"
+              >
+                Falar com Vendas
+              </Button>
+            </a>
           </div>
         </div>
       </section>
