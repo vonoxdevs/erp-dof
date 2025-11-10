@@ -29,6 +29,13 @@ interface Transaction {
   bank_account_id: string | null;
   contact_id: string | null;
   created_at: string;
+  customer_name?: string | null;
+  supplier_name?: string | null;
+  account_from_id?: string | null;
+  account_to_id?: string | null;
+  transfer_to_account_id?: string | null;
+  is_recurring?: boolean;
+  recurrence_config?: any;
   categories?: {
     name: string;
     icon?: string;
