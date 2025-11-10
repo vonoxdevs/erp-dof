@@ -22,7 +22,7 @@ import { calculateMRR, calculateMonthlyExpenses } from "@/lib/recurringCalculati
 interface RecurringContract {
   id: string;
   name: string;
-  type: "revenue" | "expense";
+  type: "revenue" | "expense" | "income";
   amount: number;
   frequency: string;
   start_date: string;
@@ -259,7 +259,7 @@ export default function RecurringTransactions() {
                   <TableCell className="font-medium">{contract.name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {contract.type === "revenue" ? (
+                      {(contract.type === "revenue" || contract.type === "income") ? (
                         <>
                           <TrendingUp className="w-4 h-4 text-accent" />
                           <span>Receita</span>
