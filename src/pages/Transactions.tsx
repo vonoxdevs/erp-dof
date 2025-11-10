@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -55,6 +56,7 @@ interface Transaction {
 }
 
 const Transactions = () => {
+  const queryClient = useQueryClient();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -132,6 +134,12 @@ const Transactions = () => {
     try {
       const { error } = await supabase.from("transactions").delete().eq("id", id);
       if (error) throw error;
+      
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+      ]);
+      
       toast.success("Transação excluída com sucesso!");
       loadTransactions();
     } catch (error: any) {

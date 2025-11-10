@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -105,6 +106,7 @@ interface Props {
 }
 
 export function TransactionDialog({ open, onClose, transaction }: Props) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Partial<Transaction>>({
     type: "expense",
@@ -263,11 +265,23 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
           .update(dataToSave)
           .eq("id", transaction.id);
         if (error) throw error;
+        
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+          queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+        ]);
+        
         toast.success("Transação atualizada com sucesso!");
       } else {
         // Create
         const { error } = await supabase.from("transactions").insert([dataToSave]);
         if (error) throw error;
+        
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+          queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+        ]);
+        
         console.log('🎉 Transação criada com sucesso');
         toast.success("Transação criada com sucesso!");
       }

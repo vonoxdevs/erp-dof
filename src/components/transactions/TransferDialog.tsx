@@ -124,7 +124,10 @@ export function TransferDialog({ open, onClose }: Props) {
       const { error } = await supabase.from("transactions").insert([dataToSave]);
       if (error) throw error;
 
-      await queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+      ]);
       toast.success("Transferência criada com sucesso!");
       onClose(true);
     } catch (error: any) {
