@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 
 interface Contract {
   id: string;
@@ -19,6 +20,7 @@ interface Contract {
   start_date: string;
   end_date: string | null;
   is_active: boolean;
+  bank_account_id: string | null;
 }
 
 interface Props {
@@ -29,6 +31,8 @@ interface Props {
 
 export function ContractDialog({ open, onClose, contract }: Props) {
   const [loading, setLoading] = useState(false);
+  const { accounts, isLoading: loadingAccounts } = useBankAccounts();
+  
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -38,6 +42,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
     start_date: "",
     end_date: "",
     is_active: true,
+    bank_account_id: "",
   });
 
   useEffect(() => {
@@ -51,6 +56,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         start_date: contract.start_date,
         end_date: contract.end_date || "",
         is_active: contract.is_active,
+        bank_account_id: contract.bank_account_id || "",
       });
     } else {
       setFormData({
@@ -62,6 +68,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         start_date: new Date().toISOString().split("T")[0],
         end_date: "",
         is_active: true,
+        bank_account_id: "",
       });
     }
   }, [contract, open]);
@@ -81,6 +88,11 @@ export function ContractDialog({ open, onClose, contract }: Props) {
     
     if (!formData.start_date) {
       toast.error("Data de início é obrigatória");
+      return;
+    }
+    
+    if (!formData.bank_account_id) {
+      toast.error("Selecione uma conta bancária para receber as receitas");
       return;
     }
     
@@ -136,7 +148,8 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         is_active: formData.is_active,
         auto_generate: true,
         generation_day: 1,
-        next_generation_date: formData.start_date, // Adicionar data de próxima geração
+        next_generation_date: formData.start_date,
+        bank_account_id: formData.bank_account_id,
       };
 
       console.log("Dados do contrato a serem salvos:", contractData);
@@ -271,6 +284,27 @@ export function ContractDialog({ open, onClose, contract }: Props) {
                 required
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bank_account_id">Conta Bancária *</Label>
+            <Select
+              value={formData.bank_account_id}
+              onValueChange={(value) => setFormData({ ...formData, bank_account_id: value })}
+              disabled={loadingAccounts}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={loadingAccounts ? "Carregando..." : "Selecione a conta"} />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts?.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.bank_name} - {account.account_number}
+                    {account.account_digit && `-${account.account_digit}`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
