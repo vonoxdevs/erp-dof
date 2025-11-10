@@ -88,7 +88,7 @@ const Auth = () => {
           setAuthState('confirmed');
           setSuccess('Email confirmado com sucesso! Redirecionando...');
           toast.success('Email confirmado!', {
-            description: 'Bem-vindo ao LSFIN! 🎉'
+            description: 'Bem-vindo ao ERP Financeiro DOF! 🎉'
           });
           
           setTimeout(() => {
@@ -526,7 +526,7 @@ const Auth = () => {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
               <Building2 className="w-5 h-5 text-primary" />
-              <span className="text-sm font-medium text-primary">LSFIN v2.0</span>
+              <span className="text-sm font-medium text-primary">ERP Financeiro DOF</span>
             </div>
             <h1 className="text-5xl font-bold tracking-tight">
               O ERP Financeiro

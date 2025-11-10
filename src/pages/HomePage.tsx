@@ -41,7 +41,7 @@ export default function HomePage() {
                 <TrendingUp className="w-6 h-6 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                LSFIN ERP
+                ERP Financeiro DOF
               </span>
             </Link>
 
@@ -317,7 +317,7 @@ export default function HomePage() {
             {/* Left Side */}
             <div className="space-y-8">
               <div className="space-y-4">
-                <h2 className="text-4xl font-bold">Por que escolher o LSFIN ERP?</h2>
+                <h2 className="text-4xl font-bold">Por que escolher o ERP Financeiro DOF?</h2>
                 <p className="text-xl text-muted-foreground">
                   A solução completa para transformar a gestão financeira da sua empresa
                 </p>
@@ -401,7 +401,7 @@ export default function HomePage() {
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                   <TrendingUp className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-xl font-bold text-white">LSFIN ERP</span>
+                <span className="text-xl font-bold text-white">ERP Financeiro DOF</span>
               </div>
               <p className="text-sm">
                 Gestão financeira inteligente para empresas que querem crescer.
@@ -444,7 +444,7 @@ export default function HomePage() {
 
           {/* Bottom Footer */}
           <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm">© 2024 LSFIN ERP. Todos os direitos reservados.</p>
+            <p className="text-sm">© 2024 ERP Financeiro DOF. Todos os direitos reservados.</p>
             <div className="flex gap-4">
               <a href="#" className="hover:text-white transition-colors">Facebook</a>
               <a href="#" className="hover:text-white transition-colors">Twitter</a>

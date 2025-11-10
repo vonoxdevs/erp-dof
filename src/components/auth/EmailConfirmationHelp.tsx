@@ -115,7 +115,7 @@ export const EmailConfirmationHelp = () => {
 
       <div className="bg-muted/50 border border-border rounded-lg p-4">
         <p className="text-sm text-muted-foreground">
-          <strong>Ainda com problemas?</strong> Entre em contato com o suporte através do chat ou email: suporte@lsfin.com.br
+          <strong>Ainda com problemas?</strong> Entre em contato com o suporte através do chat ou email: suporte@dof.com.br
         </p>
       </div>
     </div>

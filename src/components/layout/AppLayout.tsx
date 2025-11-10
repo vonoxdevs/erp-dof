@@ -65,7 +65,7 @@ const AppLayout = () => {
                   )}
                 </div>
                 <div className="hidden sm:block">
-                  <h1 className="text-lg font-bold">{company?.name || "LSFIN v2.0"}</h1>
+                  <h1 className="text-lg font-bold">{company?.name || "ERP Financeiro DOF"}</h1>
                   <p className="text-xs text-muted-foreground">ERP Financeiro Corporativo</p>
                 </div>
               </div>

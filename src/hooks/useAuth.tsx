@@ -174,7 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, loading: true }));
       await authService.completeOnboarding(state.user.id, companyData);
-      toast.success('Onboarding concluído! Bem-vindo ao LSFIN ERP!');
+      toast.success('Onboarding concluído! Bem-vindo ao ERP Financeiro DOF!');
       
       // Recarregar perfil
       await loadUserProfile(state.user);

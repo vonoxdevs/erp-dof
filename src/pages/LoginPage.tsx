@@ -129,7 +129,7 @@ export default function LoginPage() {
             </div>
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                LSFIN ERP
+                ERP Financeiro DOF
               </h1>
               <p className="text-sm text-muted-foreground">Gestão Financeira Inteligente</p>
             </div>

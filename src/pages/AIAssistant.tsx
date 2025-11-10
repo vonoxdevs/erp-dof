@@ -15,7 +15,7 @@ const AIAssistant = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Olá! Sou o assistente financeiro do LSFIN v2.0. Como posso ajudar você hoje? Posso analisar suas transações, fornecer insights sobre fluxo de caixa, ou responder questões sobre suas finanças.",
+      content: "Olá! Sou o assistente financeiro do ERP Financeiro DOF. Como posso ajudar você hoje? Posso analisar suas transações, fornecer insights sobre fluxo de caixa, ou responder questões sobre suas finanças.",
     },
   ]);
   const [input, setInput] = useState("");
