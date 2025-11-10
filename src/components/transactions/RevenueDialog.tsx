@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ interface Props {
 }
 
 export function RevenueDialog({ open, onClose }: Props) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
@@ -153,6 +155,7 @@ export function RevenueDialog({ open, onClose }: Props) {
       const { error } = await supabase.from("transactions").insert([dataToSave]);
       if (error) throw error;
 
+      await queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
       toast.success("Receita criada com sucesso!");
       onClose(true);
     } catch (error: any) {
