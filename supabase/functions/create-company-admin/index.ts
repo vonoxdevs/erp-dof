@@ -123,7 +123,9 @@ serve(async (req) => {
           cnpj: company.cnpj,
           email: company.email || null,
           phone: company.phone || null,
-          is_active: true
+          is_active: true,
+          address: null,
+          responsible: null
         })
         .select()
         .single();
