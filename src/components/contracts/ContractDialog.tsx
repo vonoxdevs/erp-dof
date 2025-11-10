@@ -82,16 +82,23 @@ export function ContractDialog({ open, onClose, contract }: Props) {
 
       if (!profile?.company_id) throw new Error("Empresa não encontrada");
 
+      const amount = parseFloat(formData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error("Valor inválido");
+      }
+
       const contractData = {
         company_id: profile.company_id,
-        name: formData.name,
-        description: formData.description || null,
+        name: formData.name.trim(),
+        description: formData.description?.trim() || null,
         type: formData.type,
-        amount: parseFloat(formData.amount),
+        amount: amount,
         frequency: formData.frequency,
         start_date: formData.start_date,
         end_date: formData.end_date || null,
         is_active: formData.is_active,
+        auto_generate: true,
+        generation_day: 1,
       };
 
       if (contract) {
@@ -99,18 +106,25 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           .from("contracts")
           .update(contractData)
           .eq("id", contract.id);
-        if (error) throw error;
+        if (error) {
+          console.error("Erro ao atualizar contrato:", error);
+          throw error;
+        }
         toast.success("Contrato atualizado com sucesso!");
       } else {
         const { error } = await supabase
           .from("contracts")
           .insert(contractData);
-        if (error) throw error;
+        if (error) {
+          console.error("Erro ao criar contrato:", error);
+          throw error;
+        }
         toast.success("Contrato criado com sucesso!");
       }
 
       onClose(true);
     } catch (error: any) {
+      console.error("Erro no handleSubmit:", error);
       toast.error(error.message || "Erro ao salvar contrato");
     } finally {
       setLoading(false);
