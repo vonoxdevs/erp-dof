@@ -32,7 +32,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    type: "revenue",
+    type: "income",
     amount: "",
     frequency: "monthly",
     start_date: "",
@@ -56,7 +56,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       setFormData({
         name: "",
         description: "",
-        type: "revenue",
+        type: "income",
         amount: "",
         frequency: "monthly",
         start_date: new Date().toISOString().split("T")[0],
@@ -241,7 +241,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="revenue">Receita</SelectItem>
+                  <SelectItem value="income">Receita</SelectItem>
                   <SelectItem value="expense">Despesa</SelectItem>
                 </SelectContent>
               </Select>
@@ -271,10 +271,10 @@ export function ContractDialog({ open, onClose, contract }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="daily">Diário</SelectItem>
+                  <SelectItem value="weekly">Semanal</SelectItem>
                   <SelectItem value="monthly">Mensal</SelectItem>
-                  <SelectItem value="quarterly">Trimestral</SelectItem>
-                  <SelectItem value="semiannual">Semestral</SelectItem>
-                  <SelectItem value="annual">Anual</SelectItem>
+                  <SelectItem value="yearly">Anual</SelectItem>
                 </SelectContent>
               </Select>
             </div>
