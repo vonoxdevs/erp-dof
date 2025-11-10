@@ -32,6 +32,26 @@ interface Transaction {
     icon?: string;
     color?: string;
   } | null;
+  bank_accounts?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
+  bank_account?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
+  account_from?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
+  account_to?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
 }
 
 const Transactions = () => {
@@ -84,7 +104,10 @@ const Transactions = () => {
         .from("transactions")
         .select(`
           *,
-          categories(name, icon, color)
+          categories(name, icon, color),
+          bank_account:bank_accounts!bank_account_id(id, bank_name, account_number),
+          account_from:bank_accounts!account_from_id(id, bank_name, account_number),
+          account_to:bank_accounts!account_to_id(id, bank_name, account_number)
         `)
         .eq("company_id", profile.company_id)
         .order("due_date", { ascending: false });

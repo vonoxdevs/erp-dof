@@ -24,6 +24,11 @@ interface Transaction {
     icon?: string;
     color?: string;
   } | null;
+  bank_account?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
   account_from?: {
     id: string;
     bank_name: string;
@@ -128,21 +133,34 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
             </TableCell>
             <TableCell>
               <div className="text-xs space-y-1">
-                {transaction.account_from && (
-                  <div className="flex items-center gap-1">
-                    <Building2 className="h-3 w-3" />
-                    <span className="text-destructive font-medium">De:</span>
-                    <span>{transaction.account_from.bank_name}</span>
-                  </div>
+                {transaction.type === "transfer" ? (
+                  <>
+                    {transaction.account_from && (
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        <span className="text-destructive font-medium">De:</span>
+                        <span>{transaction.account_from.bank_name}</span>
+                      </div>
+                    )}
+                    {transaction.account_to && (
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        <span className="text-accent font-medium">Para:</span>
+                        <span>{transaction.account_to.bank_name}</span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {transaction.bank_account && (
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-3 w-3" />
+                        <span>{transaction.bank_account.bank_name}</span>
+                      </div>
+                    )}
+                  </>
                 )}
-                {transaction.account_to && (
-                  <div className="flex items-center gap-1">
-                    <Building2 className="h-3 w-3" />
-                    <span className="text-accent font-medium">Para:</span>
-                    <span>{transaction.account_to.bank_name}</span>
-                  </div>
-                )}
-                {!transaction.account_from && !transaction.account_to && (
+                {!transaction.bank_account && !transaction.account_from && !transaction.account_to && (
                   <span className="text-muted-foreground">-</span>
                 )}
               </div>
