@@ -238,14 +238,14 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
 
       const validatedData = validationResult.data;
 
-      const dataToSave = {
+      // Preparar dados base
+      const baseData = {
         type: validatedData.type,
         amount: validatedData.amount,
         description: validatedData.description,
         due_date: validatedData.due_date,
         status: validatedData.status,
         company_id: profile.company_id,
-        created_by: user.id,
         payment_date: validatedData.payment_date || null,
         category_id: formData.category_id || null,
         bank_account_id: formData.bank_account_id || null,
@@ -256,33 +256,68 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         account_to_id: validatedData.account_to_id || null,
       };
 
+      // Adicionar created_by apenas na criação
+      const dataToSave = transaction?.id 
+        ? baseData 
+        : { ...baseData, created_by: user.id };
+
       console.log('💾 Dados a serem salvos:', dataToSave);
 
       if (transaction?.id) {
-        // Update
-        const { error } = await supabase
+        // Atualizar transação existente
+        const { data, error } = await supabase
           .from("transactions")
           .update(dataToSave)
-          .eq("id", transaction.id);
-        if (error) throw error;
+          .eq("id", transaction.id)
+          .eq("company_id", profile.company_id) // Garantir company isolation
+          .select();
+        
+        if (error) {
+          console.error("Erro ao atualizar transação:", error);
+          throw new Error(`Erro ao atualizar: ${error.message || error.details || "Erro desconhecido"}`);
+        }
+        
+        if (!data || data.length === 0) {
+          throw new Error("Transação não encontrada ou sem permissão para editar");
+        }
         
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
           queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
         ]);
         
+        console.log('✅ Transação atualizada:', data);
         toast.success("Transação atualizada com sucesso!");
       } else {
-        // Create
-        const { error } = await supabase.from("transactions").insert([dataToSave]);
-        if (error) throw error;
+        // Criar nova transação
+        const { data, error } = await supabase
+          .from("transactions")
+          .insert([dataToSave])
+          .select();
+        
+        if (error) {
+          console.error("Erro ao criar transação:", error);
+          
+          // Mensagens de erro específicas
+          if (error.message?.includes("violates row-level security policy")) {
+            throw new Error("Você não tem permissão para criar transações");
+          } else if (error.message?.includes("company_id")) {
+            throw new Error("Empresa não encontrada. Faça logout e login novamente.");
+          } else {
+            throw new Error(`Erro ao criar: ${error.message || error.details || "Erro desconhecido"}`);
+          }
+        }
+        
+        if (!data || data.length === 0) {
+          throw new Error("Erro ao criar transação: resposta vazia do servidor");
+        }
         
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
           queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
         ]);
         
-        console.log('🎉 Transação criada com sucesso');
+        console.log('🎉 Transação criada com sucesso:', data);
         toast.success("Transação criada com sucesso!");
       }
       onClose(true);

@@ -110,50 +110,86 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         return;
       }
 
+      // Validar campos obrigatórios
+      if (!formData.name.trim()) {
+        toast.error("Nome do contrato é obrigatório");
+        setLoading(false);
+        return;
+      }
+
+      const amount = parseFloat(formData.amount);
+      if (isNaN(amount) || amount <= 0) {
+        toast.error("Valor deve ser maior que zero");
+        setLoading(false);
+        return;
+      }
+
       const contractData = {
         company_id: profile.company_id,
         name: formData.name.trim(),
         description: formData.description?.trim() || null,
         type: formData.type,
-        amount: parseFloat(formData.amount),
+        amount: amount,
         frequency: formData.frequency,
         start_date: formData.start_date,
         end_date: formData.end_date || null,
         is_active: formData.is_active,
         auto_generate: true,
         generation_day: 1,
+        next_generation_date: formData.start_date, // Adicionar data de próxima geração
       };
 
       console.log("Dados do contrato a serem salvos:", contractData);
 
       if (contract) {
+        // Atualizar contrato existente
         const { data, error } = await supabase
           .from("contracts")
           .update(contractData)
           .eq("id", contract.id)
+          .eq("company_id", profile.company_id) // Garantir company isolation
           .select();
         
         if (error) {
-          console.error("Erro detalhado ao atualizar:", error);
-          toast.error(`Erro ao atualizar: ${error.message}`);
+          console.error("Erro detalhado ao atualizar contrato:", error);
+          toast.error(`Erro ao atualizar contrato: ${error.message || error.details || "Erro desconhecido"}`);
           return;
         }
         
-        console.log("Contrato atualizado:", data);
+        if (!data || data.length === 0) {
+          toast.error("Contrato não encontrado ou sem permissão para editar");
+          return;
+        }
+        
+        console.log("Contrato atualizado com sucesso:", data);
         toast.success("Contrato atualizado com sucesso!");
       } else {
+        // Criar novo contrato
         const { data, error } = await supabase
           .from("contracts")
-          .insert(contractData)
+          .insert([contractData])
           .select();
         
         if (error) {
-          console.error("Erro detalhado ao criar:", error);
-          toast.error(`Erro ao criar: ${error.message}`);
+          console.error("Erro detalhado ao criar contrato:", error);
+          
+          // Mensagens de erro específicas
+          if (error.message?.includes("violates row-level security policy")) {
+            toast.error("Você não tem permissão para criar contratos");
+          } else if (error.message?.includes("company_id")) {
+            toast.error("Empresa não encontrada. Faça logout e login novamente.");
+          } else {
+            toast.error(`Erro ao criar contrato: ${error.message || error.details || "Erro desconhecido"}`);
+          }
           return;
         }
         
-        console.log("Contrato criado:", data);
+        if (!data || data.length === 0) {
+          toast.error("Erro ao criar contrato: resposta vazia do servidor");
+          return;
+        }
+        
+        console.log("Contrato criado com sucesso:", data);
         toast.success("Contrato criado com sucesso!");
       }
 
