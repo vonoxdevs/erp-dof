@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft, Repeat } from "lucide-react";
+import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft, Repeat, Calendar as CalendarIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
@@ -15,6 +15,11 @@ import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { sanitizeError } from "@/lib/errorMapping";
 import { exportTransactionsToPDF } from "@/lib/exportUtils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface Transaction {
   id: string;
@@ -78,6 +83,8 @@ const Transactions = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     loadTransactions();
@@ -193,7 +200,20 @@ const Transactions = () => {
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     const matchesCategory = categoryFilter === "all" || t.category_id === categoryFilter;
     
-    return matchesSearch && matchesType && matchesStatus && matchesCategory;
+    // Filtro de período
+    let matchesPeriod = true;
+    if (startDate || endDate) {
+      const transactionDate = new Date(t.due_date);
+      if (startDate && endDate) {
+        matchesPeriod = transactionDate >= startDate && transactionDate <= endDate;
+      } else if (startDate) {
+        matchesPeriod = transactionDate >= startDate;
+      } else if (endDate) {
+        matchesPeriod = transactionDate <= endDate;
+      }
+    }
+    
+    return matchesSearch && matchesType && matchesStatus && matchesCategory && matchesPeriod;
   });
 
   if (loading) {
@@ -266,38 +286,111 @@ const Transactions = () => {
 
       {/* Filters and Search */}
       <Card className="p-4 glass">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar transações..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar transações..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filtros
+            </Button>
+            <Button variant="outline" onClick={handleExport}>
+              <Download className="w-4 h-4 mr-2" />
+              Exportar PDF
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filtros
-          </Button>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
-            Exportar PDF
-          </Button>
+
+          {/* Filtro de Período */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <span className="text-sm font-medium whitespace-nowrap">Filtrar por período:</span>
+            <div className="flex flex-wrap gap-2 items-center">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground">até</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(startDate || endDate) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStartDate(undefined);
+                    setEndDate(undefined);
+                  }}
+                >
+                  <X className="h-4 w-4 mr-1" />
+                  Limpar período
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {showFilters && (
+            <TransactionFilters
+              typeFilter={typeFilter}
+              statusFilter={statusFilter}
+              categoryFilter={categoryFilter}
+              onTypeChange={setTypeFilter}
+              onStatusChange={setStatusFilter}
+              onCategoryChange={setCategoryFilter}
+            />
+          )}
         </div>
-        {showFilters && (
-          <TransactionFilters
-            typeFilter={typeFilter}
-            statusFilter={statusFilter}
-            categoryFilter={categoryFilter}
-            onTypeChange={setTypeFilter}
-            onStatusChange={setStatusFilter}
-            onCategoryChange={setCategoryFilter}
-          />
-        )}
       </Card>
 
       {/* Table */}
