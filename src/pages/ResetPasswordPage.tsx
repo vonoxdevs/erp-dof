@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Lock, CheckCircle2 } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Eye, EyeOff, Lock, CheckCircle2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { authService } from "@/services/authService";
 import { sanitizeError } from "@/lib/errorMapping";
 
 const ResetPasswordPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     password: "",
     confirmPassword: "",
@@ -17,7 +20,56 @@ const ResetPasswordPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isValidToken, setIsValidToken] = useState(false);
+  const [checkingToken, setCheckingToken] = useState(true);
   const [passwordStrength, setPasswordStrength] = useState<"weak" | "medium" | "strong">("weak");
+
+  // Verificar se há um token válido na URL
+  useEffect(() => {
+    const checkRecoveryToken = async () => {
+      try {
+        // Verificar se há parâmetros de recuperação na URL
+        const hashParams = new URLSearchParams(location.hash.slice(1));
+        const type = hashParams.get('type');
+        
+        if (type === 'recovery') {
+          // Verificar se o usuário está autenticado (token válido)
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            setIsValidToken(true);
+          } else {
+            toast({
+              title: "Link inválido ou expirado",
+              description: "Solicite um novo link de recuperação de senha",
+              variant: "destructive",
+            });
+            setTimeout(() => navigate("/login"), 3000);
+          }
+        } else {
+          // Se não há token de recuperação, redirecionar para login
+          toast({
+            title: "Link de recuperação necessário",
+            description: "Use o link enviado por email para redefinir sua senha",
+            variant: "destructive",
+          });
+          setTimeout(() => navigate("/login"), 3000);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar token:", error);
+        toast({
+          title: "Erro ao verificar link",
+          description: "Tente solicitar um novo link de recuperação",
+          variant: "destructive",
+        });
+        setTimeout(() => navigate("/login"), 3000);
+      } finally {
+        setCheckingToken(false);
+      }
+    };
+
+    checkRecoveryToken();
+  }, [location, navigate]);
 
   useEffect(() => {
     // Calcular força da senha
@@ -115,6 +167,45 @@ const ResetPasswordPage = () => {
     }
   };
 
+  if (checkingToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Verificando link de recuperação...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isValidToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-2 text-center">
+            <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-2">
+              <AlertCircle className="w-6 h-6 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl">Link Inválido</CardTitle>
+            <CardDescription>
+              O link de recuperação está inválido ou expirado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => navigate("/login")} 
+              className="w-full"
+            >
+              Voltar para Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <Card className="w-full max-w-md">
@@ -129,6 +220,12 @@ const ResetPasswordPage = () => {
         </CardHeader>
 
         <CardContent>
+          <Alert className="mb-4">
+            <AlertDescription className="text-sm">
+              Você está redefinindo sua senha. Após concluir, use a nova senha para fazer login.
+            </AlertDescription>
+          </Alert>
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Nova senha */}
             <div className="space-y-2">
