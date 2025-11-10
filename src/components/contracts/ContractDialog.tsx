@@ -193,6 +193,19 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         toast.success("Contrato criado com sucesso!");
       }
 
+      // Gera automaticamente as transações recorrentes
+      toast.info("Gerando transações recorrentes...");
+      const { error: generateError } = await supabase.functions.invoke(
+        "generate-recurring-transactions"
+      );
+
+      if (generateError) {
+        console.error("Erro ao gerar transações:", generateError);
+        toast.warning("Contrato salvo, mas houve erro ao gerar transações");
+      } else {
+        toast.success("Transações geradas e saldos atualizados!");
+      }
+
       onClose(true);
     } catch (error: any) {
       console.error("Erro inesperado:", error);
