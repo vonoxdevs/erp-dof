@@ -218,7 +218,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verificar se conta está ativa
   const isActive = (): boolean => {
-    return (state.profile as any)?.is_active === true;
+    // Super admins sempre têm acesso
+    if (state.roles.includes('super_admin')) return true;
+    
+    // Verificar se a empresa está ativa
+    if (state.company && !(state.company as any).is_active) return false;
+    
+    return true;
   };
 
   return (
