@@ -11,7 +11,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Repeat, Edit, Trash2, Play, Pause, TrendingUp, TrendingDown } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Repeat, Edit, Trash2, Play, Pause, TrendingUp, TrendingDown, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +38,7 @@ interface RecurringContract {
   auto_generate: boolean;
   next_generation_date: string | null;
   last_generated_date: string | null;
+  bank_account_id: string | null;
   categories?: {
     name: string;
     icon?: string;
@@ -125,11 +132,39 @@ export default function RecurringTransactions() {
   const generateNow = async () => {
     try {
       setLoading(true);
+      
+      // Verificar contratos ativos sem conta bancária antes de gerar
+      const contractsWithoutAccount = contracts.filter(
+        c => c.is_active && !c.bank_account_id
+      );
+      
+      if (contractsWithoutAccount.length > 0) {
+        toast.error(
+          `${contractsWithoutAccount.length} contrato(s) não pode(m) gerar transações: conta bancária não definida`,
+          { duration: 5000 }
+        );
+      }
+
       const { data, error } = await supabase.functions.invoke('generate-recurring-transactions');
 
       if (error) throw error;
 
-      toast.success(`${data.transactions} transações geradas de ${data.contracts} contratos`);
+      if (data.transactions === 0 && data.contracts === 0) {
+        if (contractsWithoutAccount.length > 0) {
+          toast.warning(
+            'Nenhuma transação foi gerada. Verifique se os contratos possuem conta bancária definida.',
+            { duration: 5000 }
+          );
+        } else {
+          toast.info('Nenhuma transação pendente para gerar no momento.');
+        }
+      } else {
+        toast.success(
+          `✅ ${data.transactions} transação(ões) gerada(s) de ${data.contracts} contrato(s)`,
+          { duration: 4000 }
+        );
+      }
+      
       loadContracts();
     } catch (error: any) {
       toast.error(sanitizeError(error));
@@ -256,7 +291,26 @@ export default function RecurringTransactions() {
             <TableBody>
               {contracts.map((contract) => (
                 <TableRow key={contract.id}>
-                  <TableCell className="font-medium">{contract.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <span>{contract.name}</span>
+                      {!contract.bank_account_id && contract.is_active && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 flex items-center gap-1 cursor-help">
+                                <AlertCircle className="w-3 h-3" />
+                                Sem conta
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-sm">Este contrato não pode gerar transações<br />porque não possui conta bancária definida</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {(contract.type === "revenue" || contract.type === "income") ? (
