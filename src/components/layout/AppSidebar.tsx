@@ -10,6 +10,7 @@ import {
   User,
   Users,
   Repeat,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -103,6 +104,25 @@ export function AppSidebar() {
                     <NavLink to="/users" className={getNavClass("/users")}>
                       <Users className="w-4 h-4" />
                       {open && <span>Usuários</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* Super Admin Section */}
+        {hasRole(['super_admin']) && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Super Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/super-admin" className={getNavClass("/super-admin")}>
+                      <Shield className="w-4 h-4" />
+                      {open && <span>Painel Master</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

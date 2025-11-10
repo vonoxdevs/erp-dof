@@ -25,6 +25,7 @@ import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
 import UsersPage from "./pages/UsersPage";
+import SuperAdminPage from "./pages/SuperAdminPage";
 import NotFound from "./pages/NotFound";
 import AppLayout from "./components/layout/AppLayout";
 import OverduePage from "./pages/OverduePage";
@@ -81,6 +82,14 @@ const App = () => {
             <Route path="/profile" element={<Profile />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
+            <Route 
+              path="/super-admin" 
+              element={
+                <ProtectedRoute roles={['super_admin']}>
+                  <SuperAdminPage />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/users" 
               element={
