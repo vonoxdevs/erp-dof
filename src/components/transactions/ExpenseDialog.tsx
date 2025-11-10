@@ -149,7 +149,7 @@ export function ExpenseDialog({ open, onClose }: Props) {
         created_by: user.id,
         category_id: formData.category_id,
         supplier_name: formData.supplier_name || null,
-        account_from_id: formData.account_from_id,
+        bank_account_id: formData.account_from_id,
       };
 
       const { error } = await supabase.from("transactions").insert([dataToSave]);

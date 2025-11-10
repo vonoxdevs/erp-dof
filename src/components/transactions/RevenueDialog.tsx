@@ -149,7 +149,7 @@ export function RevenueDialog({ open, onClose }: Props) {
         created_by: user.id,
         category_id: formData.category_id,
         customer_name: formData.customer_name || null,
-        account_to_id: formData.account_to_id,
+        bank_account_id: formData.account_to_id,
       };
 
       const { error } = await supabase.from("transactions").insert([dataToSave]);
