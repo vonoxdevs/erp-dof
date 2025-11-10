@@ -190,7 +190,7 @@ export default function RecurringTransactions() {
             })}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            {contracts.filter(c => c.type === "revenue" && c.is_active).length} contratos • por mês
+            {contracts.filter(c => (c.type === "revenue" || c.type === "income") && c.is_active).length} contratos • por mês
           </p>
         </Card>
         <Card className="p-4 border-l-4 border-l-destructive">
