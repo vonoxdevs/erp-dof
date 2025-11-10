@@ -95,23 +95,17 @@ export const useOnboarding = () => {
 
       console.log('📥 [Onboarding] Resposta da função:', result);
 
-      if (functionError) {
-        console.error('❌ [Onboarding] Erro da função:', functionError);
-        
-        // Extrair mensagem de erro do resultado
-        let errorMessage = functionError.message || 'Erro ao processar onboarding.';
-        
-        // Se o resultado tem uma mensagem de erro mais específica, usar ela
-        if (result && typeof result === 'object' && 'error' in result) {
-          errorMessage = result.error as string;
-        }
-        
+      // Verificar erros no resultado primeiro (mais específico)
+      if (result?.error) {
+        console.error('❌ [Onboarding] Erro no resultado:', result.error);
+        const errorMessage = result.details || result.error;
         throw new Error(errorMessage);
       }
 
-      if (result?.error) {
-        console.error('❌ [Onboarding] Erro no resultado:', result.error);
-        throw new Error(result.error);
+      // Se houver erro na chamada da função
+      if (functionError) {
+        console.error('❌ [Onboarding] Erro da função:', functionError);
+        throw new Error(functionError.message || 'Erro ao processar onboarding.');
       }
 
       if (!result?.success) {
