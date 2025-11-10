@@ -274,6 +274,14 @@ const Transactions = () => {
     return matchesSearch && matchesType && matchesStatus && matchesCategory && matchesPeriod;
   });
 
+  // Debug: Log para verificar cálculos
+  console.log("=== DEBUG TRANSAÇÕES ===");
+  console.log("Total de transações:", transactions.length);
+  console.log("Transações filtradas:", filteredTransactions.length);
+  console.log("Receitas pagas:", filteredTransactions.filter(t => t.type === "revenue" && t.status === "paid"));
+  console.log("Despesas pagas:", filteredTransactions.filter(t => t.type === "expense" && t.status === "paid"));
+  console.log("Período aplicado:", { appliedStartDate, appliedEndDate });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
