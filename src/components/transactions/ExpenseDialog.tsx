@@ -200,6 +200,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         created_by: user.id,
         category_id: formData.category_id,
         supplier_name: formData.supplier_name || null,
+        account_from_id: formData.account_from_id,
         bank_account_id: formData.account_from_id,
         is_recurring: formData.is_recurring,
         recurrence_config: recurrenceConfig,

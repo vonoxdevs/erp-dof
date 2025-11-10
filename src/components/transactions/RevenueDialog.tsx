@@ -200,6 +200,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         created_by: user.id,
         category_id: formData.category_id,
         customer_name: formData.customer_name || null,
+        account_to_id: formData.account_to_id,
         bank_account_id: formData.account_to_id,
         is_recurring: formData.is_recurring,
         recurrence_config: recurrenceConfig,
