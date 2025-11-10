@@ -859,6 +859,59 @@ export type Database = {
           },
         ]
       }
+      user_invites: {
+        Row: {
+          accepted_at: string | null
+          company_id: string
+          created_at: string | null
+          department: string | null
+          email: string
+          expires_at: string
+          full_name: string
+          id: string
+          invited_by: string
+          permissions: Json
+          role: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          company_id: string
+          created_at?: string | null
+          department?: string | null
+          email: string
+          expires_at: string
+          full_name: string
+          id?: string
+          invited_by: string
+          permissions?: Json
+          role: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          company_id?: string
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          expires_at?: string
+          full_name?: string
+          id?: string
+          invited_by?: string
+          permissions?: Json
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_profiles: {
         Row: {
           avatar_url: string | null
