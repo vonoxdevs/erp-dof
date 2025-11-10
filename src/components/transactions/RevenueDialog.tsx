@@ -19,13 +19,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, TrendingUp, AlertCircle } from "lucide-react";
+import { Loader2, TrendingUp, AlertCircle, Repeat } from "lucide-react";
 import { z } from "zod";
 import { sanitizeError } from "@/lib/errorMapping";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const revenueSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -36,22 +37,44 @@ const revenueSchema = z.object({
   account_to_id: z.string().uuid("Selecione a conta de destino"),
 });
 
+interface Transaction {
+  id: string;
+  amount: number;
+  description: string;
+  due_date: string;
+  status: "pending" | "paid" | "overdue" | "cancelled";
+  customer_name?: string | null;
+  category_id?: string | null;
+  bank_account_id?: string | null;
+  is_recurring?: boolean;
+  recurrence_config?: {
+    frequency: string;
+    total_installments?: number | null;
+    end_date?: string | null;
+  } | null;
+}
+
 interface Props {
   open: boolean;
   onClose: (refresh?: boolean) => void;
+  transaction?: Transaction | null;
 }
 
-export function RevenueDialog({ open, onClose }: Props) {
+export function RevenueDialog({ open, onClose, transaction }: Props) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
     due_date: new Date().toISOString().split("T")[0],
-    status: "pending" as const,
+    status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     customer_name: "",
     category_id: null as string | null,
     account_to_id: null as string | null,
+    is_recurring: false,
+    frequency: "monthly",
+    total_installments: undefined as number | undefined,
+    end_date: "",
   });
   const [categories, setCategories] = useState<any[]>([]);
   const { accounts: bankAccounts, isLoading: accountsLoading } = useBankAccounts();
@@ -73,17 +96,37 @@ export function RevenueDialog({ open, onClose }: Props) {
   useEffect(() => {
     if (open) {
       loadCategories();
-      setFormData({
-        amount: undefined,
-        description: "",
-        due_date: new Date().toISOString().split("T")[0],
-        status: "pending",
-        customer_name: "",
-        category_id: null,
-        account_to_id: null,
-      });
+      if (transaction) {
+        setFormData({
+          amount: transaction.amount,
+          description: transaction.description,
+          due_date: transaction.due_date,
+          status: transaction.status,
+          customer_name: transaction.customer_name || "",
+          category_id: transaction.category_id || null,
+          account_to_id: transaction.bank_account_id || null,
+          is_recurring: transaction.is_recurring || false,
+          frequency: transaction.recurrence_config?.frequency || "monthly",
+          total_installments: transaction.recurrence_config?.total_installments || undefined,
+          end_date: transaction.recurrence_config?.end_date || "",
+        });
+      } else {
+        setFormData({
+          amount: undefined,
+          description: "",
+          due_date: new Date().toISOString().split("T")[0],
+          status: "pending",
+          customer_name: "",
+          category_id: null,
+          account_to_id: null,
+          is_recurring: false,
+          frequency: "monthly",
+          total_installments: undefined,
+          end_date: "",
+        });
+      }
     }
-  }, [open]);
+  }, [open, transaction]);
 
   const loadCategories = async () => {
     try {
@@ -139,6 +182,14 @@ export function RevenueDialog({ open, onClose }: Props) {
         throw new Error(errorMessages);
       }
 
+      const recurrenceConfig = formData.is_recurring
+        ? {
+            frequency: formData.frequency,
+            total_installments: formData.total_installments || null,
+            end_date: formData.end_date || null,
+          }
+        : null;
+
       const dataToSave = {
         type: "revenue" as const,
         amount: formData.amount,
@@ -150,16 +201,27 @@ export function RevenueDialog({ open, onClose }: Props) {
         category_id: formData.category_id,
         customer_name: formData.customer_name || null,
         bank_account_id: formData.account_to_id,
+        is_recurring: formData.is_recurring,
+        recurrence_config: recurrenceConfig,
       };
 
-      const { error } = await supabase.from("transactions").insert([dataToSave]);
-      if (error) throw error;
+      if (transaction) {
+        const { error } = await supabase
+          .from("transactions")
+          .update(dataToSave)
+          .eq("id", transaction.id);
+        if (error) throw error;
+        toast.success("Receita atualizada com sucesso!");
+      } else {
+        const { error } = await supabase.from("transactions").insert([dataToSave]);
+        if (error) throw error;
+        toast.success("Receita criada com sucesso!");
+      }
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
         queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
       ]);
-      toast.success("Receita criada com sucesso!");
       onClose(true);
     } catch (error: any) {
       toast.error(sanitizeError(error));
@@ -174,7 +236,7 @@ export function RevenueDialog({ open, onClose }: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-accent" />
-            Nova Receita
+            {transaction ? "Editar Receita" : "Nova Receita"}
           </DialogTitle>
         </DialogHeader>
 
@@ -324,6 +386,99 @@ export function RevenueDialog({ open, onClose }: Props) {
             </CardContent>
           </Card>
 
+          {/* Recorrência */}
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="pt-6 space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_recurring"
+                  checked={formData.is_recurring}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, is_recurring: checked as boolean })
+                  }
+                />
+                <Label htmlFor="is_recurring" className="flex items-center gap-2 cursor-pointer">
+                  <Repeat className="h-4 w-4" />
+                  Transação Recorrente
+                </Label>
+              </div>
+
+              {formData.is_recurring && (
+                <div className="space-y-4 pl-6 border-l-2 border-primary/20">
+                  <div className="space-y-2">
+                    <Label>Frequência *</Label>
+                    <Select
+                      value={formData.frequency}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, frequency: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Diária</SelectItem>
+                        <SelectItem value="weekly">Semanal</SelectItem>
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                        <SelectItem value="quarterly">Trimestral</SelectItem>
+                        <SelectItem value="semiannual">Semestral</SelectItem>
+                        <SelectItem value="annual">Anual</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Total de Parcelas</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={formData.total_installments || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            total_installments: e.target.value ? parseInt(e.target.value) : undefined,
+                          })
+                        }
+                        placeholder="Ex: 12"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Deixe vazio para recorrência sem fim
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Data de Término</Label>
+                      <Input
+                        type="date"
+                        value={formData.end_date}
+                        onChange={(e) =>
+                          setFormData({ ...formData, end_date: e.target.value })
+                        }
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Alternativa ao total de parcelas
+                      </p>
+                    </div>
+                  </div>
+
+                  <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      {formData.total_installments && formData.end_date
+                        ? "⚠️ Quando ambos são definidos, o que atingir primeiro será usado."
+                        : formData.total_installments
+                        ? `Serão geradas ${formData.total_installments} parcelas automaticamente.`
+                        : formData.end_date
+                        ? `Parcelas serão geradas até ${new Date(formData.end_date).toLocaleDateString("pt-BR")}.`
+                        : "Parcelas serão geradas indefinidamente (até cancelar)."}
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onClose()}>
               Cancelar
@@ -332,10 +487,10 @@ export function RevenueDialog({ open, onClose }: Props) {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Criando...
+                  {transaction ? "Atualizando..." : "Criando..."}
                 </>
               ) : (
-                "Criar Receita"
+                transaction ? "Atualizar Receita" : "Criar Receita"
               )}
             </Button>
           </DialogFooter>

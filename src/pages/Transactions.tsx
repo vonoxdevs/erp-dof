@@ -66,7 +66,6 @@ const Transactions = () => {
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [companyName, setCompanyName] = useState<string>("Minha Empresa");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -127,7 +126,14 @@ const Transactions = () => {
 
   const handleEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    setDialogOpen(true);
+    // Abrir o dialog correto baseado no tipo da transação
+    if (transaction.type === "revenue") {
+      setRevenueDialogOpen(true);
+    } else if (transaction.type === "expense") {
+      setExpenseDialogOpen(true);
+    } else if (transaction.type === "transfer") {
+      setTransferDialogOpen(true);
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -151,6 +157,9 @@ const Transactions = () => {
 
   const handleDialogClose = (refresh?: boolean) => {
     setDialogOpen(false);
+    setRevenueDialogOpen(false);
+    setExpenseDialogOpen(false);
+    setTransferDialogOpen(false);
     setSelectedTransaction(null);
     if (refresh) loadTransactions();
   };
@@ -208,10 +217,6 @@ const Transactions = () => {
           <Button onClick={() => setTransferDialogOpen(true)} size="lg" variant="outline">
             <ArrowRightLeft className="w-4 h-4 mr-2" />
             Transferência
-          </Button>
-          <Button onClick={() => setRecurringDialogOpen(true)} size="lg" variant="secondary">
-            <Repeat className="w-4 h-4 mr-2" />
-            Recorrente
           </Button>
         </div>
       </div>
@@ -308,32 +313,30 @@ const Transactions = () => {
         open={revenueDialogOpen}
         onClose={(refresh) => {
           setRevenueDialogOpen(false);
+          setSelectedTransaction(null);
           if (refresh) loadTransactions();
         }}
+        transaction={selectedTransaction}
       />
       
       <ExpenseDialog
         open={expenseDialogOpen}
         onClose={(refresh) => {
           setExpenseDialogOpen(false);
+          setSelectedTransaction(null);
           if (refresh) loadTransactions();
         }}
+        transaction={selectedTransaction}
       />
       
       <TransferDialog
         open={transferDialogOpen}
         onClose={(refresh) => {
           setTransferDialogOpen(false);
+          setSelectedTransaction(null);
           if (refresh) loadTransactions();
         }}
-      />
-      
-      <RecurringTransactionDialog
-        open={recurringDialogOpen}
-        onClose={(refresh) => {
-          setRecurringDialogOpen(false);
-          if (refresh) loadTransactions();
-        }}
+        transaction={selectedTransaction}
       />
     </div>
   );
