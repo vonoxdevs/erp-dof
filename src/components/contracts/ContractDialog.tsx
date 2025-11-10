@@ -68,23 +68,46 @@ export function ContractDialog({ open, onClose, contract }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name?.trim()) {
+      toast.error("Nome do contrato é obrigatório");
+      return;
+    }
+    
+    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+      toast.error("Valor deve ser maior que zero");
+      return;
+    }
+    
+    if (!formData.start_date) {
+      toast.error("Data de início é obrigatória");
+      return;
+    }
+    
     setLoading(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!user) {
+        toast.error("Usuário não autenticado");
+        return;
+      }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("user_profiles")
         .select("company_id")
         .eq("id", user.id)
-        .single();
+        .maybeSingle();
 
-      if (!profile?.company_id) throw new Error("Empresa não encontrada");
+      if (profileError) {
+        console.error("Erro ao buscar perfil:", profileError);
+        toast.error("Erro ao buscar dados do usuário");
+        return;
+      }
 
-      const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) {
-        throw new Error("Valor inválido");
+      if (!profile?.company_id) {
+        toast.error("Empresa não encontrada no seu perfil");
+        return;
       }
 
       const contractData = {
@@ -92,7 +115,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         name: formData.name.trim(),
         description: formData.description?.trim() || null,
         type: formData.type,
-        amount: amount,
+        amount: parseFloat(formData.amount),
         frequency: formData.frequency,
         start_date: formData.start_date,
         end_date: formData.end_date || null,
@@ -101,31 +124,43 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         generation_day: 1,
       };
 
+      console.log("Dados do contrato a serem salvos:", contractData);
+
       if (contract) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("contracts")
           .update(contractData)
-          .eq("id", contract.id);
+          .eq("id", contract.id)
+          .select();
+        
         if (error) {
-          console.error("Erro ao atualizar contrato:", error);
-          throw error;
+          console.error("Erro detalhado ao atualizar:", error);
+          toast.error(`Erro ao atualizar: ${error.message}`);
+          return;
         }
+        
+        console.log("Contrato atualizado:", data);
         toast.success("Contrato atualizado com sucesso!");
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("contracts")
-          .insert(contractData);
+          .insert(contractData)
+          .select();
+        
         if (error) {
-          console.error("Erro ao criar contrato:", error);
-          throw error;
+          console.error("Erro detalhado ao criar:", error);
+          toast.error(`Erro ao criar: ${error.message}`);
+          return;
         }
+        
+        console.log("Contrato criado:", data);
         toast.success("Contrato criado com sucesso!");
       }
 
       onClose(true);
     } catch (error: any) {
-      console.error("Erro no handleSubmit:", error);
-      toast.error(error.message || "Erro ao salvar contrato");
+      console.error("Erro inesperado:", error);
+      toast.error(`Erro inesperado: ${error.message || "Erro desconhecido"}`);
     } finally {
       setLoading(false);
     }
