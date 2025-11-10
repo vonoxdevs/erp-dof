@@ -3,9 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, Download } from "lucide-react";
+import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
+import { RevenueDialog } from "@/components/transactions/RevenueDialog";
+import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
+import { TransferDialog } from "@/components/transactions/TransferDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { sanitizeError } from "@/lib/errorMapping";
@@ -37,6 +40,9 @@ const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
+  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [companyName, setCompanyName] = useState<string>("Minha Empresa");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -152,15 +158,25 @@ const Transactions = () => {
   return (
     <div className="container mx-auto p-6 space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Transações</h1>
           <p className="text-muted-foreground">Gerencie todas as transações financeiras</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} size="lg">
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Transação
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setRevenueDialogOpen(true)} size="lg" variant="default" className="bg-accent hover:bg-accent/90">
+            <TrendingUp className="w-4 h-4 mr-2" />
+            Receita
+          </Button>
+          <Button onClick={() => setExpenseDialogOpen(true)} size="lg" variant="destructive">
+            <TrendingDown className="w-4 h-4 mr-2" />
+            Despesa
+          </Button>
+          <Button onClick={() => setTransferDialogOpen(true)} size="lg" variant="outline">
+            <ArrowRightLeft className="w-4 h-4 mr-2" />
+            Transferência
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -244,11 +260,35 @@ const Transactions = () => {
         />
       </Card>
 
-      {/* Dialog */}
+      {/* Dialogs */}
       <TransactionDialog
         open={dialogOpen}
         onClose={handleDialogClose}
         transaction={selectedTransaction}
+      />
+      
+      <RevenueDialog
+        open={revenueDialogOpen}
+        onClose={(refresh) => {
+          setRevenueDialogOpen(false);
+          if (refresh) loadTransactions();
+        }}
+      />
+      
+      <ExpenseDialog
+        open={expenseDialogOpen}
+        onClose={(refresh) => {
+          setExpenseDialogOpen(false);
+          if (refresh) loadTransactions();
+        }}
+      />
+      
+      <TransferDialog
+        open={transferDialogOpen}
+        onClose={(refresh) => {
+          setTransferDialogOpen(false);
+          if (refresh) loadTransactions();
+        }}
       />
     </div>
   );
