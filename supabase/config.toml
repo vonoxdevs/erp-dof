@@ -2,3 +2,18 @@ project_id = "agpeebvrrcytghmilzss"
 
 [functions.ai-assistant]
 verify_jwt = true
+
+[functions.generate-monthly-report]
+verify_jwt = true
+
+[functions.generate-recurring-transactions]
+verify_jwt = true
+
+[functions.onboarding]
+verify_jwt = true
+
+[functions.create-company-admin]
+verify_jwt = true
+
+[functions.super-admin-users]
+verify_jwt = true

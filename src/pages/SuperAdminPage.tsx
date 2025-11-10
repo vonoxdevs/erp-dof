@@ -18,11 +18,13 @@ import {
   type CompanyWithUsers,
   type AllUserData
 } from "@/services/superAdminService";
+import { CreateCompanyAdminDialog } from "@/components/superadmin/CreateCompanyAdminDialog";
 
 const SuperAdminPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   // Verificar se é super admin
   useEffect(() => {
@@ -164,7 +166,7 @@ const SuperAdminPage = () => {
                     Gerencie todas as empresas do sistema
                   </CardDescription>
                 </div>
-                <Button>
+                <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Empresa + Admin
                 </Button>
@@ -312,6 +314,16 @@ const SuperAdminPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog para criar empresa + admin */}
+      <CreateCompanyAdminDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['super-admin-companies'] });
+          queryClient.invalidateQueries({ queryKey: ['super-admin-users'] });
+        }}
+      />
     </div>
   );
 };
