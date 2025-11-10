@@ -4,12 +4,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft } from "lucide-react";
+import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft, Repeat } from "lucide-react";
 import { toast } from "sonner";
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
 import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
 import { TransferDialog } from "@/components/transactions/TransferDialog";
+import { RecurringTransactionDialog } from "@/components/transactions/RecurringTransactionDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { sanitizeError } from "@/lib/errorMapping";
@@ -65,6 +66,7 @@ const Transactions = () => {
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [companyName, setCompanyName] = useState<string>("Minha Empresa");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -194,7 +196,7 @@ const Transactions = () => {
           <h1 className="text-3xl font-bold">Transações</h1>
           <p className="text-muted-foreground">Gerencie todas as transações financeiras</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button onClick={() => setRevenueDialogOpen(true)} size="lg" variant="default" className="bg-accent hover:bg-accent/90">
             <TrendingUp className="w-4 h-4 mr-2" />
             Receita
@@ -206,6 +208,10 @@ const Transactions = () => {
           <Button onClick={() => setTransferDialogOpen(true)} size="lg" variant="outline">
             <ArrowRightLeft className="w-4 h-4 mr-2" />
             Transferência
+          </Button>
+          <Button onClick={() => setRecurringDialogOpen(true)} size="lg" variant="secondary">
+            <Repeat className="w-4 h-4 mr-2" />
+            Recorrente
           </Button>
         </div>
       </div>
@@ -318,6 +324,14 @@ const Transactions = () => {
         open={transferDialogOpen}
         onClose={(refresh) => {
           setTransferDialogOpen(false);
+          if (refresh) loadTransactions();
+        }}
+      />
+      
+      <RecurringTransactionDialog
+        open={recurringDialogOpen}
+        onClose={(refresh) => {
+          setRecurringDialogOpen(false);
           if (refresh) loadTransactions();
         }}
       />
