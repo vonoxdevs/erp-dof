@@ -83,8 +83,13 @@ const Transactions = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  // Estados para datas selecionadas (temporárias)
+  const [tempStartDate, setTempStartDate] = useState<Date | undefined>(undefined);
+  const [tempEndDate, setTempEndDate] = useState<Date | undefined>(undefined);
+
+  // Estados para datas aplicadas (usadas no filtro)
+  const [appliedStartDate, setAppliedStartDate] = useState<Date | undefined>(undefined);
+  const [appliedEndDate, setAppliedEndDate] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     loadTransactions();
@@ -194,6 +199,36 @@ const Transactions = () => {
     }
   };
 
+  const handleApplyPeriodFilter = () => {
+    // Validação: ambas as datas devem ser selecionadas
+    if (!tempStartDate || !tempEndDate) {
+      toast.error("Selecione a data inicial e final do período");
+      return;
+    }
+
+    // Validação: data inicial não pode ser maior que data final
+    if (tempStartDate > tempEndDate) {
+      toast.error("A data inicial não pode ser maior que a data final");
+      return;
+    }
+
+    // Aplicar as datas no filtro
+    setAppliedStartDate(tempStartDate);
+    setAppliedEndDate(tempEndDate);
+
+    toast.success(
+      `Período aplicado: ${format(tempStartDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(tempEndDate, "dd/MM/yyyy", { locale: ptBR })}`
+    );
+  };
+
+  const handleClearPeriodFilter = () => {
+    setTempStartDate(undefined);
+    setTempEndDate(undefined);
+    setAppliedStartDate(undefined);
+    setAppliedEndDate(undefined);
+    toast.info("Filtro de período removido");
+  };
+
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "all" || t.type === typeFilter;
@@ -202,14 +237,14 @@ const Transactions = () => {
     
     // Filtro de período
     let matchesPeriod = true;
-    if (startDate || endDate) {
+    if (appliedStartDate || appliedEndDate) {
       const transactionDate = new Date(t.due_date);
-      if (startDate && endDate) {
-        matchesPeriod = transactionDate >= startDate && transactionDate <= endDate;
-      } else if (startDate) {
-        matchesPeriod = transactionDate >= startDate;
-      } else if (endDate) {
-        matchesPeriod = transactionDate <= endDate;
+      if (appliedStartDate && appliedEndDate) {
+        matchesPeriod = transactionDate >= appliedStartDate && transactionDate <= appliedEndDate;
+      } else if (appliedStartDate) {
+        matchesPeriod = transactionDate >= appliedStartDate;
+      } else if (appliedEndDate) {
+        matchesPeriod = transactionDate <= appliedEndDate;
       }
     }
     
@@ -320,18 +355,18 @@ const Transactions = () => {
                     variant="outline"
                     className={cn(
                       "justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
+                      !tempStartDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+                    {tempStartDate ? format(tempStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
+                    selected={tempStartDate}
+                    onSelect={setTempStartDate}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
                   />
@@ -346,36 +381,55 @@ const Transactions = () => {
                     variant="outline"
                     className={cn(
                       "justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
+                      !tempEndDate && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
+                    {tempEndDate ? format(tempEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
+                    selected={tempEndDate}
+                    onSelect={setTempEndDate}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
                   />
                 </PopoverContent>
               </Popover>
 
-              {(startDate || endDate) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setStartDate(undefined);
-                    setEndDate(undefined);
-                  }}
-                >
-                  <X className="h-4 w-4 mr-1" />
-                  Limpar período
-                </Button>
+              {/* Botões de ação do período */}
+              {(tempStartDate || tempEndDate) && (
+                <>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleApplyPeriodFilter}
+                    disabled={!tempStartDate || !tempEndDate}
+                  >
+                    Calcular
+                  </Button>
+                  
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearPeriodFilter}
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Limpar
+                  </Button>
+                </>
+              )}
+
+              {/* Indicador de período ativo */}
+              {(appliedStartDate && appliedEndDate) && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-md text-sm">
+                  <CalendarIcon className="h-4 w-4" />
+                  <span className="font-medium">
+                    Período: {format(appliedStartDate, "dd/MM/yyyy", { locale: ptBR })} até {format(appliedEndDate, "dd/MM/yyyy", { locale: ptBR })}
+                  </span>
+                </div>
               )}
             </div>
           </div>
