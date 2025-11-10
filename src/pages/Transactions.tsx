@@ -239,12 +239,35 @@ const Transactions = () => {
     let matchesPeriod = true;
     if (appliedStartDate || appliedEndDate) {
       const transactionDate = new Date(t.due_date);
+      
       if (appliedStartDate && appliedEndDate) {
-        matchesPeriod = transactionDate >= appliedStartDate && transactionDate <= appliedEndDate;
+        // Normalizar as datas para meia-noite para comparação correta
+        const startOfDay = new Date(appliedStartDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const endOfDay = new Date(appliedEndDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const txDate = new Date(transactionDate);
+        txDate.setHours(0, 0, 0, 0);
+        
+        matchesPeriod = txDate >= startOfDay && txDate <= endOfDay;
       } else if (appliedStartDate) {
-        matchesPeriod = transactionDate >= appliedStartDate;
+        const startOfDay = new Date(appliedStartDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        
+        const txDate = new Date(transactionDate);
+        txDate.setHours(0, 0, 0, 0);
+        
+        matchesPeriod = txDate >= startOfDay;
       } else if (appliedEndDate) {
-        matchesPeriod = transactionDate <= appliedEndDate;
+        const endOfDay = new Date(appliedEndDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const txDate = new Date(transactionDate);
+        txDate.setHours(0, 0, 0, 0);
+        
+        matchesPeriod = txDate <= endOfDay;
       }
     }
     
