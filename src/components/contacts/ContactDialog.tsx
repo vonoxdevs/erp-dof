@@ -27,8 +27,8 @@ const contactSchema = z.object({
   document: z.string().trim().min(1, "Documento é obrigatório").max(20),
   document_type: z.enum(["cpf", "cnpj"]),
   type: z.enum(["customer", "supplier", "both"]),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
-  phone: z.string().max(20).optional().or(z.literal("")),
+  email: z.string().trim().email("Email inválido").or(z.literal("")),
+  phone: z.string().trim().max(20).or(z.literal("")),
 });
 
 interface Contact {
