@@ -249,6 +249,7 @@ export type Database = {
       categorias: {
         Row: {
           ativo: boolean | null
+          centro_custo_id: string | null
           company_id: string
           cor: string | null
           created_at: string
@@ -261,6 +262,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean | null
+          centro_custo_id?: string | null
           company_id: string
           cor?: string | null
           created_at?: string
@@ -273,6 +275,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean | null
+          centro_custo_id?: string | null
           company_id?: string
           cor?: string | null
           created_at?: string
@@ -284,6 +287,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "categorias_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "categorias_company_id_fkey"
             columns: ["company_id"]

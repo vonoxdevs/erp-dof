@@ -12,6 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TipoCategoria } from '@/types/categoria';
@@ -30,6 +37,8 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
   const [cor, setCor] = useState('#3b82f6');
   const [contasSelecionadas, setContasSelecionadas] = useState<string[]>([]);
   const [contasBancarias, setContasBancarias] = useState<any[]>([]);
+  const [centroCustoId, setCentroCustoId] = useState<string>('');
+  const [centrosCusto, setCentrosCusto] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -43,17 +52,28 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
   };
 
   useEffect(() => {
-    async function fetchContas() {
-      const { data } = await supabase
-        .from('bank_accounts')
-        .select('id, bank_name, account_number')
-        .eq('is_active', true)
-        .order('bank_name');
-      
-      setContasBancarias(data || []);
+    async function fetchRelacionamentos() {
+      if (tipo === 'centro_custo') {
+        const { data } = await supabase
+          .from('bank_accounts')
+          .select('id, bank_name, account_number')
+          .eq('is_active', true)
+          .order('bank_name');
+        
+        setContasBancarias(data || []);
+      } else if (tipo === 'receita' || tipo === 'despesa') {
+        const { data } = await supabase
+          .from('categorias')
+          .select('id, nome, icon, cor')
+          .eq('tipo', 'centro_custo')
+          .eq('ativo', true)
+          .order('nome');
+        
+        setCentrosCusto(data || []);
+      }
     }
-    fetchContas();
-  }, []);
+    fetchRelacionamentos();
+  }, [tipo]);
 
   useEffect(() => {
     if (categoriaId && aberto) {
@@ -75,6 +95,7 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
           setDescricao(data.descricao || '');
           setIcon(data.icon || '📁');
           setCor(data.cor || '#3b82f6');
+          setCentroCustoId(data.centro_custo_id || '');
           
           const contasHabilitadas = data.categoria_conta_bancaria
             ?.filter((ccc: any) => ccc.habilitado)
@@ -90,6 +111,7 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
       setIcon('📁');
       setCor('#3b82f6');
       setContasSelecionadas([]);
+      setCentroCustoId('');
     }
   }, [categoriaId, aberto]);
 
@@ -128,36 +150,44 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
       if (!profile?.company_id) throw new Error('Empresa não encontrada');
 
       if (categoriaId) {
+        const updateData: any = {
+          nome: nome.trim(),
+          descricao: descricao.trim() || null,
+          icon: icon.trim() || '📁',
+          cor: cor || '#3b82f6',
+          updated_at: new Date().toISOString()
+        };
+
+        if (tipo === 'receita' || tipo === 'despesa') {
+          updateData.centro_custo_id = centroCustoId || null;
+        }
+
         const { error: updateError } = await supabase
           .from('categorias')
-          .update({
-            nome: nome.trim(),
-            descricao: descricao.trim() || null,
-            icon: icon.trim() || '📁',
-            cor: cor || '#3b82f6',
-            updated_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('id', categoriaId);
 
         if (updateError) throw updateError;
 
-        await supabase
-          .from('categoria_conta_bancaria')
-          .delete()
-          .eq('categoria_id', categoriaId);
-
-        if (contasSelecionadas.length > 0) {
-          const vinculos = contasSelecionadas.map(contaId => ({
-            categoria_id: categoriaId,
-            conta_bancaria_id: contaId,
-            habilitado: true
-          }));
-
-          const { error: vinculoError } = await supabase
+        if (tipo === 'centro_custo') {
+          await supabase
             .from('categoria_conta_bancaria')
-            .insert(vinculos);
+            .delete()
+            .eq('categoria_id', categoriaId);
 
-          if (vinculoError) throw vinculoError;
+          if (contasSelecionadas.length > 0) {
+            const vinculos = contasSelecionadas.map(contaId => ({
+              categoria_id: categoriaId,
+              conta_bancaria_id: contaId,
+              habilitado: true
+            }));
+
+            const { error: vinculoError } = await supabase
+              .from('categoria_conta_bancaria')
+              .insert(vinculos);
+
+            if (vinculoError) throw vinculoError;
+          }
         }
 
         toast({
@@ -165,23 +195,29 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
           description: 'As alterações foram salvas com sucesso'
         });
       } else {
+        const insertData: any = {
+          company_id: profile.company_id,
+          nome: nome.trim(),
+          descricao: descricao.trim() || null,
+          icon: icon.trim() || '📁',
+          cor: cor || '#3b82f6',
+          tipo,
+          ativo: true
+        };
+
+        if (tipo === 'receita' || tipo === 'despesa') {
+          insertData.centro_custo_id = centroCustoId || null;
+        }
+
         const { data: novaCategoria, error: insertError } = await supabase
           .from('categorias')
-          .insert({
-            company_id: profile.company_id,
-            nome: nome.trim(),
-            descricao: descricao.trim() || null,
-            icon: icon.trim() || '📁',
-            cor: cor || '#3b82f6',
-            tipo,
-            ativo: true
-          })
+          .insert(insertData)
           .select()
           .single();
 
         if (insertError) throw insertError;
 
-        if (contasSelecionadas.length > 0 && novaCategoria) {
+        if (tipo === 'centro_custo' && contasSelecionadas.length > 0 && novaCategoria) {
           const vinculos = contasSelecionadas.map(contaId => ({
             categoria_id: novaCategoria.id,
             conta_bancaria_id: contaId,
@@ -222,7 +258,9 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
               {categoriaId ? 'Editar' : 'Nova'} Categoria de {getTipoLabel(tipo)}
             </DialogTitle>
             <DialogDescription>
-              Preencha as informações da categoria e selecione as contas bancárias
+              {tipo === 'centro_custo' 
+                ? 'Preencha as informações da categoria e selecione as contas bancárias'
+                : 'Preencha as informações da categoria e selecione o centro de custo'}
             </DialogDescription>
           </DialogHeader>
 
@@ -288,37 +326,74 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
               </p>
             </div>
 
-            <div className="grid gap-2">
-              <Label>Contas Bancárias Habilitadas</Label>
-              <div className="border rounded-md p-4 space-y-3 max-h-[200px] overflow-y-auto">
-                {contasBancarias.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhuma conta bancária cadastrada
-                  </p>
-                ) : (
-                  contasBancarias.map(conta => (
-                    <div key={conta.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`conta-${conta.id}`}
-                        checked={contasSelecionadas.includes(conta.id)}
-                        onCheckedChange={(checked) =>
-                          handleToggleConta(conta.id, checked as boolean)
-                        }
-                      />
-                      <Label
-                        htmlFor={`conta-${conta.id}`}
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        {conta.bank_name} - {conta.account_number}
-                      </Label>
-                    </div>
-                  ))
-                )}
+            {tipo === 'centro_custo' && (
+              <div className="grid gap-2">
+                <Label>Contas Bancárias Habilitadas</Label>
+                <div className="border rounded-md p-4 space-y-3 max-h-[200px] overflow-y-auto">
+                  {contasBancarias.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma conta bancária cadastrada
+                    </p>
+                  ) : (
+                    contasBancarias.map(conta => (
+                      <div key={conta.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`conta-${conta.id}`}
+                          checked={contasSelecionadas.includes(conta.id)}
+                          onCheckedChange={(checked) =>
+                            handleToggleConta(conta.id, checked as boolean)
+                          }
+                        />
+                        <Label
+                          htmlFor={`conta-${conta.id}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {conta.bank_name} - {conta.account_number}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Selecione em quais contas bancárias esta categoria estará disponível
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Selecione em quais contas bancárias esta categoria estará disponível
-              </p>
-            </div>
+            )}
+
+            {(tipo === 'receita' || tipo === 'despesa') && (
+              <div className="grid gap-2">
+                <Label htmlFor="centro-custo">Centro de Custo</Label>
+                <Select value={centroCustoId} onValueChange={setCentroCustoId}>
+                  <SelectTrigger id="centro-custo">
+                    <SelectValue placeholder="Selecione um centro de custo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {centrosCusto.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">
+                        Nenhum centro de custo cadastrado
+                      </div>
+                    ) : (
+                      centrosCusto.map(centro => (
+                        <SelectItem key={centro.id} value={centro.id}>
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-6 h-6 rounded flex items-center justify-center text-sm"
+                              style={{ backgroundColor: centro.cor || '#3b82f6' }}
+                            >
+                              {centro.icon || '📁'}
+                            </div>
+                            <span>{centro.nome}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Selecione o centro de custo ao qual esta categoria pertence
+                </p>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

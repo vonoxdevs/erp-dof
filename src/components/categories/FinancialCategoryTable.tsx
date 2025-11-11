@@ -37,17 +37,19 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
   const { toast } = useToast();
 
   useEffect(() => {
-    async function fetchContas() {
-      const { data } = await supabase
-        .from('bank_accounts')
-        .select('id, bank_name, account_number')
-        .eq('is_active', true)
-        .order('bank_name');
-      
-      setContasBancarias(data || []);
+    async function fetchRelacionamentos() {
+      if (tipo === 'centro_custo') {
+        const { data } = await supabase
+          .from('bank_accounts')
+          .select('id, bank_name, account_number')
+          .eq('is_active', true)
+          .order('bank_name');
+        
+        setContasBancarias(data || []);
+      }
     }
-    fetchContas();
-  }, []);
+    fetchRelacionamentos();
+  }, [tipo]);
 
   const handleToggleContaBancaria = async (
     categoriaId: string,
@@ -147,11 +149,17 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
               <TableHead className="w-20">Ícone</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
-              {contasBancarias.map(conta => (
+              
+              {tipo === 'centro_custo' && contasBancarias.map(conta => (
                 <TableHead key={conta.id} className="text-center">
                   {conta.bank_name}
                 </TableHead>
               ))}
+              
+              {(tipo === 'receita' || tipo === 'despesa') && (
+                <TableHead>Centro de Custo</TableHead>
+              )}
+              
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -171,7 +179,7 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                   {categoria.descricao || '-'}
                 </TableCell>
                 
-                {contasBancarias.map(conta => (
+                {tipo === 'centro_custo' && contasBancarias.map(conta => (
                   <TableCell key={conta.id} className="text-center">
                     <Checkbox
                       checked={categoria.contas_habilitadas?.includes(conta.id)}
@@ -185,6 +193,24 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                     />
                   </TableCell>
                 ))}
+                
+                {(tipo === 'receita' || tipo === 'despesa') && (
+                  <TableCell>
+                    {categoria.centro_custo ? (
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-6 h-6 rounded flex items-center justify-center text-sm"
+                          style={{ backgroundColor: categoria.centro_custo.cor || '#3b82f6' }}
+                        >
+                          {categoria.centro_custo.icon || '📁'}
+                        </div>
+                        <span>{categoria.centro_custo.nome}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                )}
                 
                 <TableCell className="text-right">
                   <Button

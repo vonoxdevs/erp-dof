@@ -19,6 +19,12 @@ export function useCategorias(tipo?: TipoCategoria) {
           categoria_conta_bancaria(
             conta_bancaria_id,
             habilitado
+          ),
+          centro_custo:categorias!centro_custo_id(
+            id,
+            nome,
+            icon,
+            cor
           )
         `)
         .eq('ativo', true)
@@ -39,7 +45,8 @@ export function useCategorias(tipo?: TipoCategoria) {
         cor: cat.cor || '#3b82f6',
         contas_habilitadas: cat.categoria_conta_bancaria
           ?.filter((ccc: any) => ccc.habilitado)
-          .map((ccc: any) => ccc.conta_bancaria_id) || []
+          .map((ccc: any) => ccc.conta_bancaria_id) || [],
+        centro_custo: cat.centro_custo || null
       })) || [];
 
       setCategorias(categoriasComContas);

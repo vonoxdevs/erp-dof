@@ -28,6 +28,12 @@ export interface CategoriaComContas extends Categoria {
     conta_bancaria_id: string;
     habilitado: boolean;
   }>;
+  centro_custo?: {
+    id: string;
+    nome: string;
+    icon: string;
+    cor: string;
+  } | null;
 }
 
 export interface CategoriaFormData {
