@@ -21,7 +21,7 @@ import Transactions from "./pages/Transactions";
 import RecurringTransactions from "./pages/RecurringTransactions";
 import BankAccounts from "./pages/BankAccounts";
 import Contracts from "./pages/Contracts";
-import Categories from "./pages/Categories";
+import FinancialCategories from "./pages/FinancialCategories";
 import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import AIAssistant from "./pages/AIAssistant";
@@ -88,7 +88,7 @@ const App = () => {
             <Route path="/recurring-transactions" element={<RecurringTransactions />} />
             <Route path="/bank-accounts" element={<BankAccounts />} />
             <Route path="/contracts" element={<Contracts />} />
-            <Route path="/categories" element={<Categories />} />
+            <Route path="/categories" element={<FinancialCategories />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/reports" element={<Reports />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
