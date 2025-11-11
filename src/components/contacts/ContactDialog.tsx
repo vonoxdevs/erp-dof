@@ -26,7 +26,7 @@ const contactSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100),
   document: z.string().trim().min(1, "Documento é obrigatório").max(20),
   document_type: z.enum(["cpf", "cnpj"]),
-  type: z.enum(["customer", "supplier", "both"]),
+  type: z.enum(["client", "supplier", "both"]),
   email: z.string().trim().email("Email inválido").or(z.literal("")),
   phone: z.string().trim().max(20).or(z.literal("")),
 });
@@ -53,7 +53,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
     name: "",
     document: "",
     document_type: "cpf" as "cpf" | "cnpj",
-    type: "customer" as "customer" | "supplier" | "both",
+    type: "client" as "client" | "supplier" | "both",
     email: "",
     phone: "",
   });
@@ -64,7 +64,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         name: contact.name,
         document: contact.document,
         document_type: contact.document_type as "cpf" | "cnpj",
-        type: contact.type as "customer" | "supplier" | "both",
+        type: contact.type as "client" | "supplier" | "both",
         email: contact.email || "",
         phone: contact.phone || "",
       });
@@ -73,7 +73,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         name: "",
         document: "",
         document_type: "cpf",
-        type: "customer",
+        type: "client",
         email: "",
         phone: "",
       });
@@ -187,7 +187,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
               <Label>Tipo *</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value: "customer" | "supplier" | "both") =>
+                onValueChange={(value: "client" | "supplier" | "both") =>
                   setFormData({ ...formData, type: value })
                 }
               >
@@ -195,7 +195,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="customer">Cliente</SelectItem>
+                  <SelectItem value="client">Cliente</SelectItem>
                   <SelectItem value="supplier">Fornecedor</SelectItem>
                   <SelectItem value="both">Ambos</SelectItem>
                 </SelectContent>
