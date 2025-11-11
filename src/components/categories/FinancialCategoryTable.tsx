@@ -33,6 +33,7 @@ interface FinancialCategoryTableProps {
 export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTableProps) {
   const { categorias, loading, refetch } = useCategorias(tipo);
   const [contasBancarias, setContasBancarias] = useState<any[]>([]);
+  const [centrosCusto, setCentrosCusto] = useState<any[]>([]);
   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -46,6 +47,15 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
           .order('bank_name');
         
         setContasBancarias(data || []);
+      } else if (tipo === 'receita' || tipo === 'despesa') {
+        const { data } = await supabase
+          .from('categorias')
+          .select('id, nome, icon, cor')
+          .eq('tipo', 'centro_custo')
+          .eq('ativo', true)
+          .order('nome');
+        
+        setCentrosCusto(data || []);
       }
     }
     fetchRelacionamentos();
@@ -88,6 +98,38 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
         description: habilitado 
           ? 'Categoria habilitada para esta conta' 
           : 'Categoria desabilitada para esta conta'
+      });
+
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao atualizar',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleToggleCentroCusto = async (
+    categoriaId: string,
+    centroCustoId: string,
+    checked: boolean
+  ) => {
+    try {
+      const { error } = await supabase
+        .from('categorias')
+        .update({ 
+          centro_custo_id: checked ? centroCustoId : null 
+        })
+        .eq('id', categoriaId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Centro de custo atualizado',
+        description: checked 
+          ? 'Centro de custo vinculado com sucesso' 
+          : 'Centro de custo desvinculado'
       });
 
       refetch();
@@ -156,9 +198,19 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                 </TableHead>
               ))}
               
-              {(tipo === 'receita' || tipo === 'despesa') && (
-                <TableHead>Centro de Custo</TableHead>
-              )}
+              {(tipo === 'receita' || tipo === 'despesa') && centrosCusto.map(centro => (
+                <TableHead key={centro.id} className="text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <div 
+                      className="w-6 h-6 rounded flex items-center justify-center text-sm"
+                      style={{ backgroundColor: centro.cor || '#3b82f6' }}
+                    >
+                      {centro.icon || '📁'}
+                    </div>
+                    <span>{centro.nome}</span>
+                  </div>
+                </TableHead>
+              ))}
               
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -194,23 +246,20 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                   </TableCell>
                 ))}
                 
-                {(tipo === 'receita' || tipo === 'despesa') && (
-                  <TableCell>
-                    {categoria.centro_custo ? (
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-6 h-6 rounded flex items-center justify-center text-sm"
-                          style={{ backgroundColor: categoria.centro_custo.cor || '#3b82f6' }}
-                        >
-                          {categoria.centro_custo.icon || '📁'}
-                        </div>
-                        <span>{categoria.centro_custo.nome}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                {(tipo === 'receita' || tipo === 'despesa') && centrosCusto.map(centro => (
+                  <TableCell key={centro.id} className="text-center">
+                    <Checkbox
+                      checked={categoria.centro_custo?.id === centro.id}
+                      onCheckedChange={(checked) =>
+                        handleToggleCentroCusto(
+                          categoria.id,
+                          centro.id,
+                          checked as boolean
+                        )
+                      }
+                    />
                   </TableCell>
-                )}
+                ))}
                 
                 <TableCell className="text-right">
                   <Button
