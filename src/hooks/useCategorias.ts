@@ -19,12 +19,6 @@ export function useCategorias(tipo?: TipoCategoria) {
           categoria_conta_bancaria(
             conta_bancaria_id,
             habilitado
-          ),
-          centro_custo:categorias!centro_custo_id(
-            id,
-            nome,
-            icon,
-            cor
           )
         `)
         .eq('ativo', true)
@@ -38,6 +32,25 @@ export function useCategorias(tipo?: TipoCategoria) {
 
       if (error) throw error;
 
+      // Buscar centros de custo separadamente
+      const centrosCustoIds = data
+        ?.map(cat => cat.centro_custo_id)
+        .filter(Boolean) || [];
+
+      let centrosCustoMap: Record<string, any> = {};
+      
+      if (centrosCustoIds.length > 0) {
+        const { data: centrosCustoData } = await supabase
+          .from('categorias')
+          .select('id, nome, icon, cor')
+          .in('id', centrosCustoIds);
+
+        centrosCustoMap = (centrosCustoData || []).reduce((acc, centro) => {
+          acc[centro.id] = centro;
+          return acc;
+        }, {} as Record<string, any>);
+      }
+
       const categoriasComContas: CategoriaComContas[] = data?.map(cat => ({
         ...cat,
         tipo: cat.tipo as TipoCategoria,
@@ -46,9 +59,7 @@ export function useCategorias(tipo?: TipoCategoria) {
         contas_habilitadas: cat.categoria_conta_bancaria
           ?.filter((ccc: any) => ccc.habilitado)
           .map((ccc: any) => ccc.conta_bancaria_id) || [],
-        centro_custo: Array.isArray(cat.centro_custo) && cat.centro_custo.length > 0 
-          ? cat.centro_custo[0] 
-          : null
+        centro_custo: cat.centro_custo_id ? centrosCustoMap[cat.centro_custo_id] || null : null
       })) || [];
 
       setCategorias(categoriasComContas);
