@@ -27,12 +27,13 @@ export function CategoryTable({ categories, onEdit, onDelete, onToggleActive }: 
       income: "Receita",
       expense: "Despesa",
       transfer: "Transferência",
+      revenue: "Receita"
     };
     return types[type as keyof typeof types] || type;
   };
 
   const getTypeBadgeVariant = (type: string) => {
-    if (type === "revenue") return "default";
+    if (type === "revenue" || type === "income") return "default";
     if (type === "expense") return "destructive";
     return "secondary";
   };
@@ -73,7 +74,7 @@ export function CategoryTable({ categories, onEdit, onDelete, onToggleActive }: 
               </div>
             </TableCell>
             <TableCell>
-              <Badge variant={getTypeBadgeVariant(category.type)}>
+              <Badge variant={getTypeBadgeVariant(category.type) as any}>
                 {getTypeLabel(category.type)}
               </Badge>
             </TableCell>

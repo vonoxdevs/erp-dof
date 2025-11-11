@@ -204,6 +204,92 @@ export type Database = {
           },
         ]
       }
+      categoria_conta_bancaria: {
+        Row: {
+          categoria_id: string
+          conta_bancaria_id: string
+          created_at: string
+          habilitado: boolean | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          categoria_id: string
+          conta_bancaria_id: string
+          created_at?: string
+          habilitado?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          categoria_id?: string
+          conta_bancaria_id?: string
+          created_at?: string
+          habilitado?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categoria_conta_bancaria_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categoria_conta_bancaria_conta_bancaria_id_fkey"
+            columns: ["conta_bancaria_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categorias: {
+        Row: {
+          ativo: boolean | null
+          company_id: string
+          cor: string | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          company_id: string
+          cor?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean | null
+          company_id?: string
+          cor?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string | null
@@ -403,7 +489,10 @@ export type Database = {
           amount: number
           auto_generate: boolean | null
           bank_account_id: string | null
+          categoria_despesa_id: string | null
+          categoria_receita_id: string | null
           category_id: string | null
+          centro_custo_id: string | null
           company_id: string
           contact_id: string | null
           created_at: string | null
@@ -428,7 +517,10 @@ export type Database = {
           amount: number
           auto_generate?: boolean | null
           bank_account_id?: string | null
+          categoria_despesa_id?: string | null
+          categoria_receita_id?: string | null
           category_id?: string | null
+          centro_custo_id?: string | null
           company_id: string
           contact_id?: string | null
           created_at?: string | null
@@ -453,7 +545,10 @@ export type Database = {
           amount?: number
           auto_generate?: boolean | null
           bank_account_id?: string | null
+          categoria_despesa_id?: string | null
+          categoria_receita_id?: string | null
           category_id?: string | null
+          centro_custo_id?: string | null
           company_id?: string
           contact_id?: string | null
           created_at?: string | null
@@ -483,10 +578,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_categoria_despesa_id_fkey"
+            columns: ["categoria_despesa_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_categoria_receita_id_fkey"
+            columns: ["categoria_receita_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
           {
@@ -709,7 +825,10 @@ export type Database = {
           amount: number
           attachments: Json | null
           bank_account_id: string | null
+          categoria_despesa_id: string | null
+          categoria_receita_id: string | null
           category_id: string | null
+          centro_custo_id: string | null
           company_id: string
           contact_id: string | null
           contract_id: string | null
@@ -744,7 +863,10 @@ export type Database = {
           amount: number
           attachments?: Json | null
           bank_account_id?: string | null
+          categoria_despesa_id?: string | null
+          categoria_receita_id?: string | null
           category_id?: string | null
+          centro_custo_id?: string | null
           company_id: string
           contact_id?: string | null
           contract_id?: string | null
@@ -779,7 +901,10 @@ export type Database = {
           amount?: number
           attachments?: Json | null
           bank_account_id?: string | null
+          categoria_despesa_id?: string | null
+          categoria_receita_id?: string | null
           category_id?: string | null
+          centro_custo_id?: string | null
           company_id?: string
           contact_id?: string | null
           contract_id?: string | null
@@ -830,10 +955,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transactions_categoria_despesa_id_fkey"
+            columns: ["categoria_despesa_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_categoria_receita_id_fkey"
+            columns: ["categoria_receita_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_centro_custo_id_fkey"
+            columns: ["centro_custo_id"]
+            isOneToOne: false
+            referencedRelation: "categorias"
             referencedColumns: ["id"]
           },
           {
