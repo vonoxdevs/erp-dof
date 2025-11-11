@@ -51,7 +51,7 @@ const bankAccountSchema = z.object({
     .trim()
     .max(20, "Documento do titular deve ter no máximo 20 caracteres")
     .optional(),
-  current_balance: z.number()
+  initial_balance: z.number()
     .min(-999999999, "Saldo inválido")
     .max(999999999, "Saldo muito alto")
     .finite("Saldo deve ser um número válido"),
@@ -69,7 +69,8 @@ interface BankAccount {
   account_type: string;
   holder_name?: string;
   holder_document?: string;
-  current_balance: number;
+  initial_balance: number;
+  current_balance?: number;
   is_active: boolean;
   is_default: boolean;
 }
@@ -86,7 +87,7 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
     bank_name: "",
     account_number: "",
     account_type: "checking",
-    current_balance: 0,
+    initial_balance: 0,
     is_active: true,
     is_default: false,
   });
@@ -99,7 +100,7 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         bank_name: "",
         account_number: "",
         account_type: "checking",
-        current_balance: 0,
+        initial_balance: 0,
         is_active: true,
         is_default: false,
       });
@@ -132,7 +133,7 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         account_type: formData.account_type || "checking",
         holder_name: formData.holder_name,
         holder_document: formData.holder_document,
-        current_balance: formData.current_balance || 0,
+        initial_balance: formData.initial_balance || 0,
         is_active: formData.is_active !== false,
         is_default: formData.is_default || false,
       });
@@ -144,7 +145,7 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
 
       const validatedData = validationResult.data;
 
-      const dataToSave = {
+      const dataToSave: any = {
         bank_name: validatedData.bank_name,
         bank_code: validatedData.bank_code || "000",
         agency_number: validatedData.agency_number || "0000",
@@ -153,13 +154,14 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         account_type: validatedData.account_type,
         holder_name: validatedData.holder_name || user.user_metadata?.full_name || "Titular",
         holder_document: validatedData.holder_document || "00000000000",
-        current_balance: validatedData.current_balance,
+        initial_balance: validatedData.initial_balance,
         is_active: validatedData.is_active,
         is_default: validatedData.is_default,
         company_id: profile.company_id,
       };
 
       if (account?.id) {
+        // Na edição, não atualiza o current_balance
         const { error } = await supabase
           .from("bank_accounts")
           .update(dataToSave)
@@ -167,6 +169,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         if (error) throw error;
         toast.success("Conta atualizada com sucesso!");
       } else {
+        // Na criação, define current_balance igual ao initial_balance
+        dataToSave.current_balance = validatedData.initial_balance;
         const { error } = await supabase.from("bank_accounts").insert([dataToSave]);
         if (error) throw error;
         toast.success("Conta criada com sucesso!");
@@ -230,8 +234,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
             <div className="space-y-2">
               <Label>Saldo Inicial (R$)</Label>
               <CurrencyInput
-                value={formData.current_balance}
-                onChange={(value) => setFormData({ ...formData, current_balance: value })}
+                value={formData.initial_balance}
+                onChange={(value) => setFormData({ ...formData, initial_balance: value })}
                 placeholder="R$ 0,00"
               />
             </div>

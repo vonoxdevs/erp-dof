@@ -12,6 +12,7 @@ interface BankAccount {
   id: string;
   bank_name: string;
   account_number: string;
+  initial_balance: number;
   current_balance: number;
   account_type: string;
   is_active: boolean;
