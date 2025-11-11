@@ -10,6 +10,13 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useCategorias } from '@/hooks/useCategorias';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -110,16 +117,15 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
     }
   };
 
-  const handleToggleCentroCusto = async (
+  const handleChangeCentroCusto = async (
     categoriaId: string,
-    centroCustoId: string,
-    checked: boolean
+    centroCustoId: string
   ) => {
     try {
       const { error } = await supabase
         .from('categorias')
         .update({ 
-          centro_custo_id: checked ? centroCustoId : null 
+          centro_custo_id: centroCustoId === 'none' ? null : centroCustoId
         })
         .eq('id', categoriaId);
 
@@ -127,9 +133,9 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
 
       toast({
         title: 'Centro de custo atualizado',
-        description: checked 
-          ? 'Centro de custo vinculado com sucesso' 
-          : 'Centro de custo desvinculado'
+        description: centroCustoId === 'none' 
+          ? 'Centro de custo removido' 
+          : 'Centro de custo vinculado com sucesso'
       });
 
       refetch();
@@ -198,19 +204,9 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                 </TableHead>
               ))}
               
-              {(tipo === 'receita' || tipo === 'despesa') && centrosCusto.map(centro => (
-                <TableHead key={centro.id} className="text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <div 
-                      className="w-6 h-6 rounded flex items-center justify-center text-sm"
-                      style={{ backgroundColor: centro.cor || '#3b82f6' }}
-                    >
-                      {centro.icon || '📁'}
-                    </div>
-                    <span>{centro.nome}</span>
-                  </div>
-                </TableHead>
-              ))}
+              {(tipo === 'receita' || tipo === 'despesa') && (
+                <TableHead>Centro de Custo</TableHead>
+              )}
               
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -246,20 +242,36 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                   </TableCell>
                 ))}
                 
-                {(tipo === 'receita' || tipo === 'despesa') && centrosCusto.map(centro => (
-                  <TableCell key={centro.id} className="text-center">
-                    <Checkbox
-                      checked={categoria.centro_custo?.id === centro.id}
-                      onCheckedChange={(checked) =>
-                        handleToggleCentroCusto(
-                          categoria.id,
-                          centro.id,
-                          checked as boolean
-                        )
-                      }
-                    />
+                {(tipo === 'receita' || tipo === 'despesa') && (
+                  <TableCell>
+                    <Select
+                      value={categoria.centro_custo?.id || 'none'}
+                      onValueChange={(value) => handleChangeCentroCusto(categoria.id, value)}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">Nenhum</span>
+                        </SelectItem>
+                        {centrosCusto.map(centro => (
+                          <SelectItem key={centro.id} value={centro.id}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-5 h-5 rounded flex items-center justify-center text-xs"
+                                style={{ backgroundColor: centro.cor || '#3b82f6' }}
+                              >
+                                {centro.icon || '📁'}
+                              </div>
+                              <span>{centro.nome}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </TableCell>
-                ))}
+                )}
                 
                 <TableCell className="text-right">
                   <Button
