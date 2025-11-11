@@ -46,7 +46,9 @@ export function useCategorias(tipo?: TipoCategoria) {
         contas_habilitadas: cat.categoria_conta_bancaria
           ?.filter((ccc: any) => ccc.habilitado)
           .map((ccc: any) => ccc.conta_bancaria_id) || [],
-        centro_custo: cat.centro_custo || null
+        centro_custo: Array.isArray(cat.centro_custo) && cat.centro_custo.length > 0 
+          ? cat.centro_custo[0] 
+          : null
       })) || [];
 
       setCategorias(categoriasComContas);
