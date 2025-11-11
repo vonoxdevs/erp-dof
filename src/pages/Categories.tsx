@@ -31,6 +31,24 @@ const Categories = () => {
 
   useEffect(() => {
     loadCategories();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('categories-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categories'
+        },
+        () => loadCategories()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadCategories = async () => {
