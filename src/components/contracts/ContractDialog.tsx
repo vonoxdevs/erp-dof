@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
+import { SelectCategoria } from '@/components/shared/SelectCategoria';
 
 interface Contract {
   id: string;
@@ -32,6 +34,8 @@ interface Props {
 export function ContractDialog({ open, onClose, contract }: Props) {
   const [loading, setLoading] = useState(false);
   const { accounts, isLoading: loadingAccounts } = useBankAccounts();
+  const [centroCustoId, setCentroCustoId] = useState("");
+  const [categoriaId, setCategoriaId] = useState("");
   
   const [formData, setFormData] = useState({
     name: "",
@@ -58,6 +62,9 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         is_active: contract.is_active,
         bank_account_id: contract.bank_account_id || "",
       });
+      // TODO: Carregar centro_custo_id e categoria_id do contrato quando disponível
+      setCentroCustoId("");
+      setCategoriaId("");
     } else {
       setFormData({
         name: "",
@@ -70,6 +77,8 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         is_active: true,
         bank_account_id: "",
       });
+      setCentroCustoId("");
+      setCategoriaId("");
     }
   }, [contract, open]);
 
@@ -150,6 +159,9 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         generation_day: 1,
         next_generation_date: formData.start_date,
         bank_account_id: formData.bank_account_id,
+        centro_custo_id: centroCustoId || null,
+        categoria_receita_id: formData.type === 'income' ? categoriaId || null : null,
+        categoria_despesa_id: formData.type === 'expense' ? categoriaId || null : null,
       };
 
       console.log("Dados do contrato a serem salvos:", contractData);
@@ -290,7 +302,11 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             <Label htmlFor="bank_account_id">Conta Bancária *</Label>
             <Select
               value={formData.bank_account_id}
-              onValueChange={(value) => setFormData({ ...formData, bank_account_id: value })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, bank_account_id: value });
+                setCentroCustoId("");
+                setCategoriaId("");
+              }}
               disabled={loadingAccounts}
             >
               <SelectTrigger>
@@ -305,6 +321,37 @@ export function ContractDialog({ open, onClose, contract }: Props) {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Centro de Custo e Categoria */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="centro_custo">Centro de Custo *</Label>
+              <SelectCentroCusto
+                contaBancariaId={formData.bank_account_id}
+                value={centroCustoId}
+                onChange={(value) => {
+                  setCentroCustoId(value);
+                  setCategoriaId("");
+                }}
+                placeholder="Selecione o centro de custo"
+                disabled={!formData.bank_account_id}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="categoria">
+                {formData.type === 'income' ? 'Categoria de Receita' : 'Categoria de Despesa'}
+              </Label>
+              <SelectCategoria
+                centroCustoId={centroCustoId}
+                tipo={formData.type === 'income' ? 'receita' : 'despesa'}
+                value={categoriaId}
+                onChange={setCategoriaId}
+                placeholder="Selecione a categoria"
+                disabled={!centroCustoId}
+              />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">

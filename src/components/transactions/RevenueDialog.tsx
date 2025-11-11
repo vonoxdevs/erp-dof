@@ -27,6 +27,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
+import { SelectCategoria } from '@/components/shared/SelectCategoria';
 
 const revenueSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -44,7 +46,8 @@ interface Transaction {
   due_date: string;
   status: "pending" | "paid" | "overdue" | "cancelled";
   customer_name?: string | null;
-  category_id?: string | null;
+  centro_custo_id?: string | null;
+  categoria_receita_id?: string | null;
   bank_account_id?: string | null;
   is_recurring?: boolean;
   recurrence_config?: {
@@ -63,20 +66,20 @@ interface Props {
 export function RevenueDialog({ open, onClose, transaction }: Props) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const [centroCustoId, setCentroCustoId] = useState<string | null>(null);
+  const [categoriaReceitaId, setCategoriaReceitaId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
     due_date: new Date().toISOString().split("T")[0],
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     customer_name: "",
-    category_id: null as string | null,
     account_to_id: null as string | null,
     is_recurring: false,
     frequency: "monthly",
     total_installments: undefined as number | undefined,
     end_date: "",
   });
-  const [categories, setCategories] = useState<any[]>([]);
   const { accounts: bankAccounts, isLoading: accountsLoading } = useBankAccounts();
 
   const formatCurrency = (value: number) => {
@@ -95,7 +98,6 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
 
   useEffect(() => {
     if (open) {
-      loadCategories();
       if (transaction) {
         setFormData({
           amount: transaction.amount,
@@ -103,13 +105,14 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           due_date: transaction.due_date,
           status: transaction.status,
           customer_name: transaction.customer_name || "",
-          category_id: transaction.category_id || null,
           account_to_id: transaction.bank_account_id || null,
           is_recurring: transaction.is_recurring || false,
           frequency: transaction.recurrence_config?.frequency || "monthly",
           total_installments: transaction.recurrence_config?.total_installments || undefined,
           end_date: transaction.recurrence_config?.end_date || "",
         });
+        setCentroCustoId(transaction.centro_custo_id || null);
+        setCategoriaReceitaId(transaction.categoria_receita_id || null);
       } else {
         setFormData({
           amount: undefined,
@@ -117,44 +120,17 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           due_date: new Date().toISOString().split("T")[0],
           status: "pending",
           customer_name: "",
-          category_id: null,
           account_to_id: null,
           is_recurring: false,
           frequency: "monthly",
           total_installments: undefined,
           end_date: "",
         });
+        setCentroCustoId(null);
+        setCategoriaReceitaId(null);
       }
     }
   }, [open, transaction]);
-
-  const loadCategories = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("company_id")
-        .eq("id", user.id)
-        .single();
-
-      if (!profile?.company_id) return;
-
-      const { data } = await supabase
-        .from("categories")
-        .select("id, name, icon, color")
-        .eq("company_id", profile.company_id)
-        .eq("type", "revenue")
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("name");
-
-      setCategories(data || []);
-    } catch (error) {
-      console.error("Erro ao carregar categorias:", error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -198,7 +174,8 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         status: formData.status,
         company_id: profile.company_id,
         created_by: user.id,
-        category_id: formData.category_id,
+        centro_custo_id: centroCustoId,
+        categoria_receita_id: categoriaReceitaId,
         customer_name: formData.customer_name || null,
         account_to_id: formData.account_to_id,
         bank_account_id: formData.account_to_id,
@@ -290,42 +267,16 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Data de Vencimento *</Label>
-              <Input
-                type="date"
-                value={formData.due_date}
-                onChange={(e) =>
-                  setFormData({ ...formData, due_date: e.target.value })
-                }
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select
-                value={formData.category_id || ""}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, category_id: value || null })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      <div className="flex items-center gap-2">
-                        {category.icon && <span>{category.icon}</span>}
-                        <span>{category.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Data de Vencimento *</Label>
+            <Input
+              type="date"
+              value={formData.due_date}
+              onChange={(e) =>
+                setFormData({ ...formData, due_date: e.target.value })
+              }
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -357,9 +308,11 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                 </Label>
                 <Select 
                   value={formData.account_to_id || ""}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, account_to_id: value || null })
-                  }
+                  onValueChange={(value) => {
+                    setFormData({ ...formData, account_to_id: value || null });
+                    setCentroCustoId(null);
+                    setCategoriaReceitaId(null);
+                  }}
                   disabled={accountsLoading || !bankAccounts?.length}
                 >
                   <SelectTrigger>
@@ -386,6 +339,35 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
               </div>
             </CardContent>
           </Card>
+
+          {/* Centro de Custo e Categoria de Receita */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Centro de Custo *</Label>
+              <SelectCentroCusto
+                contaBancariaId={formData.account_to_id}
+                value={centroCustoId || ""}
+                onChange={(value) => {
+                  setCentroCustoId(value);
+                  setCategoriaReceitaId(null);
+                }}
+                placeholder="Selecione o centro de custo"
+                disabled={!formData.account_to_id}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoria de Receita</Label>
+              <SelectCategoria
+                centroCustoId={centroCustoId}
+                tipo="receita"
+                value={categoriaReceitaId || ""}
+                onChange={setCategoriaReceitaId}
+                placeholder="Selecione a categoria"
+                disabled={!centroCustoId}
+              />
+            </div>
+          </div>
 
           {/* Recorrência */}
           <Card className="border-primary/30 bg-primary/5">

@@ -27,6 +27,8 @@ import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
+import { SelectCategoria } from '@/components/shared/SelectCategoria';
 
 // Validation schema
 const transactionSchema = z.object({
@@ -90,7 +92,9 @@ interface Transaction {
   due_date: string;
   payment_date?: string | null;
   status: "pending" | "paid" | "overdue" | "cancelled";
-  category_id?: string | null;
+  centro_custo_id?: string | null;
+  categoria_receita_id?: string | null;
+  categoria_despesa_id?: string | null;
   bank_account_id?: string | null;
   account_from_id?: string | null;
   account_to_id?: string | null;
@@ -108,6 +112,9 @@ interface Props {
 export function TransactionDialog({ open, onClose, transaction }: Props) {
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const [centroCustoId, setCentroCustoId] = useState<string | null>(null);
+  const [categoriaReceitaId, setCategoriaReceitaId] = useState<string | null>(null);
+  const [categoriaDespesaId, setCategoriaDespesaId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Transaction>>({
     type: "expense",
     amount: undefined,
@@ -115,7 +122,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
     due_date: new Date().toISOString().split("T")[0],
     status: "pending",
   });
-  const [categories, setCategories] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
   
@@ -152,15 +158,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
 
       if (!profile?.company_id) return;
 
-      // Buscar categorias ativas
-      const { data: categoriesData } = await supabase
-        .from("categories")
-        .select("id, name, type, icon, color")
-        .eq("company_id", profile.company_id)
-        .eq("is_active", true)
-        .is("deleted_at", null)
-        .order("name");
-
       // Buscar contatos ativos
       const { data: contactsData } = await supabase
         .from("contacts")
@@ -170,7 +167,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         .is("deleted_at", null)
         .order("name");
 
-      setCategories(categoriesData || []);
       setContacts(contactsData || []);
     } catch (error) {
       console.error("Erro ao carregar dados do formulário:", error);
@@ -186,6 +182,9 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
     
     if (transaction) {
       setFormData(transaction);
+      setCentroCustoId(transaction.centro_custo_id || null);
+      setCategoriaReceitaId(transaction.categoria_receita_id || null);
+      setCategoriaDespesaId(transaction.categoria_despesa_id || null);
     } else {
       setFormData({
         type: "expense",
@@ -194,6 +193,9 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         due_date: new Date().toISOString().split("T")[0],
         status: "pending",
       });
+      setCentroCustoId(null);
+      setCategoriaReceitaId(null);
+      setCategoriaDespesaId(null);
     }
   }, [transaction, open]);
 
@@ -247,7 +249,9 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         status: validatedData.status,
         company_id: profile.company_id,
         payment_date: validatedData.payment_date || null,
-        category_id: formData.category_id || null,
+        centro_custo_id: centroCustoId,
+        categoria_receita_id: validatedData.type === 'revenue' ? categoriaReceitaId : null,
+        categoria_despesa_id: validatedData.type === 'expense' ? categoriaDespesaId : null,
         bank_account_id: formData.bank_account_id || null,
         contact_id: formData.contact_id || null,
         customer_name: validatedData.customer_name || null,
@@ -352,9 +356,12 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
               <Label>Tipo *</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, type: value })
-                }
+                onValueChange={(value: any) => {
+                  setFormData({ ...formData, type: value });
+                  setCentroCustoId(null);
+                  setCategoriaReceitaId(null);
+                  setCategoriaDespesaId(null);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -428,54 +435,6 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <Select
-                value={formData.category_id || ""}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, category_id: value || null })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories
-                    .filter(cat => cat.type === formData.type)
-                    .map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        <div className="flex items-center gap-2">
-                          {category.icon && <span>{category.icon}</span>}
-                          <span>{category.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Conta Bancária (Legado)</Label>
-              <Select
-                value={formData.bank_account_id || ""}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, bank_account_id: value || null })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione uma conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bankAccounts?.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.bank_name} - {account.account_number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
           {/* Alerta se não houver contas */}
           {!accountsLoading && (!bankAccounts || bankAccounts.length === 0) && (
@@ -546,9 +505,13 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                   </Label>
                   <Select 
                     value={formData.account_to_id || ""}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, account_to_id: value || null })
-                    }
+                    onValueChange={(value) => {
+                      setFormData({ ...formData, account_to_id: value || null });
+                      if (formData.type === 'revenue') {
+                        setCentroCustoId(null);
+                        setCategoriaReceitaId(null);
+                      }
+                    }}
                     disabled={accountsLoading || !bankAccounts?.length}
                   >
                     <SelectTrigger>
@@ -577,6 +540,66 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Centro de Custo e Categoria - RECEITA */}
+          {formData.type === 'revenue' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Centro de Custo *</Label>
+                <SelectCentroCusto
+                  contaBancariaId={formData.account_to_id}
+                  value={centroCustoId || ""}
+                  onChange={(value) => {
+                    setCentroCustoId(value);
+                    setCategoriaReceitaId(null);
+                  }}
+                  placeholder="Selecione o centro de custo"
+                  disabled={!formData.account_to_id}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Categoria de Receita</Label>
+                <SelectCategoria
+                  centroCustoId={centroCustoId}
+                  tipo="receita"
+                  value={categoriaReceitaId || ""}
+                  onChange={setCategoriaReceitaId}
+                  placeholder="Selecione a categoria"
+                  disabled={!centroCustoId}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Centro de Custo e Categoria - DESPESA */}
+          {formData.type === 'expense' && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Centro de Custo *</Label>
+                <SelectCentroCusto
+                  contaBancariaId={formData.account_from_id}
+                  value={centroCustoId || ""}
+                  onChange={(value) => {
+                    setCentroCustoId(value);
+                    setCategoriaDespesaId(null);
+                  }}
+                  placeholder="Selecione o centro de custo"
+                  disabled={!formData.account_from_id}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Categoria de Despesa</Label>
+                <SelectCategoria
+                  centroCustoId={centroCustoId}
+                  tipo="despesa"
+                  value={categoriaDespesaId || ""}
+                  onChange={setCategoriaDespesaId}
+                  placeholder="Selecione a categoria"
+                  disabled={!centroCustoId}
+                />
+              </div>
+            </div>
           )}
 
           {formData.type === 'expense' && (
