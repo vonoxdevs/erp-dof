@@ -35,6 +35,8 @@ export function useCategorias(tipo?: TipoCategoria) {
       const categoriasComContas: CategoriaComContas[] = data?.map(cat => ({
         ...cat,
         tipo: cat.tipo as TipoCategoria,
+        icon: cat.icon || '📁',
+        cor: cat.cor || '#3b82f6',
         contas_habilitadas: cat.categoria_conta_bancaria
           ?.filter((ccc: any) => ccc.habilitado)
           .map((ccc: any) => ccc.conta_bancaria_id) || []

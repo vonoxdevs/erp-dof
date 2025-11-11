@@ -8,6 +8,7 @@ export interface Categoria {
   tipo: TipoCategoria;
   ativo: boolean;
   cor?: string;
+  icon?: string;
   created_at: string;
   updated_at: string;
 }
@@ -34,5 +35,6 @@ export interface CategoriaFormData {
   descricao?: string;
   tipo: TipoCategoria;
   cor?: string;
+  icon?: string;
   contas_bancarias: string[];
 }

@@ -26,6 +26,8 @@ interface FinancialCategoryDialogProps {
 export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: FinancialCategoryDialogProps) {
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
+  const [icon, setIcon] = useState('📁');
+  const [cor, setCor] = useState('#3b82f6');
   const [contasSelecionadas, setContasSelecionadas] = useState<string[]>([]);
   const [contasBancarias, setContasBancarias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,6 +73,8 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
         if (data) {
           setNome(data.nome);
           setDescricao(data.descricao || '');
+          setIcon(data.icon || '📁');
+          setCor(data.cor || '#3b82f6');
           
           const contasHabilitadas = data.categoria_conta_bancaria
             ?.filter((ccc: any) => ccc.habilitado)
@@ -83,6 +87,8 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
     } else {
       setNome('');
       setDescricao('');
+      setIcon('📁');
+      setCor('#3b82f6');
       setContasSelecionadas([]);
     }
   }, [categoriaId, aberto]);
@@ -127,6 +133,8 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
           .update({
             nome: nome.trim(),
             descricao: descricao.trim() || null,
+            icon: icon.trim() || '📁',
+            cor: cor || '#3b82f6',
             updated_at: new Date().toISOString()
           })
           .eq('id', categoriaId);
@@ -163,6 +171,8 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
             company_id: profile.company_id,
             nome: nome.trim(),
             descricao: descricao.trim() || null,
+            icon: icon.trim() || '📁',
+            cor: cor || '#3b82f6',
             tipo,
             ativo: true
           })
@@ -239,6 +249,43 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
                 placeholder="Descrição opcional da categoria"
                 rows={3}
               />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="icon">Ícone</Label>
+              <Input
+                id="icon"
+                value={icon}
+                onChange={(e) => setIcon(e.target.value)}
+                placeholder="Ex: 📊, 💼, 🏢, etc."
+                maxLength={10}
+              />
+              <p className="text-xs text-muted-foreground">
+                Use emojis ou ícones para identificar visualmente a categoria
+              </p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="cor">Cor de Fundo</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="cor"
+                  type="color"
+                  value={cor}
+                  onChange={(e) => setCor(e.target.value)}
+                  className="w-20 h-10 cursor-pointer"
+                />
+                <Input
+                  value={cor}
+                  onChange={(e) => setCor(e.target.value)}
+                  placeholder="#3b82f6"
+                  maxLength={7}
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Escolha uma cor para destacar a categoria nas visualizações
+              </p>
             </div>
 
             <div className="grid gap-2">

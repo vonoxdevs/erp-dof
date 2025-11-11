@@ -144,6 +144,7 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-20">Ícone</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
               {contasBancarias.map(conta => (
@@ -157,6 +158,14 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
           <TableBody>
             {categorias.map(categoria => (
               <TableRow key={categoria.id}>
+                <TableCell>
+                  <div 
+                    className="flex items-center justify-center w-10 h-10 rounded-md text-xl"
+                    style={{ backgroundColor: categoria.cor || '#3b82f6' }}
+                  >
+                    {categoria.icon || '📁'}
+                  </div>
+                </TableCell>
                 <TableCell className="font-medium">{categoria.nome}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {categoria.descricao || '-'}

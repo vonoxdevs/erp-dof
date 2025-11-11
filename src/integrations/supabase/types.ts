@@ -253,6 +253,7 @@ export type Database = {
           cor: string | null
           created_at: string
           descricao: string | null
+          icon: string | null
           id: string
           nome: string
           tipo: string
@@ -264,6 +265,7 @@ export type Database = {
           cor?: string | null
           created_at?: string
           descricao?: string | null
+          icon?: string | null
           id?: string
           nome: string
           tipo: string
@@ -275,6 +277,7 @@ export type Database = {
           cor?: string | null
           created_at?: string
           descricao?: string | null
+          icon?: string | null
           id?: string
           nome?: string
           tipo?: string
