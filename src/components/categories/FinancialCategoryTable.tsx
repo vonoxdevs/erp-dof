@@ -245,7 +245,7 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                 {(tipo === 'receita' || tipo === 'despesa') && (
                   <TableCell>
                     <Select
-                      value={categoria.centro_custo?.id || 'none'}
+                      value={categoria.centro_custo?.id ?? 'none'}
                       onValueChange={(value) => handleChangeCentroCusto(categoria.id, value)}
                     >
                       <SelectTrigger className="w-[200px]">
