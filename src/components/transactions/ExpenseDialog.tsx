@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import {
   Select,
   SelectContent,
@@ -242,14 +243,12 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
 
             <div className="space-y-2">
               <Label>Valor (R$) *</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={formData.amount || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, amount: e.target.value ? parseFloat(e.target.value) : undefined })
+              <CurrencyInput
+                value={formData.amount}
+                onChange={(value) =>
+                  setFormData({ ...formData, amount: value })
                 }
-                placeholder="0,00"
+                placeholder="R$ 0,00"
                 required
               />
             </div>
@@ -349,7 +348,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
           {/* Centro de Custo e Categoria de Despesa */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Centro de Custo *</Label>
+              <Label>Centro de Custo</Label>
               <SelectCentroCusto
                 contaBancariaId={formData.account_from_id}
                 value={centroCustoId || ""}

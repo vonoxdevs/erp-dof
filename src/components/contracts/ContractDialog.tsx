@@ -11,6 +11,8 @@ import { Loader2 } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
+import { CurrencyInput } from '@/components/shared/CurrencyInput';
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Contract {
   id: string;
@@ -36,12 +38,13 @@ export function ContractDialog({ open, onClose, contract }: Props) {
   const { accounts, isLoading: loadingAccounts } = useBankAccounts();
   const [centroCustoId, setCentroCustoId] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
+  const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     type: "income",
-    amount: "",
+    amount: 0,
     frequency: "monthly",
     start_date: "",
     end_date: "",
@@ -55,14 +58,13 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         name: contract.name,
         description: contract.description || "",
         type: contract.type,
-        amount: contract.amount.toString(),
+        amount: contract.amount,
         frequency: contract.frequency,
         start_date: contract.start_date,
         end_date: contract.end_date || "",
         is_active: contract.is_active,
         bank_account_id: contract.bank_account_id || "",
       });
-      // TODO: Carregar centro_custo_id e categoria_id do contrato quando disponível
       setCentroCustoId("");
       setCategoriaId("");
     } else {
@@ -70,7 +72,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         name: "",
         description: "",
         type: "income",
-        amount: "",
+        amount: 0,
         frequency: "monthly",
         start_date: new Date().toISOString().split("T")[0],
         end_date: "",
@@ -90,7 +92,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       return;
     }
     
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
+    if (!formData.amount || formData.amount <= 0) {
       toast.error("Valor deve ser maior que zero");
       return;
     }
@@ -131,26 +133,12 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         return;
       }
 
-      // Validar campos obrigatórios
-      if (!formData.name.trim()) {
-        toast.error("Nome do contrato é obrigatório");
-        setLoading(false);
-        return;
-      }
-
-      const amount = parseFloat(formData.amount);
-      if (isNaN(amount) || amount <= 0) {
-        toast.error("Valor deve ser maior que zero");
-        setLoading(false);
-        return;
-      }
-
       const contractData = {
         company_id: profile.company_id,
         name: formData.name.trim(),
         description: formData.description?.trim() || null,
         type: formData.type,
-        amount: amount,
+        amount: formData.amount,
         frequency: formData.frequency,
         start_date: formData.start_date,
         end_date: formData.end_date || null,
@@ -172,7 +160,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           .from("contracts")
           .update(contractData)
           .eq("id", contract.id)
-          .eq("company_id", profile.company_id) // Garantir company isolation
+          .eq("company_id", profile.company_id)
           .select();
         
         if (error) {
@@ -186,8 +174,28 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           return;
         }
         
+        // Atualizar transações pendentes do contrato
+        const { error: updateTxError } = await supabase
+          .from('transactions')
+          .update({
+            amount: contractData.amount,
+            centro_custo_id: contractData.centro_custo_id,
+            categoria_receita_id: contractData.categoria_receita_id,
+            categoria_despesa_id: contractData.categoria_despesa_id,
+            bank_account_id: contractData.bank_account_id,
+            account_to_id: contractData.type === 'income' ? contractData.bank_account_id : null,
+            description: `${contractData.name} - Parcela`,
+          })
+          .eq('contract_id', contract.id)
+          .eq('status', 'pending');
+
+        if (updateTxError) {
+          console.error("Erro ao atualizar transações:", updateTxError);
+          toast.warning("Contrato atualizado, mas houve erro ao atualizar transações pendentes");
+        }
+        
         console.log("Contrato atualizado com sucesso:", data);
-        toast.success("Contrato atualizado com sucesso!");
+        toast.success("Contrato e transações pendentes atualizados!");
       } else {
         // Criar novo contrato
         const { data, error } = await supabase
@@ -198,7 +206,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         if (error) {
           console.error("Erro detalhado ao criar contrato:", error);
           
-          // Mensagens de erro específicas
           if (error.message?.includes("violates row-level security policy")) {
             toast.error("Você não tem permissão para criar contratos");
           } else if (error.message?.includes("company_id")) {
@@ -230,6 +237,11 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       } else {
         toast.success("Transações geradas e saldos atualizados!");
       }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+      ]);
 
       onClose(true);
     } catch (error: any) {
@@ -287,12 +299,10 @@ export function ContractDialog({ open, onClose, contract }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="amount">Valor Mensal *</Label>
-              <Input
-                id="amount"
-                type="number"
-                step="0.01"
+              <CurrencyInput
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, amount: value })}
+                placeholder="R$ 0,00"
                 required
               />
             </div>

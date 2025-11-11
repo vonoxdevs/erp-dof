@@ -26,7 +26,7 @@ export function AccountsBalance() {
         .from('transactions')
         .select('type, amount, status')
         .eq('company_id', profile.company_id)
-        .eq('status', 'pending');
+        .in('status', ['pending', 'overdue']);
       
       if (error) throw error;
       return data || [];

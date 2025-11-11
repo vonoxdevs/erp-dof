@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CurrencyInput } from "@/components/shared/CurrencyInput";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -228,12 +229,10 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
 
             <div className="space-y-2">
               <Label>Saldo Inicial (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
+              <CurrencyInput
                 value={formData.current_balance}
-                onChange={(e) => setFormData({ ...formData, current_balance: parseFloat(e.target.value) || 0 })}
-                placeholder="0,00"
+                onChange={(value) => setFormData({ ...formData, current_balance: value })}
+                placeholder="R$ 0,00"
               />
             </div>
 

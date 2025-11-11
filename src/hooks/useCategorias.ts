@@ -63,6 +63,24 @@ export function useCategorias(tipo?: TipoCategoria) {
 
   useEffect(() => {
     fetchCategorias();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('categorias-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categorias'
+        },
+        () => fetchCategorias()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [tipo]);
 
   return { categorias, loading, refetch: fetchCategorias };
