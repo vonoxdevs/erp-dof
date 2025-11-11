@@ -9,7 +9,8 @@ import { useCategoriasFiltradas } from '@/hooks/useCategoriasFiltradas';
 import { TipoCategoria } from '@/types/categoria';
 
 interface SelectCategoriaProps {
-  contaBancariaId: string | null;
+  contaBancariaId?: string | null;
+  centroCustoId?: string | null;
   tipo: TipoCategoria;
   value: string;
   onChange: (value: string) => void;
@@ -19,6 +20,7 @@ interface SelectCategoriaProps {
 
 export function SelectCategoria({
   contaBancariaId,
+  centroCustoId,
   tipo,
   value,
   onChange,
@@ -27,10 +29,14 @@ export function SelectCategoria({
 }: SelectCategoriaProps) {
   const { categorias, loading } = useCategoriasFiltradas({
     contaBancariaId,
+    centroCustoId,
     tipo
   });
 
-  const isDisabled = disabled || !contaBancariaId || loading;
+  // Para centro_custo, precisa contaBancariaId
+  // Para receita/despesa, precisa centroCustoId
+  const requiredId = tipo === 'centro_custo' ? contaBancariaId : centroCustoId;
+  const isDisabled = disabled || !requiredId || loading;
 
   return (
     <Select value={value} onValueChange={onChange} disabled={isDisabled}>
