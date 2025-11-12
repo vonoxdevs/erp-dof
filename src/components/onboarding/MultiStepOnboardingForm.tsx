@@ -79,26 +79,15 @@ export const MultiStepOnboardingForm = () => {
         throw new Error('Erro ao criar usuário');
       }
 
+      // Usar a sessão retornada diretamente pelo signUp
+      if (!authData.session) {
+        throw new Error('Sessão não foi criada. Verifique se a confirmação de e-mail está desabilitada.');
+      }
+
+      const session = authData.session;
+
       // 2. Aguardar um pouco para garantir que o trigger criou o perfil
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // 3. Fazer login automaticamente
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: personalData.email,
-        password: personalData.password
-      });
-
-      if (signInError) {
-        console.error('Erro ao fazer login automático:', signInError);
-        // Não bloquear o fluxo, usuário pode fazer login manualmente
-      }
-
-      // 4. Chamar edge function de onboarding
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error('Sessão não encontrada após criação da conta');
-      }
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const onboardingData = {
         company: {
