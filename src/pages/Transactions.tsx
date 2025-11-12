@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft, Repeat, Calendar as CalendarIcon, X } from "lucide-react";
+import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft, Repeat, Calendar as CalendarIcon, X, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
@@ -13,6 +13,7 @@ import { TransferDialog } from "@/components/transactions/TransferDialog";
 import { RecurringTransactionDialog } from "@/components/transactions/RecurringTransactionDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
+import { ImportBankStatementDialog } from "@/components/bank-accounts/ImportBankStatementDialog";
 import { sanitizeError } from "@/lib/errorMapping";
 import { exportTransactionsToPDF } from "@/lib/exportUtils";
 import { Calendar } from "@/components/ui/calendar";
@@ -84,6 +85,7 @@ const Transactions = () => {
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [companyName, setCompanyName] = useState<string>("Minha Empresa");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -376,6 +378,10 @@ const Transactions = () => {
               <Download className="w-4 h-4 mr-2" />
               Exportar PDF
             </Button>
+            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importar Extrato
+            </Button>
           </div>
 
           {/* Filtro de Período */}
@@ -526,6 +532,15 @@ const Transactions = () => {
           if (refresh) loadTransactions();
         }}
         transaction={selectedTransaction}
+      />
+
+      <ImportBankStatementDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        onImportComplete={() => {
+          loadTransactions();
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+        }}
       />
     </div>
   );
