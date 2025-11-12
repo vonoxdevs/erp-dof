@@ -41,10 +41,16 @@ interface Transaction {
   transfer_to_account_id?: string | null;
   is_recurring?: boolean;
   recurrence_config?: any;
+  centro_custo_id?: string | null;
   categories?: {
     name: string;
     icon?: string;
     color?: string;
+  } | null;
+  centro_custo?: {
+    id: string;
+    nome: string;
+    cor?: string;
   } | null;
   bank_accounts?: {
     id: string;
@@ -83,6 +89,7 @@ const Transactions = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [centroCustoFilter, setCentroCustoFilter] = useState<string>("all");
   // Estados para datas selecionadas (temporárias)
   const [tempStartDate, setTempStartDate] = useState<Date | undefined>(undefined);
   const [tempEndDate, setTempEndDate] = useState<Date | undefined>(undefined);
@@ -127,6 +134,7 @@ const Transactions = () => {
         .select(`
           *,
           categories(name, icon, color),
+          centro_custo:categorias!centro_custo_id(id, nome, cor),
           bank_account:bank_accounts!bank_account_id(id, bank_name, account_number),
           account_from:bank_accounts!account_from_id(id, bank_name, account_number),
           account_to:bank_accounts!account_to_id(id, bank_name, account_number)
@@ -234,6 +242,7 @@ const Transactions = () => {
     const matchesType = typeFilter === "all" || t.type === typeFilter;
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     const matchesCategory = categoryFilter === "all" || t.category_id === categoryFilter;
+    const matchesCentroCusto = centroCustoFilter === "all" || t.centro_custo_id === centroCustoFilter;
     
     // Filtro de período
     let matchesPeriod = true;
@@ -271,7 +280,7 @@ const Transactions = () => {
       }
     }
     
-    return matchesSearch && matchesType && matchesStatus && matchesCategory && matchesPeriod;
+    return matchesSearch && matchesType && matchesStatus && matchesCategory && matchesCentroCusto && matchesPeriod;
   });
 
 
@@ -463,9 +472,11 @@ const Transactions = () => {
               typeFilter={typeFilter}
               statusFilter={statusFilter}
               categoryFilter={categoryFilter}
+              centroCustoFilter={centroCustoFilter}
               onTypeChange={setTypeFilter}
               onStatusChange={setStatusFilter}
               onCategoryChange={setCategoryFilter}
+              onCentroCustoChange={setCentroCustoFilter}
             />
           )}
         </div>
