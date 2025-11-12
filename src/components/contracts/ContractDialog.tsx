@@ -47,7 +47,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    type: "income",
     amount: 0,
     frequency: "monthly",
     start_date: "",
@@ -62,7 +61,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       setFormData({
         name: contract.name,
         description: contract.description || "",
-        type: contract.type,
         amount: contract.amount,
         frequency: contract.frequency,
         start_date: contract.start_date,
@@ -78,7 +76,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       setFormData({
         name: "",
         description: "",
-        type: "income",
         amount: 0,
         frequency: "monthly",
         start_date: new Date().toISOString().split("T")[0],
@@ -178,7 +175,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
     e.preventDefault();
     
     if (!formData.name?.trim()) {
-      toast.error("Nome do contrato é obrigatório");
+      toast.error("Nome do cliente é obrigatório");
       return;
     }
     
@@ -227,7 +224,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         company_id: profile.company_id,
         name: formData.name.trim(),
         description: formData.description?.trim() || null,
-        type: formData.type,
+        type: "income",
         amount: formData.amount,
         frequency: formData.frequency,
         start_date: formData.start_date,
@@ -238,7 +235,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         next_generation_date: formData.start_date,
         bank_account_id: formData.bank_account_id,
         centro_custo_id: centroCustoId || null,
-        categoria_despesa_id: formData.type === 'expense' ? categoriaId || null : null,
+        categoria_receita_id: categoriaId || null,
         service_description: formData.service_description?.trim() || null,
         attachments: attachments,
       };
@@ -271,9 +268,9 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           .update({
             amount: contractData.amount,
             centro_custo_id: contractData.centro_custo_id,
-            categoria_despesa_id: contractData.categoria_despesa_id,
+            categoria_receita_id: contractData.categoria_receita_id,
             bank_account_id: contractData.bank_account_id,
-            account_to_id: contractData.type === 'income' ? contractData.bank_account_id : null,
+            account_to_id: contractData.bank_account_id,
             description: `${contractData.name} - Parcela`,
           })
           .eq('contract_id', contract.id)
@@ -351,7 +348,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do Contrato *</Label>
+            <Label htmlFor="name">Nome do Cliente *</Label>
             <Input
               id="name"
               value={formData.name}
@@ -381,32 +378,14 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             />
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="type">Tipo *</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(value) => setFormData({ ...formData, type: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income">Receita</SelectItem>
-                  <SelectItem value="expense">Despesa</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="amount">Valor Mensal *</Label>
-              <CurrencyInput
-                value={formData.amount}
-                onChange={(value) => setFormData({ ...formData, amount: value })}
-                placeholder="R$ 0,00"
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="amount">Valor Mensal *</Label>
+            <CurrencyInput
+              value={formData.amount}
+              onChange={(value) => setFormData({ ...formData, amount: value })}
+              placeholder="R$ 0,00"
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -450,19 +429,17 @@ export function ContractDialog({ open, onClose, contract }: Props) {
               />
             </div>
 
-            {formData.type === 'expense' && (
-              <div className="space-y-2">
-                <Label htmlFor="categoria">Categoria de Despesa</Label>
-                <SelectCategoria
-                  centroCustoId={centroCustoId}
-                  tipo="despesa"
-                  value={categoriaId}
-                  onChange={setCategoriaId}
-                  placeholder="Selecione a categoria"
-                  disabled={!centroCustoId}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="categoria">Categoria de Receita</Label>
+              <SelectCategoria
+                centroCustoId={centroCustoId}
+                tipo="receita"
+                value={categoriaId}
+                onChange={setCategoriaId}
+                placeholder="Selecione a categoria"
+                disabled={!centroCustoId}
+              />
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">

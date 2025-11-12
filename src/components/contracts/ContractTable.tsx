@@ -23,14 +23,6 @@ interface Props {
 }
 
 export function ContractTable({ contracts, onEdit, onDelete, onGenerateInvoice, onSendInvoice }: Props) {
-  const getTypeLabel = (type: string) => {
-    const types = {
-      income: "Receita",
-      expense: "Despesa",
-    };
-    return types[type as keyof typeof types] || type;
-  };
-
   const getFrequencyLabel = (frequency: string) => {
     const frequencies = {
       monthly: "Mensal",
@@ -53,8 +45,7 @@ export function ContractTable({ contracts, onEdit, onDelete, onGenerateInvoice, 
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Nome</TableHead>
-          <TableHead>Tipo</TableHead>
+          <TableHead>Cliente</TableHead>
           <TableHead>Valor Mensal</TableHead>
           <TableHead>Frequência</TableHead>
           <TableHead>Início</TableHead>
@@ -66,11 +57,6 @@ export function ContractTable({ contracts, onEdit, onDelete, onGenerateInvoice, 
         {contracts.map((contract) => (
           <TableRow key={contract.id}>
             <TableCell className="font-medium">{contract.name}</TableCell>
-            <TableCell>
-              <Badge variant={contract.type === "revenue" ? "default" : "destructive"}>
-                {getTypeLabel(contract.type)}
-              </Badge>
-            </TableCell>
             <TableCell className="font-semibold">
               R$ {Number(contract.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </TableCell>
