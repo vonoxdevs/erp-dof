@@ -5,13 +5,21 @@ import { Pencil, Trash2, FileText, Send } from "lucide-react";
 
 interface Contract {
   id: string;
-  name: string;
-  type: string;
+  contract_name: string | null;
+  contact_id: string;
   amount: number;
   frequency: string;
   start_date: string;
   end_date: string | null;
   is_active: boolean;
+  attachments: any[] | null;
+  contact?: {
+    name: string;
+  };
+  centro_custo?: {
+    nome: string;
+    icon?: string;
+  };
 }
 
 interface Props {
@@ -23,16 +31,6 @@ interface Props {
 }
 
 export function ContractTable({ contracts, onEdit, onDelete, onGenerateInvoice, onSendInvoice }: Props) {
-  const getFrequencyLabel = (frequency: string) => {
-    const frequencies = {
-      monthly: "Mensal",
-      quarterly: "Trimestral",
-      semiannual: "Semestral",
-      annual: "Anual",
-    };
-    return frequencies[frequency as keyof typeof frequencies] || frequency;
-  };
-
   if (contracts.length === 0) {
     return (
       <div className="p-8 text-center text-muted-foreground">
@@ -45,26 +43,43 @@ export function ContractTable({ contracts, onEdit, onDelete, onGenerateInvoice, 
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>Nome do Contrato</TableHead>
           <TableHead>Cliente</TableHead>
           <TableHead>Valor Mensal</TableHead>
-          <TableHead>Frequência</TableHead>
+          <TableHead>Centro de Custo</TableHead>
           <TableHead>Início</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>Anexo</TableHead>
           <TableHead className="text-right">Ações</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {contracts.map((contract) => (
           <TableRow key={contract.id}>
-            <TableCell className="font-medium">{contract.name}</TableCell>
+            <TableCell className="font-medium">
+              {contract.contract_name || "Sem nome"}
+            </TableCell>
+            <TableCell>
+              {contract.contact?.name || "Cliente não informado"}
+            </TableCell>
             <TableCell className="font-semibold">
               R$ {Number(contract.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
             </TableCell>
-            <TableCell>{getFrequencyLabel(contract.frequency)}</TableCell>
-            <TableCell>{new Date(contract.start_date).toLocaleDateString("pt-BR")}</TableCell>
             <TableCell>
-              <Badge variant={contract.is_active ? "default" : "secondary"}>
-                {contract.is_active ? "Ativo" : "Inativo"}
+              {contract.centro_custo ? (
+                <div className="flex items-center gap-2">
+                  {contract.centro_custo.icon && <span>{contract.centro_custo.icon}</span>}
+                  <span>{contract.centro_custo.nome}</span>
+                </div>
+              ) : (
+                <span className="text-muted-foreground">-</span>
+              )}
+            </TableCell>
+            <TableCell>
+              {new Date(contract.start_date).toLocaleDateString("pt-BR")}
+            </TableCell>
+            <TableCell>
+              <Badge variant={contract.attachments && contract.attachments.length > 0 ? "default" : "secondary"}>
+                {contract.attachments && contract.attachments.length > 0 ? "Sim" : "Não"}
               </Badge>
             </TableCell>
             <TableCell className="text-right">

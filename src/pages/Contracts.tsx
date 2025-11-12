@@ -12,20 +12,27 @@ import { calculateMRR } from "@/lib/recurringCalculations";
 interface Contract {
   id: string;
   company_id: string;
+  contract_name: string | null;
+  contact_id: string;
   type: string;
-  name: string;
-  description: string | null;
   amount: number;
+  frequency: string;
   start_date: string;
   end_date: string | null;
-  frequency: string;
   is_active: boolean;
-  contact_id: string | null;
-  category_id: string | null;
-  bank_account_id: string | null;
+  description: string | null;
   service_description: string | null;
+  bank_account_id: string | null;
+  centro_custo_id: string | null;
+  categoria_receita_id: string | null;
   attachments: any[] | null;
-  created_at: string;
+  contact?: {
+    name: string;
+  };
+  centro_custo?: {
+    nome: string;
+    icon?: string;
+  };
 }
 
 const Contracts = () => {
@@ -54,9 +61,14 @@ const Contracts = () => {
 
       const { data, error } = await supabase
         .from("contracts")
-        .select("*")
+        .select(`
+          *,
+          contact:contacts!contracts_contact_id_fkey(name),
+          centro_custo:categorias!contracts_centro_custo_id_fkey(nome, icon)
+        `)
         .eq("company_id", profile.company_id)
-        .order("created_at", { ascending: false });
+        .is("deleted_at", null)
+        .order("contract_name", { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       setContracts((data || []) as Contract[]);
@@ -100,7 +112,8 @@ const Contracts = () => {
   };
 
   const filteredContracts = contracts.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+    c.contract_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.contact?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const activeContracts = filteredContracts.filter((c) => c.is_active);

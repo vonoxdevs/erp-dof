@@ -545,6 +545,7 @@ export type Database = {
           centro_custo_id: string | null
           company_id: string
           contact_id: string | null
+          contract_name: string | null
           created_at: string | null
           currency: string | null
           deleted_at: string | null
@@ -575,6 +576,7 @@ export type Database = {
           centro_custo_id?: string | null
           company_id: string
           contact_id?: string | null
+          contract_name?: string | null
           created_at?: string | null
           currency?: string | null
           deleted_at?: string | null
@@ -605,6 +607,7 @@ export type Database = {
           centro_custo_id?: string | null
           company_id?: string
           contact_id?: string | null
+          contract_name?: string | null
           created_at?: string | null
           currency?: string | null
           deleted_at?: string | null

@@ -7,17 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Upload, X, FileText } from "lucide-react";
+import { Loader2, X, FileText } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
+import { SelectCliente } from '@/components/shared/SelectCliente';
 import { CurrencyInput } from '@/components/shared/CurrencyInput';
 import { useQueryClient } from "@tanstack/react-query";
 
 interface Contract {
   id: string;
-  name: string;
+  contract_name: string | null;
+  contact_id: string | null;
   description: string | null;
+  service_description: string | null;
   type: string;
   amount: number;
   frequency: string;
@@ -25,7 +28,8 @@ interface Contract {
   end_date: string | null;
   is_active: boolean;
   bank_account_id: string | null;
-  service_description: string | null;
+  centro_custo_id: string | null;
+  categoria_receita_id: string | null;
   attachments: any[] | null;
 }
 
@@ -38,55 +42,58 @@ interface Props {
 export function ContractDialog({ open, onClose, contract }: Props) {
   const [loading, setLoading] = useState(false);
   const { accounts, isLoading: loadingAccounts } = useBankAccounts();
-  const [centroCustoId, setCentroCustoId] = useState("");
-  const [categoriaId, setCategoriaId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
-    name: "",
+    contract_name: "",
+    contact_id: "",
     description: "",
+    service_description: "",
     amount: 0,
+    bank_account_id: "",
+    centro_custo_id: "",
+    categoria_receita_id: "",
     frequency: "monthly",
     start_date: "",
     end_date: "",
     is_active: true,
-    bank_account_id: "",
-    service_description: "",
   });
 
   useEffect(() => {
     if (contract) {
       setFormData({
-        name: contract.name,
+        contract_name: contract.contract_name || "",
+        contact_id: contract.contact_id || "",
         description: contract.description || "",
+        service_description: contract.service_description || "",
         amount: contract.amount,
+        bank_account_id: contract.bank_account_id || "",
+        centro_custo_id: contract.centro_custo_id || "",
+        categoria_receita_id: contract.categoria_receita_id || "",
         frequency: contract.frequency,
         start_date: contract.start_date,
         end_date: contract.end_date || "",
         is_active: contract.is_active,
-        bank_account_id: contract.bank_account_id || "",
-        service_description: contract.service_description || "",
       });
       setAttachments(contract.attachments || []);
-      setCentroCustoId("");
-      setCategoriaId("");
     } else {
       setFormData({
-        name: "",
+        contract_name: "",
+        contact_id: "",
         description: "",
+        service_description: "",
         amount: 0,
+        bank_account_id: "",
+        centro_custo_id: "",
+        categoria_receita_id: "",
         frequency: "monthly",
         start_date: new Date().toISOString().split("T")[0],
         end_date: "",
         is_active: true,
-        bank_account_id: "",
-        service_description: "",
       });
       setAttachments([]);
-      setCentroCustoId("");
-      setCategoriaId("");
     }
   }, [contract, open]);
 
@@ -174,8 +181,14 @@ export function ContractDialog({ open, onClose, contract }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name?.trim()) {
-      toast.error("Nome do cliente é obrigatório");
+    // Validações
+    if (!formData.contract_name?.trim()) {
+      toast.error("Nome do contrato é obrigatório");
+      return;
+    }
+    
+    if (!formData.contact_id) {
+      toast.error("Cliente é obrigatório");
       return;
     }
     
@@ -184,13 +197,18 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       return;
     }
     
-    if (!formData.start_date) {
-      toast.error("Data de início é obrigatória");
+    if (!formData.bank_account_id) {
+      toast.error("Selecione uma conta bancária");
       return;
     }
     
-    if (!formData.bank_account_id) {
-      toast.error("Selecione uma conta bancária para receber as receitas");
+    if (!formData.centro_custo_id) {
+      toast.error("Centro de custo é obrigatório");
+      return;
+    }
+    
+    if (!formData.start_date) {
+      toast.error("Data de início é obrigatória");
       return;
     }
     
@@ -209,21 +227,18 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         .eq("id", user.id)
         .maybeSingle();
 
-      if (profileError) {
-        console.error("Erro ao buscar perfil:", profileError);
+      if (profileError || !profile?.company_id) {
         toast.error("Erro ao buscar dados do usuário");
-        return;
-      }
-
-      if (!profile?.company_id) {
-        toast.error("Empresa não encontrada no seu perfil");
         return;
       }
 
       const contractData = {
         company_id: profile.company_id,
-        name: formData.name.trim(),
+        name: formData.contract_name.trim(), // Manter compatibilidade com schema antigo
+        contract_name: formData.contract_name.trim(),
+        contact_id: formData.contact_id,
         description: formData.description?.trim() || null,
+        service_description: formData.service_description?.trim() || null,
         type: "income",
         amount: formData.amount,
         frequency: formData.frequency,
@@ -234,13 +249,10 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         generation_day: 1,
         next_generation_date: formData.start_date,
         bank_account_id: formData.bank_account_id,
-        centro_custo_id: centroCustoId || null,
-        categoria_receita_id: categoriaId || null,
-        service_description: formData.service_description?.trim() || null,
+        centro_custo_id: formData.centro_custo_id,
+        categoria_receita_id: formData.categoria_receita_id || null,
         attachments: attachments,
       };
-
-      console.log("Dados do contrato a serem salvos:", contractData);
 
       if (contract) {
         // Atualizar contrato existente
@@ -252,13 +264,12 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           .select();
         
         if (error) {
-          console.error("Erro detalhado ao atualizar contrato:", error);
-          toast.error(`Erro ao atualizar contrato: ${error.message || error.details || "Erro desconhecido"}`);
+          toast.error(`Erro ao atualizar contrato: ${error.message}`);
           return;
         }
         
         if (!data || data.length === 0) {
-          toast.error("Contrato não encontrado ou sem permissão para editar");
+          toast.error("Contrato não encontrado ou sem permissão");
           return;
         }
         
@@ -271,18 +282,17 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             categoria_receita_id: contractData.categoria_receita_id,
             bank_account_id: contractData.bank_account_id,
             account_to_id: contractData.bank_account_id,
-            description: `${contractData.name} - Parcela`,
+            contact_id: contractData.contact_id,
+            description: `${contractData.contract_name} - Parcela`,
           })
           .eq('contract_id', contract.id)
           .eq('status', 'pending');
 
         if (updateTxError) {
           console.error("Erro ao atualizar transações:", updateTxError);
-          toast.warning("Contrato atualizado, mas houve erro ao atualizar transações pendentes");
         }
         
-        console.log("Contrato atualizado com sucesso:", data);
-        toast.success("Contrato e transações pendentes atualizados!");
+        toast.success("Contrato atualizado!");
       } else {
         // Criar novo contrato
         const { data, error } = await supabase
@@ -291,25 +301,16 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           .select();
         
         if (error) {
-          console.error("Erro detalhado ao criar contrato:", error);
-          
-          if (error.message?.includes("violates row-level security policy")) {
-            toast.error("Você não tem permissão para criar contratos");
-          } else if (error.message?.includes("company_id")) {
-            toast.error("Empresa não encontrada. Faça logout e login novamente.");
-          } else {
-            toast.error(`Erro ao criar contrato: ${error.message || error.details || "Erro desconhecido"}`);
-          }
+          toast.error(`Erro ao criar contrato: ${error.message}`);
           return;
         }
         
         if (!data || data.length === 0) {
-          toast.error("Erro ao criar contrato: resposta vazia do servidor");
+          toast.error("Erro ao criar contrato");
           return;
         }
         
-        console.log("Contrato criado com sucesso:", data);
-        toast.success("Contrato criado com sucesso!");
+        toast.success("Contrato criado!");
       }
 
       // Gera automaticamente as transações recorrentes
@@ -322,7 +323,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         console.error("Erro ao gerar transações:", generateError);
         toast.warning("Contrato salvo, mas houve erro ao gerar transações");
       } else {
-        toast.success("Transações geradas e saldos atualizados!");
+        toast.success("Transações geradas!");
       }
 
       await Promise.all([
@@ -332,8 +333,8 @@ export function ContractDialog({ open, onClose, contract }: Props) {
 
       onClose(true);
     } catch (error: any) {
-      console.error("Erro inesperado:", error);
-      toast.error(`Erro inesperado: ${error.message || "Erro desconhecido"}`);
+      console.error("Erro:", error);
+      toast.error(`Erro: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -347,16 +348,29 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* 1. Nome do Contrato */}
           <div className="space-y-2">
-            <Label htmlFor="name">Nome do Cliente *</Label>
+            <Label htmlFor="contract_name">Nome do Contrato *</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              id="contract_name"
+              value={formData.contract_name}
+              onChange={(e) => setFormData({ ...formData, contract_name: e.target.value })}
+              placeholder="Ex: Manutenção de Software"
               required
             />
           </div>
 
+          {/* 2. Cliente */}
+          <div className="space-y-2">
+            <Label>Cliente *</Label>
+            <SelectCliente
+              value={formData.contact_id}
+              onChange={(value) => setFormData({ ...formData, contact_id: value })}
+              placeholder="Selecione o cliente"
+            />
+          </div>
+
+          {/* 3. Observações */}
           <div className="space-y-2">
             <Label htmlFor="description">Observações</Label>
             <Textarea
@@ -364,22 +378,25 @@ export function ContractDialog({ open, onClose, contract }: Props) {
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
+              placeholder="Observações gerais sobre o contrato"
             />
           </div>
 
+          {/* 4. Descrição do Serviço */}
           <div className="space-y-2">
-            <Label htmlFor="service_description">Descrição do Serviço *</Label>
+            <Label htmlFor="service_description">Descrição do Serviço</Label>
             <Textarea
               id="service_description"
               value={formData.service_description}
               onChange={(e) => setFormData({ ...formData, service_description: e.target.value })}
-              rows={3}
-              placeholder="Descreva detalhadamente o tipo de serviço contratado..."
+              rows={4}
+              placeholder="Descreva detalhadamente o serviço contratado..."
             />
           </div>
 
+          {/* 5. Valor Mensal Líquido */}
           <div className="space-y-2">
-            <Label htmlFor="amount">Valor Mensal *</Label>
+            <Label htmlFor="amount">Valor Mensal Líquido *</Label>
             <CurrencyInput
               value={formData.amount}
               onChange={(value) => setFormData({ ...formData, amount: value })}
@@ -388,14 +405,18 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             />
           </div>
 
+          {/* 6. Conta */}
           <div className="space-y-2">
-            <Label htmlFor="bank_account_id">Conta Bancária *</Label>
+            <Label htmlFor="bank_account_id">Conta *</Label>
             <Select
               value={formData.bank_account_id}
               onValueChange={(value) => {
-                setFormData({ ...formData, bank_account_id: value });
-                setCentroCustoId("");
-                setCategoriaId("");
+                setFormData({ 
+                  ...formData, 
+                  bank_account_id: value,
+                  centro_custo_id: "",
+                  categoria_receita_id: ""
+                });
               }}
               disabled={loadingAccounts}
             >
@@ -413,16 +434,19 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             </Select>
           </div>
 
-          {/* Centro de Custo e Categoria */}
+          {/* 7. Centro de Custo e Categoria */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="centro_custo">Centro de Custo *</Label>
+              <Label>Centro de Custo *</Label>
               <SelectCentroCusto
                 contaBancariaId={formData.bank_account_id}
-                value={centroCustoId}
+                value={formData.centro_custo_id}
                 onChange={(value) => {
-                  setCentroCustoId(value);
-                  setCategoriaId("");
+                  setFormData({ 
+                    ...formData, 
+                    centro_custo_id: value,
+                    categoria_receita_id: ""
+                  });
                 }}
                 placeholder="Selecione o centro de custo"
                 disabled={!formData.bank_account_id}
@@ -430,37 +454,39 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="categoria">Categoria de Receita</Label>
+              <Label>Categoria de Receita</Label>
               <SelectCategoria
-                centroCustoId={centroCustoId}
+                centroCustoId={formData.centro_custo_id}
                 tipo="receita"
-                value={categoriaId}
-                onChange={setCategoriaId}
+                value={formData.categoria_receita_id}
+                onChange={(value) => setFormData({ ...formData, categoria_receita_id: value })}
                 placeholder="Selecione a categoria"
-                disabled={!centroCustoId}
+                disabled={!formData.centro_custo_id}
               />
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="frequency">Frequência *</Label>
-              <Select
-                value={formData.frequency}
-                onValueChange={(value) => setFormData({ ...formData, frequency: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="daily">Diário</SelectItem>
-                  <SelectItem value="weekly">Semanal</SelectItem>
-                  <SelectItem value="monthly">Mensal</SelectItem>
-                  <SelectItem value="yearly">Anual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* 8. Frequência */}
+          <div className="space-y-2">
+            <Label htmlFor="frequency">Frequência *</Label>
+            <Select
+              value={formData.frequency}
+              onValueChange={(value) => setFormData({ ...formData, frequency: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Diário</SelectItem>
+                <SelectItem value="weekly">Semanal</SelectItem>
+                <SelectItem value="monthly">Mensal</SelectItem>
+                <SelectItem value="yearly">Anual</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
+          {/* 9. Datas */}
+          <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start_date">Data de Início *</Label>
               <Input
@@ -471,21 +497,21 @@ export function ContractDialog({ open, onClose, contract }: Props) {
                 required
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="end_date">Data de Término</Label>
+              <Input
+                id="end_date"
+                type="date"
+                value={formData.end_date}
+                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              />
+            </div>
           </div>
 
+          {/* 10. Anexar Contrato */}
           <div className="space-y-2">
-            <Label htmlFor="end_date">Data de Término (opcional)</Label>
-            <Input
-              id="end_date"
-              type="date"
-              value={formData.end_date}
-              onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-            />
-          </div>
-
-          {/* Anexos */}
-          <div className="space-y-2">
-            <Label>Anexar Contrato (Opcional)</Label>
+            <Label>Anexar Contrato</Label>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Input
@@ -542,7 +568,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {contract ? "Atualizar" : "Criar"}
+              {contract ? "Atualizar Contrato" : "Criar Contrato"}
             </Button>
           </div>
         </form>
