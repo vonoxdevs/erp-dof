@@ -60,13 +60,15 @@ export const MultiStepOnboardingForm = () => {
       });
 
       if (signUpError) {
-        // Tratar erro de email já cadastrado
-        if (signUpError.message?.includes('already') || 
-            signUpError.message?.includes('registered') ||
-            signUpError.status === 422) {
+        // Tratar erro de email já cadastrado especificamente
+        const errorMsg = signUpError.message?.toLowerCase() || '';
+        if (errorMsg.includes('already') || 
+            errorMsg.includes('user already registered') ||
+            errorMsg.includes('email already exists')) {
           throw new Error('Este e-mail já está cadastrado. Faça login ou use outro e-mail.');
         }
-        throw signUpError;
+        // Para outros erros, mostrar mensagem original
+        throw new Error(signUpError.message || 'Erro ao criar conta');
       }
 
       if (!authData.user) {
