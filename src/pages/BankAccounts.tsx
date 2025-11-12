@@ -17,6 +17,10 @@ interface BankAccount {
   account_type: string;
   is_active: boolean;
   is_default: boolean;
+  credit_limit?: number;
+  closing_day?: number;
+  due_day?: number;
+  available_credit?: number;
 }
 
 const BankAccounts = () => {
@@ -44,7 +48,7 @@ const BankAccounts = () => {
 
       const { data, error } = await supabase
         .from("bank_accounts")
-        .select("*")
+        .select("*, credit_limit, closing_day, due_day, available_credit")
         .eq("company_id", profile.company_id)
         .order("is_default", { ascending: false });
 

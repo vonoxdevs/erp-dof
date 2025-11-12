@@ -76,14 +76,18 @@ export type Database = {
           allow_negative_balance: boolean | null
           auto_sync: boolean | null
           available_balance: number | null
+          available_credit: number | null
           bank_code: string
           bank_name: string
           blocked_balance: number | null
+          closing_day: number | null
           company_id: string
           created_at: string | null
+          credit_limit: number | null
           currency: string | null
           current_balance: number | null
           deleted_at: string | null
+          due_day: number | null
           holder_document: string
           holder_name: string
           id: string
@@ -103,14 +107,18 @@ export type Database = {
           allow_negative_balance?: boolean | null
           auto_sync?: boolean | null
           available_balance?: number | null
+          available_credit?: number | null
           bank_code: string
           bank_name: string
           blocked_balance?: number | null
+          closing_day?: number | null
           company_id: string
           created_at?: string | null
+          credit_limit?: number | null
           currency?: string | null
           current_balance?: number | null
           deleted_at?: string | null
+          due_day?: number | null
           holder_document: string
           holder_name: string
           id?: string
@@ -130,14 +138,18 @@ export type Database = {
           allow_negative_balance?: boolean | null
           auto_sync?: boolean | null
           available_balance?: number | null
+          available_credit?: number | null
           bank_code?: string
           bank_name?: string
           blocked_balance?: number | null
+          closing_day?: number | null
           company_id?: string
           created_at?: string | null
+          credit_limit?: number | null
           currency?: string | null
           current_balance?: number | null
           deleted_at?: string | null
+          due_day?: number | null
           holder_document?: string
           holder_name?: string
           id?: string

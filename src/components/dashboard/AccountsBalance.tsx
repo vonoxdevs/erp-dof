@@ -1,12 +1,20 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, Wallet, CreditCard } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 export function AccountsBalance() {
   const { accounts, totalBalance, isLoading } = useBankAccounts();
+
+  // Separar contas normais de cartões de crédito
+  const regularAccounts = accounts?.filter(acc => acc.account_type !== 'credit_card') || [];
+  const creditCards = accounts?.filter(acc => acc.account_type === 'credit_card') || [];
+  
+  const totalCreditLimit = creditCards.reduce((sum, card) => sum + (card.credit_limit || 0), 0);
+  const totalAvailableCredit = creditCards.reduce((sum, card) => sum + (card.available_credit || card.credit_limit || 0), 0);
 
   const { data: pendingTransactions } = useQuery({
     queryKey: ['pending-transactions'],
@@ -131,29 +139,71 @@ export function AccountsBalance() {
         </Card>
       </div>
 
-      {accounts && accounts.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.slice(0, 3).map((account) => (
-            <Card key={account.id} className="border-l-4 border-l-muted">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  {account.bank_name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={cn(
-                  "text-xl font-bold",
-                  account.current_balance >= 0 ? "text-foreground" : "text-destructive"
-                )}>
-                  {formatCurrency(account.current_balance)}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Conta {account.account_number}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+      {/* Contas Bancárias Regulares */}
+      {regularAccounts.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Contas Bancárias
+          </h3>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {regularAccounts.slice(0, 3).map((account) => (
+              <Card key={account.id} className="border-l-4 border-l-muted">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {account.bank_name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={cn(
+                    "text-xl font-bold",
+                    account.current_balance >= 0 ? "text-foreground" : "text-destructive"
+                  )}>
+                    {formatCurrency(account.current_balance)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Conta {account.account_number}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cartões de Crédito */}
+      {creditCards.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+            <CreditCard className="h-4 w-4" />
+            Cartões de Crédito
+          </h3>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {creditCards.slice(0, 3).map((card) => (
+              <Card key={card.id} className="border-l-4 border-l-primary">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      {card.bank_name}
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      {formatCurrency(card.credit_limit || 0)}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-xl font-bold text-accent">
+                    {formatCurrency(card.available_credit || card.credit_limit || 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Crédito disponível
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

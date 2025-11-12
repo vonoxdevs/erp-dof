@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Star } from "lucide-react";
+import { Edit, Trash2, Star, CreditCard, Calendar } from "lucide-react";
 
 interface BankAccount {
   id: string;
@@ -11,6 +11,10 @@ interface BankAccount {
   account_type: string;
   is_active: boolean;
   is_default: boolean;
+  credit_limit?: number;
+  available_credit?: number;
+  closing_day?: number;
+  due_day?: number;
 }
 
 interface Props {
@@ -25,9 +29,13 @@ export function BankAccountCard({ account, onEdit, onDelete }: Props) {
       checking: "Conta Corrente",
       savings: "Poupança",
       investment: "Investimento",
+      credit_card: "Cartão de Crédito",
+      cdb: "CDB",
     };
     return types[type] || type;
   };
+
+  const isCreditCard = account.account_type === 'credit_card';
 
   return (
     <Card className={`p-6 glass ${account.is_default ? "border-2 border-primary" : ""}`}>
@@ -54,14 +62,53 @@ export function BankAccountCard({ account, onEdit, onDelete }: Props) {
           <p className="font-mono text-lg">{account.account_number}</p>
         </div>
 
-        <div>
-          <p className="text-sm text-muted-foreground mb-1">Saldo Atual</p>
-          <p className="text-2xl font-bold">
-            R$ {Number(account.current_balance).toLocaleString("pt-BR", {
-              minimumFractionDigits: 2,
-            })}
-          </p>
-        </div>
+        {isCreditCard ? (
+          <>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Limite Total</p>
+              <p className="text-xl font-bold text-primary">
+                R$ {Number(account.credit_limit || 0).toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Disponível</p>
+              <p className="text-2xl font-bold text-accent">
+                R$ {Number(account.available_credit || account.credit_limit || 0).toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+
+            {(account.closing_day || account.due_day) && (
+              <div className="flex items-center gap-4 text-sm">
+                {account.closing_day && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    <span>Fecha: dia {account.closing_day}</span>
+                  </div>
+                )}
+                {account.due_day && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <CreditCard className="w-4 h-4" />
+                    <span>Vence: dia {account.due_day}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div>
+            <p className="text-sm text-muted-foreground mb-1">Saldo Atual</p>
+            <p className="text-2xl font-bold">
+              R$ {Number(account.current_balance).toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+              })}
+            </p>
+          </div>
+        )}
 
         <div className="flex gap-2 pt-4 border-t">
           <Button

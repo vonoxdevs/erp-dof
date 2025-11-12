@@ -40,9 +40,12 @@ const bankAccountSchema = z.object({
     .trim()
     .max(5, "Dígito da conta deve ter no máximo 5 caracteres")
     .optional(),
-  account_type: z.enum(["checking", "savings", "investment"], {
+  account_type: z.enum(["checking", "savings", "investment", "credit_card", "cdb"], {
     errorMap: () => ({ message: "Tipo de conta inválido" })
   }),
+  credit_limit: z.number().min(0, "Limite deve ser positivo").optional(),
+  closing_day: z.number().min(1, "Dia deve estar entre 1 e 31").max(31, "Dia deve estar entre 1 e 31").optional(),
+  due_day: z.number().min(1, "Dia deve estar entre 1 e 31").max(31, "Dia deve estar entre 1 e 31").optional(),
   holder_name: z.string()
     .trim()
     .max(100, "Nome do titular deve ter no máximo 100 caracteres")
@@ -73,6 +76,10 @@ interface BankAccount {
   current_balance?: number;
   is_active: boolean;
   is_default: boolean;
+  credit_limit?: number;
+  closing_day?: number;
+  due_day?: number;
+  available_credit?: number;
 }
 
 interface Props {
@@ -90,6 +97,9 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
     initial_balance: 0,
     is_active: true,
     is_default: false,
+    credit_limit: 0,
+    closing_day: undefined,
+    due_day: undefined,
   });
 
   useEffect(() => {
@@ -103,6 +113,9 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         initial_balance: 0,
         is_active: true,
         is_default: false,
+        credit_limit: 0,
+        closing_day: undefined,
+        due_day: undefined,
       });
     }
   }, [account, open]);
@@ -136,6 +149,9 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         initial_balance: formData.initial_balance || 0,
         is_active: formData.is_active !== false,
         is_default: formData.is_default || false,
+        credit_limit: formData.credit_limit,
+        closing_day: formData.closing_day,
+        due_day: formData.due_day,
       });
 
       if (!validationResult.success) {
@@ -158,6 +174,9 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         is_active: validatedData.is_active,
         is_default: validatedData.is_default,
         company_id: profile.company_id,
+        credit_limit: validatedData.credit_limit || 0,
+        closing_day: validatedData.closing_day,
+        due_day: validatedData.due_day,
       };
 
       if (account?.id) {
@@ -227,6 +246,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
                   <SelectItem value="checking">Conta Corrente</SelectItem>
                   <SelectItem value="savings">Poupança</SelectItem>
                   <SelectItem value="investment">Investimento</SelectItem>
+                  <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                  <SelectItem value="cdb">CDB</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -249,6 +270,49 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
               />
             </div>
           </div>
+
+          {/* Campos específicos para Cartão de Crédito */}
+          {formData.account_type === 'credit_card' && (
+            <div className="border rounded-lg p-4 space-y-4 bg-muted/20">
+              <h4 className="font-semibold text-sm">Informações do Cartão de Crédito</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 col-span-2">
+                  <Label>Limite do Cartão (R$) *</Label>
+                  <CurrencyInput
+                    value={formData.credit_limit || 0}
+                    onChange={(value) => setFormData({ ...formData, credit_limit: value })}
+                    placeholder="R$ 0,00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Dia de Fechamento</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.closing_day || ""}
+                    onChange={(e) => setFormData({ ...formData, closing_day: parseInt(e.target.value) || undefined })}
+                    placeholder="Ex: 10"
+                  />
+                  <p className="text-xs text-muted-foreground">Dia do mês (1-31)</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Dia de Vencimento</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="31"
+                    value={formData.due_day || ""}
+                    onChange={(e) => setFormData({ ...formData, due_day: parseInt(e.target.value) || undefined })}
+                    placeholder="Ex: 20"
+                  />
+                  <p className="text-xs text-muted-foreground">Dia do mês (1-31)</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
