@@ -80,15 +80,6 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
 
       if (error) throw error;
 
-      // Se tiver conta bancária, vincular automaticamente
-      if (contaBancariaId) {
-        await supabase.from("categoria_conta_bancaria").insert({
-          categoria_id: data.id,
-          conta_bancaria_id: contaBancariaId,
-          habilitado: true,
-        });
-      }
-
       toast({
         title: "Centro de custo criado",
         description: "Centro de custo adicionado com sucesso!",

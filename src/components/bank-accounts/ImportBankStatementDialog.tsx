@@ -428,7 +428,6 @@ function TransactionRow({
       </TableCell>
       <TableCell>
         <SelectCentroCusto
-          contaBancariaId={bankAccountId}
           value={transaction.centroCustoId}
           onChange={(value) => onUpdate(transaction.id, "centroCustoId", value)}
           disabled={transaction.ignore}

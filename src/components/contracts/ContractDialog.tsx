@@ -192,16 +192,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       return;
     }
     
-    if (!formData.amount || formData.amount <= 0) {
-      toast.error("Valor deve ser maior que zero");
-      return;
-    }
-    
-    if (!formData.bank_account_id) {
-      toast.error("Selecione uma conta bancária");
-      return;
-    }
-    
     if (!formData.centro_custo_id) {
       toast.error("Centro de custo é obrigatório");
       return;
@@ -248,7 +238,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         auto_generate: true,
         generation_day: 1,
         next_generation_date: formData.start_date,
-        bank_account_id: formData.bank_account_id,
+        bank_account_id: null,
         centro_custo_id: formData.centro_custo_id,
         categoria_receita_id: formData.categoria_receita_id || null,
         attachments: attachments,
@@ -405,39 +395,10 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             />
           </div>
 
-          {/* 6. Conta */}
-          <div className="space-y-2">
-            <Label htmlFor="bank_account_id">Conta *</Label>
-            <Select
-              value={formData.bank_account_id}
-              onValueChange={(value) => {
-                setFormData({ 
-                  ...formData, 
-                  bank_account_id: value,
-                  centro_custo_id: ""
-                });
-              }}
-              disabled={loadingAccounts}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={loadingAccounts ? "Carregando..." : "Selecione a conta"} />
-              </SelectTrigger>
-              <SelectContent>
-                {accounts?.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.bank_name} - {account.account_number}
-                    {account.account_digit && `-${account.account_digit}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 7. Centro de Custo */}
+          {/* 6. Centro de Custo */}
           <div className="space-y-2">
             <Label>Centro de Custo *</Label>
             <SelectCentroCusto
-              contaBancariaId={formData.bank_account_id}
               value={formData.centro_custo_id}
               onChange={(value) => {
                 setFormData({ 
@@ -446,11 +407,10 @@ export function ContractDialog({ open, onClose, contract }: Props) {
                 });
               }}
               placeholder="Selecione o centro de custo"
-              disabled={!formData.bank_account_id}
             />
           </div>
 
-          {/* 8. Frequência */}
+          {/* 7. Frequência */}
           <div className="space-y-2">
             <Label htmlFor="frequency">Frequência *</Label>
             <Select
@@ -469,7 +429,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             </Select>
           </div>
 
-          {/* 9. Datas */}
+          {/* 8. Datas */}
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start_date">Data de Início *</Label>
@@ -493,7 +453,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             </div>
           </div>
 
-          {/* 10. Anexar Contrato */}
+          {/* 9. Anexar Contrato */}
           <div className="space-y-2">
             <Label>Anexar Contrato</Label>
             <div className="space-y-2">

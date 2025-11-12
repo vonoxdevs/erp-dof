@@ -548,14 +548,12 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
               <div className="space-y-2">
                 <Label>Centro de Custo *</Label>
                 <SelectCentroCusto
-                  contaBancariaId={formData.account_to_id}
                   value={centroCustoId || ""}
                   onChange={(value) => {
                     setCentroCustoId(value);
                     setCategoriaReceitaId(null);
                   }}
                   placeholder="Selecione o centro de custo"
-                  disabled={!formData.account_to_id}
                 />
               </div>
               <div className="space-y-2">
@@ -578,14 +576,12 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
               <div className="space-y-2">
                 <Label>Centro de Custo *</Label>
                 <SelectCentroCusto
-                  contaBancariaId={formData.account_from_id}
                   value={centroCustoId || ""}
                   onChange={(value) => {
                     setCentroCustoId(value);
                     setCategoriaDespesaId(null);
                   }}
                   placeholder="Selecione o centro de custo"
-                  disabled={!formData.account_from_id}
                 />
               </div>
               <div className="space-y-2">

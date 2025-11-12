@@ -344,7 +344,6 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
             <div className="space-y-2">
               <Label>Centro de Custo *</Label>
               <SelectCentroCusto
-                contaBancariaId={formData.account_to_id}
                 value={centroCustoId || ""}
                 onChange={(value) => {
                   setCentroCustoId(value);

@@ -361,7 +361,6 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
             <div className="space-y-2">
               <Label>Centro de Custo</Label>
               <SelectCentroCusto
-                contaBancariaId={formData.account_from_id}
                 value={centroCustoId || ""}
                 onChange={(value) => {
                   setCentroCustoId(value);

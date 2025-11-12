@@ -19,7 +19,6 @@ interface CentroCusto {
 }
 
 interface SelectCentroCustoProps {
-  contaBancariaId: string | null;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -27,7 +26,6 @@ interface SelectCentroCustoProps {
 }
 
 export function SelectCentroCusto({
-  contaBancariaId,
   value,
   onChange,
   placeholder = 'Selecione um centro de custo',
@@ -38,30 +36,26 @@ export function SelectCentroCusto({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const fetchCentrosCusto = async () => {
-    if (!contaBancariaId) {
-      setCentrosCusto([]);
-      return;
-    }
-
     try {
       setLoading(true);
 
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.company_id) return;
+
       const { data, error } = await supabase
         .from('categorias')
-        .select(`
-          id,
-          nome,
-          icon,
-          cor,
-          categoria_conta_bancaria!inner(
-            habilitado,
-            conta_bancaria_id
-          )
-        `)
+        .select('id, nome, icon, cor')
         .eq('tipo', 'centro_custo')
         .eq('ativo', true)
-        .eq('categoria_conta_bancaria.conta_bancaria_id', contaBancariaId)
-        .eq('categoria_conta_bancaria.habilitado', true)
+        .eq('company_id', profile.company_id)
         .order('nome');
 
       if (error) throw error;
@@ -77,9 +71,9 @@ export function SelectCentroCusto({
 
   useEffect(() => {
     fetchCentrosCusto();
-  }, [contaBancariaId]);
+  }, []);
 
-  const isDisabled = disabled || !contaBancariaId || loading;
+  const isDisabled = disabled || loading;
 
   const handleCentroCustoCreated = (centroCustoId: string) => {
     fetchCentrosCusto();
@@ -96,7 +90,7 @@ export function SelectCentroCusto({
           <SelectContent>
             {centrosCusto.length === 0 ? (
               <div className="p-2 text-sm text-muted-foreground">
-                {loading ? 'Carregando...' : 'Nenhum centro de custo disponível para esta conta'}
+                {loading ? 'Carregando...' : 'Nenhum centro de custo cadastrado'}
               </div>
             ) : (
               centrosCusto.map(centro => (
@@ -126,7 +120,6 @@ export function SelectCentroCusto({
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onCentroCustoCreated={handleCentroCustoCreated}
-        contaBancariaId={contaBancariaId || undefined}
       />
     </>
   );
