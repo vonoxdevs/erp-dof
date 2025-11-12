@@ -23,10 +23,10 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    /* Primary: Corporate Blue */
-    --primary: 217 91% 60%;
+    /* Primary: Vibrant Blue (#0066FF) - Conta Azul Inspired */
+    --primary: 217 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 91% 70%;
+    --primary-glow: 217 100% 60%;
 
     /* Secondary: Professional Navy */
     --secondary: 220 30% 92%;
@@ -104,9 +104,9 @@ All colors MUST be HSL.
     --popover: 217 33% 17%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 217 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 91% 70%;
+    --primary-glow: 217 100% 60%;
 
     --secondary: 217 33% 20%;
     --secondary-foreground: 210 40% 98%;
