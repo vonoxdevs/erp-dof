@@ -212,7 +212,10 @@ serve(async (req) => {
     console.log('🚀 Iniciando criação da empresa...');
 
     // Iniciar transação atômica
-    // 1. Criar empresa
+    // 1. Criar empresa com trial de 3 dias
+    const now = new Date();
+    const trialEndDate = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000)); // 3 dias
+    
     const { data: newCompany, error: companyError } = await supabase
       .from('companies')
       .insert({
@@ -223,6 +226,10 @@ serve(async (req) => {
         phone: company.phone,
         industry: company.industry,
         size: company.size,
+        is_trial: true,
+        trial_start_date: now.toISOString(),
+        trial_end_date: trialEndDate.toISOString(),
+        subscription_status: 'trial',
         address: {
           cep: address.cep,
           street: address.street,
@@ -248,7 +255,8 @@ serve(async (req) => {
       throw new Error('Erro ao criar empresa');
     }
 
-    console.log(`Company created: ${newCompany.id}`);
+    console.log(`✅ Company created: ${newCompany.id}`);
+    console.log(`📅 Trial period: ${now.toISOString()} até ${trialEndDate.toISOString()} (3 dias)`);
 
     // 2. Atualizar perfil do usuário existente (criado pelo trigger)
     // Marcar como trial_owner já que este usuário está criando a empresa pelo teste grátis
