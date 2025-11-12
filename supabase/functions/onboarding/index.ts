@@ -271,12 +271,12 @@ serve(async (req) => {
 
     console.log('User profile updated with company_id');
 
-    // 3. Criar role de owner
+    // 3. Criar role de admin (dono da empresa)
     const { error: roleError } = await supabase
       .from('user_roles')
       .insert({
         user_id: user.id,
-        role: 'owner'
+        role: 'admin'
       });
 
     if (roleError) {
