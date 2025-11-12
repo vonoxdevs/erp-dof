@@ -136,7 +136,7 @@ export default function HomePage() {
                 >
                   Conta PJ
                 </button>
-                <Link to="/login" className="w-full">
+                <Link to="/signup" className="w-full">
                   <Button size="lg" className="w-full">Teste Grátis</Button>
                 </Link>
               </div>
@@ -161,7 +161,7 @@ export default function HomePage() {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/login">
+                <Link to="/signup">
                   <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-lg shadow-xl hover:shadow-2xl transition-all">
                     Começar agora gratuitamente
                   </Button>
@@ -292,7 +292,7 @@ export default function HomePage() {
           <p className="text-xl lg:text-2xl max-w-2xl mx-auto opacity-90">
             Simplifique sua gestão financeira e foque no crescimento do seu negócio
           </p>
-          <Link to="/login">
+          <Link to="/signup">
             <Button 
               size="lg" 
               variant="secondary"
@@ -364,9 +364,11 @@ export default function HomePage() {
                   <span className="text-sm">Suporte via email</span>
                 </div>
               </div>
-              <Button size="lg" variant="outline" className="w-full">
-                Escolher plano
-              </Button>
+              <Link to="/signup" className="w-full">
+                <Button size="lg" variant="outline" className="w-full">
+                  Escolher plano
+                </Button>
+              </Link>
             </Card>
 
             {/* Plano Avançado - Destaque */}
@@ -405,9 +407,11 @@ export default function HomePage() {
                   <span className="text-sm">Suporte prioritário</span>
                 </div>
               </div>
-              <Button size="lg" className="w-full shadow-lg">
-                Escolher plano
-              </Button>
+              <Link to="/signup" className="w-full">
+                <Button size="lg" className="w-full shadow-lg">
+                  Escolher plano
+                </Button>
+              </Link>
             </Card>
 
             {/* Plano Performance */}
@@ -445,9 +449,11 @@ export default function HomePage() {
                   <span className="text-sm">Gerente de conta dedicado</span>
                 </div>
               </div>
-              <Button size="lg" variant="outline" className="w-full">
-                Escolher plano
-              </Button>
+              <Link to="/signup" className="w-full">
+                <Button size="lg" variant="outline" className="w-full">
+                  Escolher plano
+                </Button>
+              </Link>
             </Card>
           </div>
         </div>

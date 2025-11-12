@@ -8,6 +8,7 @@ import { AuthProvider, AuthGuard } from "@/hooks/useAuth";
 // Páginas públicas
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
+import SignUpPage from "./pages/SignUpPage";
 
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
@@ -57,6 +58,7 @@ const App = () => {
               
               {/* Rotas públicas */}
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignUpPage />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
