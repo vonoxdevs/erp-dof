@@ -437,6 +437,10 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean | null
+          manager_email: string | null
+          manager_name: string | null
+          manager_phone: string | null
+          manager_position: string | null
           name: string
           notes: string | null
           payment_terms: number | null
@@ -458,6 +462,10 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
+          manager_position?: string | null
           name: string
           notes?: string | null
           payment_terms?: number | null
@@ -479,6 +487,10 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
+          manager_position?: string | null
           name?: string
           notes?: string | null
           payment_terms?: number | null
@@ -500,6 +512,7 @@ export type Database = {
       contracts: {
         Row: {
           amount: number
+          attachments: Json | null
           auto_generate: boolean | null
           bank_account_id: string | null
           categoria_despesa_id: string | null
@@ -521,6 +534,7 @@ export type Database = {
           name: string
           next_generation_date: string | null
           payment_method: string | null
+          service_description: string | null
           start_date: string
           total_installments: number | null
           type: string
@@ -528,6 +542,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          attachments?: Json | null
           auto_generate?: boolean | null
           bank_account_id?: string | null
           categoria_despesa_id?: string | null
@@ -549,6 +564,7 @@ export type Database = {
           name: string
           next_generation_date?: string | null
           payment_method?: string | null
+          service_description?: string | null
           start_date: string
           total_installments?: number | null
           type: string
@@ -556,6 +572,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          attachments?: Json | null
           auto_generate?: boolean | null
           bank_account_id?: string | null
           categoria_despesa_id?: string | null
@@ -577,6 +594,7 @@ export type Database = {
           name?: string
           next_generation_date?: string | null
           payment_method?: string | null
+          service_description?: string | null
           start_date?: string
           total_installments?: number | null
           type?: string

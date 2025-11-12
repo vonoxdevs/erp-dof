@@ -23,6 +23,8 @@ interface Contract {
   contact_id: string | null;
   category_id: string | null;
   bank_account_id: string | null;
+  service_description: string | null;
+  attachments: any[] | null;
   created_at: string;
 }
 

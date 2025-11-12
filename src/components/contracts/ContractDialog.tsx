@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X, FileText } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
@@ -25,6 +25,8 @@ interface Contract {
   end_date: string | null;
   is_active: boolean;
   bank_account_id: string | null;
+  service_description: string | null;
+  attachments: any[] | null;
 }
 
 interface Props {
@@ -38,6 +40,8 @@ export function ContractDialog({ open, onClose, contract }: Props) {
   const { accounts, isLoading: loadingAccounts } = useBankAccounts();
   const [centroCustoId, setCentroCustoId] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [attachments, setAttachments] = useState<any[]>([]);
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
@@ -50,6 +54,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
     end_date: "",
     is_active: true,
     bank_account_id: "",
+    service_description: "",
   });
 
   useEffect(() => {
@@ -64,7 +69,9 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         end_date: contract.end_date || "",
         is_active: contract.is_active,
         bank_account_id: contract.bank_account_id || "",
+        service_description: contract.service_description || "",
       });
+      setAttachments(contract.attachments || []);
       setCentroCustoId("");
       setCategoriaId("");
     } else {
@@ -78,11 +85,94 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         end_date: "",
         is_active: true,
         bank_account_id: "",
+        service_description: "",
       });
+      setAttachments([]);
       setCentroCustoId("");
       setCategoriaId("");
     }
   }, [contract, open]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile?.company_id) throw new Error("Empresa não encontrada");
+
+      const uploadedFiles = [];
+      
+      for (const file of Array.from(files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${profile.company_id}/${fileName}`;
+
+        const { error: uploadError, data } = await supabase.storage
+          .from('contract-attachments')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        uploadedFiles.push({
+          name: file.name,
+          path: filePath,
+          size: file.size,
+          type: file.type,
+          uploaded_at: new Date().toISOString(),
+        });
+      }
+
+      setAttachments([...attachments, ...uploadedFiles]);
+      toast.success(`${uploadedFiles.length} arquivo(s) anexado(s)`);
+    } catch (error: any) {
+      toast.error(`Erro ao fazer upload: ${error.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveAttachment = async (index: number) => {
+    const attachment = attachments[index];
+    try {
+      await supabase.storage
+        .from('contract-attachments')
+        .remove([attachment.path]);
+      
+      setAttachments(attachments.filter((_, i) => i !== index));
+      toast.success("Arquivo removido");
+    } catch (error: any) {
+      toast.error(`Erro ao remover arquivo: ${error.message}`);
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('contract-attachments')
+        .download(attachment.path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast.error(`Erro ao baixar arquivo: ${error.message}`);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,8 +238,9 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         next_generation_date: formData.start_date,
         bank_account_id: formData.bank_account_id,
         centro_custo_id: centroCustoId || null,
-        categoria_receita_id: formData.type === 'income' ? categoriaId || null : null,
         categoria_despesa_id: formData.type === 'expense' ? categoriaId || null : null,
+        service_description: formData.service_description?.trim() || null,
+        attachments: attachments,
       };
 
       console.log("Dados do contrato a serem salvos:", contractData);
@@ -180,7 +271,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           .update({
             amount: contractData.amount,
             centro_custo_id: contractData.centro_custo_id,
-            categoria_receita_id: contractData.categoria_receita_id,
             categoria_despesa_id: contractData.categoria_despesa_id,
             bank_account_id: contractData.bank_account_id,
             account_to_id: contractData.type === 'income' ? contractData.bank_account_id : null,
@@ -271,12 +361,23 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="description">Observações</Label>
             <Textarea
               id="description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={2}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="service_description">Descrição do Serviço *</Label>
+            <Textarea
+              id="service_description"
+              value={formData.service_description}
+              onChange={(e) => setFormData({ ...formData, service_description: e.target.value })}
               rows={3}
+              placeholder="Descreva detalhadamente o tipo de serviço contratado..."
             />
           </div>
 
@@ -349,19 +450,19 @@ export function ContractDialog({ open, onClose, contract }: Props) {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="categoria">
-                {formData.type === 'income' ? 'Categoria de Receita' : 'Categoria de Despesa'}
-              </Label>
-              <SelectCategoria
-                centroCustoId={centroCustoId}
-                tipo={formData.type === 'income' ? 'receita' : 'despesa'}
-                value={categoriaId}
-                onChange={setCategoriaId}
-                placeholder="Selecione a categoria"
-                disabled={!centroCustoId}
-              />
-            </div>
+            {formData.type === 'expense' && (
+              <div className="space-y-2">
+                <Label htmlFor="categoria">Categoria de Despesa</Label>
+                <SelectCategoria
+                  centroCustoId={centroCustoId}
+                  tipo="despesa"
+                  value={categoriaId}
+                  onChange={setCategoriaId}
+                  placeholder="Selecione a categoria"
+                  disabled={!centroCustoId}
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -403,6 +504,59 @@ export function ContractDialog({ open, onClose, contract }: Props) {
               value={formData.end_date}
               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
             />
+          </div>
+
+          {/* Anexos */}
+          <div className="space-y-2">
+            <Label>Anexar Contrato (Opcional)</Label>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  type="file"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  multiple
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  className="flex-1"
+                />
+                {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+              </div>
+              
+              {attachments.length > 0 && (
+                <div className="space-y-2 p-3 bg-muted rounded-md">
+                  <p className="text-sm font-medium">Arquivos anexados:</p>
+                  {attachments.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between p-2 bg-background rounded">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span className="text-sm">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDownloadAttachment(file)}
+                        >
+                          Download
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveAttachment(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
