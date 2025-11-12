@@ -11,7 +11,11 @@ import { AccountsBalance } from "@/components/dashboard/AccountsBalance";
 import { DashboardPeriodFilter } from "@/components/dashboard/DashboardPeriodFilter";
 import { BudgetForecast } from "@/components/dashboard/BudgetForecast";
 import { PendingAlerts } from "@/components/dashboard/PendingAlerts";
+import { RevenueExpenseChart } from "@/components/dashboard/RevenueExpenseChart";
+import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart";
+import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { DateRange } from "react-day-picker";
+import { format, subDays, eachDayOfInterval } from "date-fns";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -33,6 +37,17 @@ const Dashboard = () => {
     revenues: any[];
     expenses: any[];
   }>({ revenues: [], expenses: [] });
+  const [chartData, setChartData] = useState<{
+    revenueExpense: any[];
+    revenueByCategory: any[];
+    expenseByCategory: any[];
+    cashFlow: any[];
+  }>({
+    revenueExpense: [],
+    revenueByCategory: [],
+    expenseByCategory: [],
+    cashFlow: [],
+  });
   useEffect(() => {
     supabase.auth.getSession().then(({
       data: {
@@ -155,9 +170,136 @@ const Dashboard = () => {
           futureExpenses,
           projectedBalance
         });
+
+        // Preparar dados para gráficos
+        prepareChartData(recentTransactions, allTransactions, totalBalance);
       }
     } catch (error: any) {
       console.error("Error loading stats:", error);
+    }
+  };
+
+  const prepareChartData = async (recentTransactions: any[], allTransactions: any[], currentBalance: number) => {
+    try {
+      // Gráfico de Receitas vs Despesas (últimos 7 dias)
+      const last7Days = eachDayOfInterval({
+        start: subDays(new Date(), 6),
+        end: new Date()
+      });
+
+      const revenueExpenseData = last7Days.map(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const dayTransactions = recentTransactions.filter(t => 
+          t.due_date === dateStr && t.status === 'paid'
+        );
+        
+        return {
+          date: format(date, 'dd/MM'),
+          revenue: dayTransactions
+            .filter(t => t.type === 'revenue')
+            .reduce((sum, t) => sum + Number(t.amount), 0),
+          expense: dayTransactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + Number(t.amount), 0),
+        };
+      });
+
+      // Buscar categorias para os gráficos de pizza
+      const { data: categories } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('ativo', true);
+
+      // Receitas por Categoria
+      const revenueByCategory = categories
+        ?.filter(cat => cat.tipo === 'receita')
+        .map(cat => {
+          const total = recentTransactions
+            .filter(t => t.type === 'revenue' && t.status === 'paid' && t.categoria_receita_id === cat.id)
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+          return {
+            name: cat.nome,
+            value: total,
+            color: cat.cor || '#3b82f6'
+          };
+        })
+        .filter(item => item.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6) || [];
+
+      // Despesas por Categoria
+      const expenseByCategory = categories
+        ?.filter(cat => cat.tipo === 'despesa')
+        .map(cat => {
+          const total = recentTransactions
+            .filter(t => t.type === 'expense' && t.status === 'paid' && t.categoria_despesa_id === cat.id)
+            .reduce((sum, t) => sum + Number(t.amount), 0);
+          return {
+            name: cat.nome,
+            value: total,
+            color: cat.cor || '#ef4444'
+          };
+        })
+        .filter(item => item.value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6) || [];
+
+      // Fluxo de Caixa (últimos 7 dias)
+      let runningBalance = currentBalance;
+      const cashFlowData = [...last7Days].reverse().map(date => {
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const dayTransactions = allTransactions.filter(t => 
+          t.due_date === dateStr && t.status === 'paid'
+        );
+        
+        const dayRevenue = dayTransactions
+          .filter(t => t.type === 'revenue')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        const dayExpense = dayTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        runningBalance = runningBalance - dayRevenue + dayExpense;
+        
+        return {
+          date: format(date, 'dd/MM'),
+          balance: runningBalance,
+        };
+      }).reverse();
+
+      // Recalcular o saldo corretamente para frente
+      let balance = currentBalance;
+      for (let i = cashFlowData.length - 1; i >= 0; i--) {
+        const dateStr = format(last7Days[i], 'yyyy-MM-dd');
+        const dayTransactions = allTransactions.filter(t => 
+          t.due_date === dateStr && t.status === 'paid'
+        );
+        
+        const dayRevenue = dayTransactions
+          .filter(t => t.type === 'revenue')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        const dayExpense = dayTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        if (i === cashFlowData.length - 1) {
+          cashFlowData[i].balance = balance;
+        } else {
+          balance = balance - dayRevenue + dayExpense;
+          cashFlowData[i].balance = balance;
+        }
+      }
+
+      setChartData({
+        revenueExpense: revenueExpenseData,
+        revenueByCategory,
+        expenseByCategory,
+        cashFlow: cashFlowData,
+      });
+    } catch (error) {
+      console.error("Error preparing chart data:", error);
     }
   };
 
@@ -309,6 +451,31 @@ const Dashboard = () => {
             overdueRevenues={overdueTransactions.revenues}
             overdueExpenses={overdueTransactions.expenses}
           />
+        </div>
+
+        {/* Gráficos e Visualizações */}
+        <div className="space-y-6 mb-8 animate-fade-in">
+          <h3 className="text-xl font-semibold">Análise Visual</h3>
+          
+          {/* Receitas vs Despesas */}
+          <RevenueExpenseChart data={chartData.revenueExpense} />
+
+          {/* Gráficos de Pizza */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <CategoryPieChart 
+              data={chartData.revenueByCategory} 
+              title="Receitas por Categoria"
+              type="revenue"
+            />
+            <CategoryPieChart 
+              data={chartData.expenseByCategory} 
+              title="Despesas por Categoria"
+              type="expense"
+            />
+          </div>
+
+          {/* Fluxo de Caixa */}
+          <CashFlowChart data={chartData.cashFlow} />
         </div>
 
         {/* Quick Actions */}
