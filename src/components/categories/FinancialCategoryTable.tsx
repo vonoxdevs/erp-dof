@@ -40,12 +40,11 @@ interface FinancialCategoryTableProps {
 export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTableProps) {
   const { categorias, loading, refetch } = useCategorias(tipo);
   const [contasBancarias, setContasBancarias] = useState<any[]>([]);
-  const [centrosCusto, setCentrosCusto] = useState<any[]>([]);
   const [categoriaParaExcluir, setCategoriaParaExcluir] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    async function fetchRelacionamentos() {
+    async function fetchContasBancarias() {
       if (tipo === 'centro_custo') {
         const { data } = await supabase
           .from('bank_accounts')
@@ -54,18 +53,9 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
           .order('bank_name');
         
         setContasBancarias(data || []);
-      } else if (tipo === 'receita' || tipo === 'despesa') {
-        const { data } = await supabase
-          .from('categorias')
-          .select('id, nome, icon, cor')
-          .eq('tipo', 'centro_custo')
-          .eq('ativo', true)
-          .order('nome');
-        
-        setCentrosCusto(data || []);
       }
     }
-    fetchRelacionamentos();
+    fetchContasBancarias();
   }, [tipo]);
 
   const handleToggleContaBancaria = async (
@@ -105,37 +95,6 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
         description: habilitado 
           ? 'Categoria habilitada para esta conta' 
           : 'Categoria desabilitada para esta conta'
-      });
-
-      refetch();
-    } catch (error: any) {
-      toast({
-        title: 'Erro ao atualizar',
-        description: error.message,
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleChangeCentroCusto = async (
-    categoriaId: string,
-    centroCustoId: string
-  ) => {
-    try {
-      const { error } = await supabase
-        .from('categorias')
-        .update({ 
-          centro_custo_id: centroCustoId === 'none' ? null : centroCustoId
-        })
-        .eq('id', categoriaId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Centro de custo atualizado',
-        description: centroCustoId === 'none' 
-          ? 'Centro de custo removido' 
-          : 'Centro de custo vinculado com sucesso'
       });
 
       refetch();
@@ -194,7 +153,6 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Ícone</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead>Descrição</TableHead>
               
@@ -205,7 +163,7 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
               ))}
               
               {(tipo === 'receita' || tipo === 'despesa') && (
-                <TableHead>Centro de Custo</TableHead>
+                <TableHead>Disponível em Todos</TableHead>
               )}
               
               <TableHead className="text-right">Ações</TableHead>
@@ -214,15 +172,15 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
           <TableBody>
             {categorias.map(categoria => (
               <TableRow key={categoria.id}>
-                <TableCell>
-                  <div 
-                    className="flex items-center justify-center w-10 h-10 rounded-md text-xl"
-                    style={{ backgroundColor: categoria.cor || '#3b82f6' }}
-                  >
-                    {categoria.icon || '📁'}
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: categoria.cor || '#3b82f6' }}
+                    />
+                    {categoria.nome}
                   </div>
                 </TableCell>
-                <TableCell className="font-medium">{categoria.nome}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {categoria.descricao || '-'}
                 </TableCell>
@@ -244,32 +202,11 @@ export function FinancialCategoryTable({ tipo, onEditar }: FinancialCategoryTabl
                 
                 {(tipo === 'receita' || tipo === 'despesa') && (
                   <TableCell>
-                    <Select
-                      value={categoria.centro_custo?.id ?? 'none'}
-                      onValueChange={(value) => handleChangeCentroCusto(categoria.id, value)}
-                    >
-                      <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">
-                          <span className="text-muted-foreground">Nenhum</span>
-                        </SelectItem>
-                        {centrosCusto.map(centro => (
-                          <SelectItem key={centro.id} value={centro.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-5 h-5 rounded flex items-center justify-center text-xs"
-                                style={{ backgroundColor: centro.cor || '#3b82f6' }}
-                              >
-                                {centro.icon || '📁'}
-                              </div>
-                              <span>{centro.nome}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        ✓ Todos os centros de custo
+                      </span>
+                    </div>
                   </TableCell>
                 )}
                 

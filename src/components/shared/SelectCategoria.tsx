@@ -34,9 +34,9 @@ export function SelectCategoria({
   });
 
   // Para centro_custo, precisa contaBancariaId
-  // Para receita/despesa, precisa centroCustoId
-  const requiredId = tipo === 'centro_custo' ? contaBancariaId : centroCustoId;
-  const isDisabled = disabled || !requiredId || loading;
+  // Para receita/despesa, NÃO precisa mais de centroCustoId (aparecem em todos)
+  const requiredId = tipo === 'centro_custo' ? contaBancariaId : true;
+  const isDisabled = disabled || (tipo === 'centro_custo' && !contaBancariaId) || loading;
 
   return (
     <Select value={value} onValueChange={onChange} disabled={isDisabled}>

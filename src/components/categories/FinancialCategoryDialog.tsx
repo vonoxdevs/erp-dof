@@ -12,16 +12,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { TipoCategoria } from '@/types/categoria';
+import { ColorPicker } from '@/components/shared/ColorPicker';
 
 interface FinancialCategoryDialogProps {
   tipo: TipoCategoria;
@@ -33,12 +27,9 @@ interface FinancialCategoryDialogProps {
 export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: FinancialCategoryDialogProps) {
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
-  const [icon, setIcon] = useState('📁');
   const [cor, setCor] = useState('#3b82f6');
   const [contasSelecionadas, setContasSelecionadas] = useState<string[]>([]);
   const [contasBancarias, setContasBancarias] = useState<any[]>([]);
-  const [centroCustoId, setCentroCustoId] = useState<string>('');
-  const [centrosCusto, setCentrosCusto] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -52,7 +43,7 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
   };
 
   useEffect(() => {
-    async function fetchRelacionamentos() {
+    async function fetchContasBancarias() {
       if (tipo === 'centro_custo') {
         const { data } = await supabase
           .from('bank_accounts')
@@ -61,18 +52,9 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
           .order('bank_name');
         
         setContasBancarias(data || []);
-      } else if (tipo === 'receita' || tipo === 'despesa') {
-        const { data } = await supabase
-          .from('categorias')
-          .select('id, nome, icon, cor')
-          .eq('tipo', 'centro_custo')
-          .eq('ativo', true)
-          .order('nome');
-        
-        setCentrosCusto(data || []);
       }
     }
-    fetchRelacionamentos();
+    fetchContasBancarias();
   }, [tipo]);
 
   useEffect(() => {
@@ -93,9 +75,7 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
         if (data) {
           setNome(data.nome);
           setDescricao(data.descricao || '');
-          setIcon(data.icon || '📁');
           setCor(data.cor || '#3b82f6');
-          setCentroCustoId(data.centro_custo_id || '');
           
           const contasHabilitadas = data.categoria_conta_bancaria
             ?.filter((ccc: any) => ccc.habilitado)
@@ -108,10 +88,8 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
     } else {
       setNome('');
       setDescricao('');
-      setIcon('📁');
-      setCor('#3b82f6');
+      setCor(tipo === 'despesa' ? '#ef4444' : tipo === 'receita' ? '#10b981' : '#3b82f6');
       setContasSelecionadas([]);
-      setCentroCustoId('');
     }
   }, [categoriaId, aberto]);
 
@@ -153,14 +131,9 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
         const updateData: any = {
           nome: nome.trim(),
           descricao: descricao.trim() || null,
-          icon: icon.trim() || '📁',
-          cor: cor || '#3b82f6',
+          cor: tipo === 'centro_custo' ? cor : (tipo === 'despesa' ? '#ef4444' : '#10b981'),
           updated_at: new Date().toISOString()
         };
-
-        if (tipo === 'receita' || tipo === 'despesa') {
-          updateData.centro_custo_id = centroCustoId || null;
-        }
 
         const { error: updateError } = await supabase
           .from('categorias')
@@ -199,15 +172,10 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
           company_id: profile.company_id,
           nome: nome.trim(),
           descricao: descricao.trim() || null,
-          icon: icon.trim() || '📁',
-          cor: cor || '#3b82f6',
+          cor: tipo === 'centro_custo' ? cor : (tipo === 'despesa' ? '#ef4444' : '#10b981'),
           tipo,
           ativo: true
         };
-
-        if (tipo === 'receita' || tipo === 'despesa') {
-          insertData.centro_custo_id = centroCustoId || null;
-        }
 
         const { data: novaCategoria, error: insertError } = await supabase
           .from('categorias')
@@ -260,7 +228,7 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
             <DialogDescription>
               {tipo === 'centro_custo' 
                 ? 'Preencha as informações da categoria e selecione as contas bancárias'
-                : 'Preencha as informações da categoria e selecione o centro de custo'}
+                : `As categorias de ${tipo} aparecem automaticamente em todos os centros de custo`}
             </DialogDescription>
           </DialogHeader>
 
@@ -289,42 +257,31 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
               />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="icon">Ícone</Label>
-              <Input
-                id="icon"
-                value={icon}
-                onChange={(e) => setIcon(e.target.value)}
-                placeholder="Ex: 📊, 💼, 🏢, etc."
-                maxLength={10}
+            {tipo === 'centro_custo' && (
+              <ColorPicker
+                value={cor}
+                onChange={setCor}
               />
-              <p className="text-xs text-muted-foreground">
-                Use emojis ou ícones para identificar visualmente a categoria
-              </p>
-            </div>
+            )}
 
-            <div className="grid gap-2">
-              <Label htmlFor="cor">Cor de Fundo</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="cor"
-                  type="color"
-                  value={cor}
-                  onChange={(e) => setCor(e.target.value)}
-                  className="w-20 h-10 cursor-pointer"
-                />
-                <Input
-                  value={cor}
-                  onChange={(e) => setCor(e.target.value)}
-                  placeholder="#3b82f6"
-                  maxLength={7}
-                  className="flex-1"
-                />
+            {tipo !== 'centro_custo' && (
+              <div className="rounded-md border p-4 bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-8 h-8 rounded-md"
+                    style={{ backgroundColor: tipo === 'despesa' ? '#ef4444' : '#10b981' }}
+                  />
+                  <div>
+                    <p className="text-sm font-medium">
+                      Cor: {tipo === 'despesa' ? 'Vermelho (Fixo)' : 'Verde (Fixo)'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      As categorias de {tipo} usam sempre a mesma cor
+                    </p>
+                  </div>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Escolha uma cor para destacar a categoria nas visualizações
-              </p>
-            </div>
+            )}
 
             {tipo === 'centro_custo' && (
               <div className="grid gap-2">
@@ -356,41 +313,6 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Selecione em quais contas bancárias esta categoria estará disponível
-                </p>
-              </div>
-            )}
-
-            {(tipo === 'receita' || tipo === 'despesa') && (
-              <div className="grid gap-2">
-                <Label htmlFor="centro-custo">Centro de Custo</Label>
-                <Select value={centroCustoId} onValueChange={setCentroCustoId}>
-                  <SelectTrigger id="centro-custo">
-                    <SelectValue placeholder="Selecione um centro de custo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {centrosCusto.length === 0 ? (
-                      <div className="p-2 text-sm text-muted-foreground">
-                        Nenhum centro de custo cadastrado
-                      </div>
-                    ) : (
-                      centrosCusto.map(centro => (
-                        <SelectItem key={centro.id} value={centro.id}>
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-6 h-6 rounded flex items-center justify-center text-sm"
-                              style={{ backgroundColor: centro.cor || '#3b82f6' }}
-                            >
-                              {centro.icon || '📁'}
-                            </div>
-                            <span>{centro.nome}</span>
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Selecione o centro de custo ao qual esta categoria pertence
                 </p>
               </div>
             )}

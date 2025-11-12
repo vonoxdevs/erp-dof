@@ -19,12 +19,7 @@ export function useCategoriasFiltradas({ contaBancariaId, centroCustoId, tipo }:
       return;
     }
 
-    // Receita/Despesa precisa de centro de custo
-    if ((tipo === 'receita' || tipo === 'despesa') && !centroCustoId) {
-      setCategorias([]);
-      return;
-    }
-
+    // Receita/Despesa NÃO precisa mais de centro de custo - aparecem em todos
     async function fetchCategoriasFiltradas() {
       try {
         setLoading(true);
@@ -63,29 +58,13 @@ export function useCategoriasFiltradas({ contaBancariaId, centroCustoId, tipo }:
           }));
 
           setCategorias(categoriasFormatadas);
-        } else if ((tipo === 'receita' || tipo === 'despesa') && centroCustoId) {
+        } else if (tipo === 'receita' || tipo === 'despesa') {
+          // Categorias de receita e despesa aparecem em TODOS os centros de custo
           const { data, error } = await supabase
             .from('categorias')
-            .select(`
-              id,
-              nome,
-              descricao,
-              tipo,
-              cor,
-              icon,
-              company_id,
-              ativo,
-              created_at,
-              updated_at,
-              categoria_centro_custo!inner(
-                habilitado,
-                centro_custo_id
-              )
-            `)
+            .select('*')
             .eq('tipo', tipo)
             .eq('ativo', true)
-            .eq('categoria_centro_custo.centro_custo_id', centroCustoId)
-            .eq('categoria_centro_custo.habilitado', true)
             .order('nome');
 
           if (error) throw error;

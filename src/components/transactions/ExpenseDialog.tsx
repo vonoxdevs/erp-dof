@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, TrendingDown, AlertCircle, Repeat } from "lucide-react";
+import { Loader2, TrendingDown, AlertCircle, Repeat, Plus } from "lucide-react";
 import { z } from "zod";
 import { sanitizeError } from "@/lib/errorMapping";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
+import { QuickCategoryDialog } from '@/components/categories/QuickCategoryDialog';
 
 const expenseSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -69,6 +70,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   const [loading, setLoading] = useState(false);
   const [centroCustoId, setCentroCustoId] = useState<string | null>(null);
   const [categoriaDespesaId, setCategoriaDespesaId] = useState<string | null>(null);
+  const [quickCategoryDialogOpen, setQuickCategoryDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
@@ -206,6 +208,15 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
       toast.error(sanitizeError(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQuickCategoryClose = (newCategoryId?: string) => {
+    setQuickCategoryDialogOpen(false);
+    if (newCategoryId) {
+      setCategoriaDespesaId(newCategoryId);
+      // Force refresh of categories
+      queryClient.invalidateQueries({ queryKey: ['categorias'] });
     }
   };
 
@@ -363,14 +374,28 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
 
             <div className="space-y-2">
               <Label>Categoria de Despesa</Label>
-              <SelectCategoria
-                centroCustoId={centroCustoId}
-                tipo="despesa"
-                value={categoriaDespesaId || ""}
-                onChange={setCategoriaDespesaId}
-                placeholder="Selecione a categoria"
-                disabled={!centroCustoId}
-              />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <SelectCategoria
+                    centroCustoId={centroCustoId}
+                    tipo="despesa"
+                    value={categoriaDespesaId || ""}
+                    onChange={setCategoriaDespesaId}
+                    placeholder="Selecione a categoria"
+                    disabled={!centroCustoId}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setQuickCategoryDialogOpen(true)}
+                  disabled={!centroCustoId}
+                  title="Criar nova categoria"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -484,6 +509,13 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
           </DialogFooter>
         </form>
       </DialogContent>
+      
+      <QuickCategoryDialog
+        tipo="despesa"
+        centroCustoId={centroCustoId}
+        open={quickCategoryDialogOpen}
+        onClose={handleQuickCategoryClose}
+      />
     </Dialog>
   );
 }

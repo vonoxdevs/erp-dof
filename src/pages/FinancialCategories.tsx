@@ -25,7 +25,7 @@ export default function FinancialCategories() {
     <div className="container mx-auto py-6 px-4">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Categorias Financeiras</h1>
+          <h1 className="text-3xl font-bold">Categorias</h1>
           <p className="text-muted-foreground mt-1">
             Gerencie centros de custo, categorias de receita e despesa
           </p>
