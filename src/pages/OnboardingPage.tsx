@@ -1,7 +1,7 @@
-import { OnboardingForm } from "@/components/onboarding/OnboardingForm";
+import CompanyOnboardingForm from "@/components/onboarding/CompanyOnboardingForm";
 
 const OnboardingPage = () => {
-  return <OnboardingForm />;
+  return <CompanyOnboardingForm />;
 };
 
 export default OnboardingPage;

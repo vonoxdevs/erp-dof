@@ -1,7 +1,7 @@
-import { MultiStepOnboardingForm } from '@/components/onboarding/MultiStepOnboardingForm';
+import SignUpForm from '@/components/onboarding/SignUpForm';
 
 const SignUpPage = () => {
-  return <MultiStepOnboardingForm />;
+  return <SignUpForm />;
 };
 
 export default SignUpPage;
