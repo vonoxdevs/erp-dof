@@ -12,23 +12,25 @@ export const validateCPF = (cpf: string): boolean => {
   // Rejeitar CPFs com todos os dígitos iguais
   if (/^(\d)\1+$/.test(cleaned)) return false;
   
-  // Primeiro dígito verificador
+  // Calcular primeiro dígito verificador
   let sum = 0;
   for (let i = 0; i < 9; i++) {
-    sum += parseInt(cleaned[i]) * (10 - i);
+    sum += parseInt(cleaned.charAt(i)) * (10 - i);
   }
-  let digit = (sum * 10) % 11;
-  if (digit === 10) digit = 0;
-  if (digit !== parseInt(cleaned[9])) return false;
+  let remainder = (sum * 10) % 11;
+  let firstDigit = remainder === 10 || remainder === 11 ? 0 : remainder;
   
-  // Segundo dígito verificador
+  if (firstDigit !== parseInt(cleaned.charAt(9))) return false;
+  
+  // Calcular segundo dígito verificador
   sum = 0;
   for (let i = 0; i < 10; i++) {
-    sum += parseInt(cleaned[i]) * (11 - i);
+    sum += parseInt(cleaned.charAt(i)) * (11 - i);
   }
-  digit = (sum * 10) % 11;
-  if (digit === 10) digit = 0;
-  return digit === parseInt(cleaned[10]);
+  remainder = (sum * 10) % 11;
+  let secondDigit = remainder === 10 || remainder === 11 ? 0 : remainder;
+  
+  return secondDigit === parseInt(cleaned.charAt(10));
 };
 
 // Validação de CNPJ com algoritmo brasileiro completo
