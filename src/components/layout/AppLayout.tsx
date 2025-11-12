@@ -9,6 +9,7 @@ import { LogOut, Building2, Home } from "lucide-react";
 import { toast } from "sonner";
 import type { User } from "@supabase/supabase-js";
 import { useAuth } from "@/hooks/useAuth";
+import { TrialStatusBanner } from "@/components/trial/TrialStatusBanner";
 
 const AppLayout = () => {
   const navigate = useNavigate();
@@ -89,6 +90,9 @@ const AppLayout = () => {
 
           {/* Main Content */}
           <main className="flex-1 overflow-auto">
+            <div className="p-4 sm:p-6">
+              <TrialStatusBanner />
+            </div>
             <Outlet />
           </main>
         </div>

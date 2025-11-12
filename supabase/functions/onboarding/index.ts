@@ -251,12 +251,14 @@ serve(async (req) => {
     console.log(`Company created: ${newCompany.id}`);
 
     // 2. Atualizar perfil do usuário existente (criado pelo trigger)
+    // Marcar como trial_owner já que este usuário está criando a empresa pelo teste grátis
     const { error: profileError } = await supabase
       .from('user_profiles')
       .update({
         company_id: newCompany.id,
         full_name: responsible.name,
-        permissions: { all: true }
+        permissions: { all: true },
+        is_trial_owner: true
       })
       .eq('id', user.id);
 

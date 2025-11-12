@@ -124,6 +124,8 @@ serve(async (req) => {
           email: company.email || null,
           phone: company.phone || null,
           is_active: true,
+          is_trial: false,
+          subscription_status: 'active',
           address: null,
           responsible: null
         })
@@ -140,10 +142,14 @@ serve(async (req) => {
       console.log('✅ [create-company-admin] Empresa criada:', companyData.id);
 
       // 4. Atualizar perfil com company_id
+      // Usuários criados pelo super admin não são trial owners
       console.log('📝 [create-company-admin] Atualizando perfil...');
       const { error: profileError } = await supabaseAdmin
         .from('user_profiles')
-        .update({ company_id: companyData.id })
+        .update({ 
+          company_id: companyData.id,
+          is_trial_owner: false
+        })
         .eq('id', authData.user.id);
 
       if (profileError) {

@@ -388,6 +388,7 @@ export type Database = {
           id: string
           industry: string | null
           is_active: boolean | null
+          is_trial: boolean | null
           legal_name: string
           logo_url: string | null
           name: string
@@ -395,6 +396,9 @@ export type Database = {
           responsible: Json | null
           settings: Json | null
           size: string | null
+          subscription_status: string | null
+          trial_end_date: string | null
+          trial_start_date: string | null
           updated_at: string | null
         }
         Insert: {
@@ -406,6 +410,7 @@ export type Database = {
           id?: string
           industry?: string | null
           is_active?: boolean | null
+          is_trial?: boolean | null
           legal_name: string
           logo_url?: string | null
           name: string
@@ -413,6 +418,9 @@ export type Database = {
           responsible?: Json | null
           settings?: Json | null
           size?: string | null
+          subscription_status?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -424,6 +432,7 @@ export type Database = {
           id?: string
           industry?: string | null
           is_active?: boolean | null
+          is_trial?: boolean | null
           legal_name?: string
           logo_url?: string | null
           name?: string
@@ -431,6 +440,9 @@ export type Database = {
           responsible?: Json | null
           settings?: Json | null
           size?: string | null
+          subscription_status?: string | null
+          trial_end_date?: string | null
+          trial_start_date?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1108,6 +1120,7 @@ export type Database = {
           created_at: string | null
           full_name: string
           id: string
+          is_trial_owner: boolean | null
           last_login_at: string | null
           permissions: Json | null
           updated_at: string | null
@@ -1118,6 +1131,7 @@ export type Database = {
           created_at?: string | null
           full_name: string
           id: string
+          is_trial_owner?: boolean | null
           last_login_at?: string | null
           permissions?: Json | null
           updated_at?: string | null
@@ -1128,6 +1142,7 @@ export type Database = {
           created_at?: string | null
           full_name?: string
           id?: string
+          is_trial_owner?: boolean | null
           last_login_at?: string | null
           permissions?: Json | null
           updated_at?: string | null
@@ -1199,7 +1214,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_company_active: { Args: { company_uuid: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      user_has_company_access: { Args: { user_uuid: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "manager" | "analyst" | "accountant" | "super_admin"

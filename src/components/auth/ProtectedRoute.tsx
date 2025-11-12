@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { ReactNode } from "react";
+import { useTrialStatus } from "@/hooks/useTrialStatus";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -17,9 +18,15 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const location = useLocation();
   const { user, profile, hasPermission, hasRole, isActive } = useAuth();
+  const { trialStatus } = useTrialStatus();
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Verificar se o trial expirou e o usuário é o trial owner
+  if (trialStatus && !trialStatus.canAccess && location.pathname !== '/plans') {
+    return <Navigate to="/plans" replace />;
   }
 
   if (!isActive()) {
