@@ -414,8 +414,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
                 setFormData({ 
                   ...formData, 
                   bank_account_id: value,
-                  centro_custo_id: "",
-                  categoria_receita_id: ""
+                  centro_custo_id: ""
                 });
               }}
               disabled={loadingAccounts}
@@ -434,36 +433,21 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             </Select>
           </div>
 
-          {/* 7. Centro de Custo e Categoria */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Centro de Custo *</Label>
-              <SelectCentroCusto
-                contaBancariaId={formData.bank_account_id}
-                value={formData.centro_custo_id}
-                onChange={(value) => {
-                  setFormData({ 
-                    ...formData, 
-                    centro_custo_id: value,
-                    categoria_receita_id: ""
-                  });
-                }}
-                placeholder="Selecione o centro de custo"
-                disabled={!formData.bank_account_id}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Categoria de Receita</Label>
-              <SelectCategoria
-                centroCustoId={formData.centro_custo_id}
-                tipo="receita"
-                value={formData.categoria_receita_id}
-                onChange={(value) => setFormData({ ...formData, categoria_receita_id: value })}
-                placeholder="Selecione a categoria"
-                disabled={!formData.centro_custo_id}
-              />
-            </div>
+          {/* 7. Centro de Custo */}
+          <div className="space-y-2">
+            <Label>Centro de Custo *</Label>
+            <SelectCentroCusto
+              contaBancariaId={formData.bank_account_id}
+              value={formData.centro_custo_id}
+              onChange={(value) => {
+                setFormData({ 
+                  ...formData, 
+                  centro_custo_id: value
+                });
+              }}
+              placeholder="Selecione o centro de custo"
+              disabled={!formData.bank_account_id}
+            />
           </div>
 
           {/* 8. Frequência */}
