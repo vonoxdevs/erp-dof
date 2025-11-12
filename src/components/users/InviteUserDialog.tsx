@@ -362,7 +362,7 @@ export function InviteUserDialog({ onSuccess }: InviteUserDialogProps) {
                 transactions: "Transações",
                 bank_accounts: "Contas Bancárias",
                 categories: "Categorias",
-                contacts: "Contatos",
+                contacts: "Clientes",
                 reports: "Relatórios",
                 settings: "Configurações",
               }).map(([key, label]) => (

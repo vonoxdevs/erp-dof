@@ -33,7 +33,7 @@ const mainItems = [
   { title: "Contratos", url: "/contracts", icon: FileText },
   { title: "Contas Bancárias", url: "/bank-accounts", icon: Building2 },
   { title: "Categorias", url: "/categories", icon: Tags },
-  { title: "Contatos", url: "/contacts", icon: UserCircle },
+  { title: "Clientes", url: "/contacts", icon: UserCircle },
 ];
 
 const supportItems = [

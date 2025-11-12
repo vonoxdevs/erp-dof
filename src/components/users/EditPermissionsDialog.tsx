@@ -110,7 +110,7 @@ export function EditPermissionsDialog({ user, open, onClose }: EditPermissionsDi
                   transactions: "Transações",
                   bank_accounts: "Contas Bancárias",
                   categories: "Categorias",
-                  contacts: "Contatos",
+                  contacts: "Clientes",
                   reports: "Relatórios",
                   settings: "Configurações",
                 }).map(([key, label]) => (
