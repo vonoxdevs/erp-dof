@@ -100,7 +100,7 @@ export default function HomePage() {
               </button>
               <Link to="/login">
                 <Button size="lg" className="shadow-lg">
-                  Teste Grátis
+                  Login
                 </Button>
               </Link>
             </div>
