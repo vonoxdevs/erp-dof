@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,6 +34,71 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
+  // Verificar onboarding pendente ao montar
+  useEffect(() => {
+    const checkPendingOnboarding = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const pendingData = localStorage.getItem('pending_onboarding');
+        if (pendingData) {
+          console.log('🔄 Onboarding pendente detectado após confirmação de email');
+          await processPendingOnboarding(session);
+        }
+      }
+    };
+
+    checkPendingOnboarding();
+  }, []);
+
+  const processPendingOnboarding = async (session: any) => {
+    try {
+      const pendingData = localStorage.getItem('pending_onboarding');
+      if (!pendingData) return;
+
+      const onboardingData = JSON.parse(pendingData);
+      console.log('📦 Processando onboarding pendente...');
+
+      toast.loading('Finalizando cadastro da empresa...', { id: 'onboarding' });
+
+      const { data: result, error: functionError } = await supabase.functions.invoke('onboarding', {
+        body: onboardingData,
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
+      });
+
+      if (result?.error) {
+        console.error('❌ Erro no onboarding:', result.error);
+        toast.error(result.details || result.error, { id: 'onboarding' });
+        return;
+      }
+
+      if (functionError) {
+        console.error('❌ Erro na função:', functionError);
+        toast.error('Erro ao criar empresa. Contate o suporte.', { id: 'onboarding' });
+        return;
+      }
+
+      if (!result?.success) {
+        toast.error('Erro ao criar empresa.', { id: 'onboarding' });
+        return;
+      }
+
+      console.log('✅ Empresa criada após confirmação de email!');
+      localStorage.removeItem('pending_onboarding');
+      
+      toast.success('Empresa criada com sucesso! Bem-vindo!', { id: 'onboarding' });
+      
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 1500);
+    } catch (error: any) {
+      console.error('Erro ao processar onboarding:', error);
+      toast.error('Erro ao finalizar cadastro.', { id: 'onboarding' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -48,8 +114,15 @@ export default function LoginPage() {
       
       await login(formData.email, formData.password);
       
-      // Se login foi bem-sucedido e senha é padrão, redirecionar para mudança de senha
-      if (isDefaultPassword) {
+      // Verificar se há onboarding pendente
+      const { data: { session } } = await supabase.auth.getSession();
+      const pendingData = localStorage.getItem('pending_onboarding');
+      
+      if (pendingData && session) {
+        // Processar onboarding pendente
+        await processPendingOnboarding(session);
+      } else if (isDefaultPassword) {
+        // Se login foi bem-sucedido e senha é padrão, redirecionar para mudança de senha
         toast.warning("Senha padrão detectada!", {
           description: "Por segurança, você deve alterar sua senha agora."
         });

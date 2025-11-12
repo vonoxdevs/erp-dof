@@ -45,50 +45,9 @@ export const MultiStepOnboardingForm = () => {
     setLoading(true);
 
     try {
-      // 1. Criar conta do usuário no Supabase Auth
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: personalData.email,
-        password: personalData.password,
-        options: {
-          data: {
-            full_name: personalData.fullName,
-            cpf: personalData.cpf,
-            phone: personalData.phone
-          },
-          emailRedirectTo: `${window.location.origin}/dashboard`
-        }
-      });
+      console.log('🚀 Iniciando criação de conta...');
 
-      if (signUpError) {
-        // Tratar erro de email já cadastrado especificamente
-        const errorMsg = signUpError.message?.toLowerCase() || '';
-        if (errorMsg.includes('already') || 
-            errorMsg.includes('user already registered') ||
-            errorMsg.includes('email already exists')) {
-          throw new Error('Este e-mail já está cadastrado. Faça login ou use outro e-mail.');
-        }
-        // Tratar erro de senha fraca
-        if (errorMsg.includes('weak') || errorMsg.includes('password')) {
-          throw new Error('Senha muito fraca. Use maiúsculas, minúsculas, números e símbolos.');
-        }
-        // Para outros erros, mostrar mensagem original
-        throw new Error(signUpError.message || 'Erro ao criar conta');
-      }
-
-      if (!authData.user) {
-        throw new Error('Erro ao criar usuário');
-      }
-
-      // Usar a sessão retornada diretamente pelo signUp
-      if (!authData.session) {
-        throw new Error('Sessão não foi criada. Verifique se a confirmação de e-mail está desabilitada.');
-      }
-
-      const session = authData.session;
-
-      // 2. Aguardar um pouco para garantir que o trigger criou o perfil
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
+      // Preparar dados do onboarding
       const onboardingData = {
         company: {
           name: companyData.tradeName,
@@ -117,48 +76,102 @@ export const MultiStepOnboardingForm = () => {
         }
       };
 
-      const { data: result, error: functionError } = await supabase.functions.invoke('onboarding', {
-        body: onboardingData,
-        headers: {
-          Authorization: `Bearer ${session.access_token}`
+      // Salvar dados no localStorage (caso precise processar após confirmação de email)
+      localStorage.setItem('pending_onboarding', JSON.stringify(onboardingData));
+      console.log('💾 Dados salvos no localStorage');
+
+      // 1. Criar conta do usuário no Supabase Auth
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: personalData.email,
+        password: personalData.password,
+        options: {
+          data: {
+            full_name: personalData.fullName,
+            cpf: personalData.cpf,
+            phone: personalData.phone
+          },
+          emailRedirectTo: `${window.location.origin}/login`
         }
       });
 
-      if (result?.error) {
-        throw new Error(result.details || result.error);
+      if (signUpError) {
+        localStorage.removeItem('pending_onboarding');
+        
+        const errorMsg = signUpError.message?.toLowerCase() || '';
+        if (errorMsg.includes('already') || 
+            errorMsg.includes('user already registered') ||
+            errorMsg.includes('email already exists')) {
+          throw new Error('Este e-mail já está cadastrado. Faça login ou use outro e-mail.');
+        }
+        if (errorMsg.includes('weak') || errorMsg.includes('password')) {
+          throw new Error('Senha muito fraca. Use maiúsculas, minúsculas, números e símbolos.');
+        }
+        throw new Error(signUpError.message || 'Erro ao criar conta');
       }
 
-      if (functionError) {
-        throw new Error(functionError.message || 'Erro ao processar onboarding');
+      if (!authData.user) {
+        localStorage.removeItem('pending_onboarding');
+        throw new Error('Erro ao criar usuário');
       }
 
-      if (!result?.success) {
-        throw new Error('Erro ao criar empresa');
-      }
+      console.log('✅ Usuário criado:', authData.user.id);
 
-      toast.success('Conta criada com sucesso! Bem-vindo ao ERP Financeiro DOF!');
-      
-      // Recarregar sessão
-      await supabase.auth.refreshSession();
-      
-      // Redirecionar para dashboard
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 1500);
+      // 2. Verificar se temos uma sessão ativa
+      const session = authData.session;
+
+      if (session) {
+        // Sessão ativa - processar onboarding imediatamente
+        console.log('✅ Sessão ativa, processando onboarding...');
+
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const { data: result, error: functionError } = await supabase.functions.invoke('onboarding', {
+          body: onboardingData,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+
+        if (result?.error) {
+          throw new Error(result.details || result.error);
+        }
+
+        if (functionError) {
+          throw new Error(functionError.message || 'Erro ao processar onboarding');
+        }
+
+        if (!result?.success) {
+          throw new Error('Erro ao criar empresa');
+        }
+
+        console.log('✅ Empresa criada com sucesso!');
+        localStorage.removeItem('pending_onboarding');
+
+        toast.success('Conta e empresa criadas com sucesso!');
+        
+        await supabase.auth.refreshSession();
+        
+        setTimeout(() => {
+          navigate('/dashboard', { replace: true });
+        }, 1500);
+      } else {
+        // Sem sessão - email confirmation está ativo
+        console.log('📧 Confirmação de email necessária');
+        toast.success(
+          'Conta criada! Verifique seu e-mail para confirmar. Após confirmar, faça login para completar o cadastro.',
+          { duration: 7000 }
+        );
+        
+        setTimeout(() => {
+          navigate('/login', { replace: true });
+        }, 2000);
+      }
 
     } catch (error: any) {
       console.error('Erro ao criar conta:', error);
       
       const errorMessage = error.message || 'Erro ao criar conta. Tente novamente.';
       toast.error(errorMessage);
-      
-      // Se falhou após criar a conta, sugerir login
-      if (error.message?.includes('Sessão')) {
-        toast.info('Você já tem uma conta. Faça login para continuar.');
-        setTimeout(() => {
-          navigate('/login');
-        }, 2000);
-      }
     } finally {
       setLoading(false);
     }
