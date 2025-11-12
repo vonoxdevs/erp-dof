@@ -60,6 +60,12 @@ export const MultiStepOnboardingForm = () => {
       });
 
       if (signUpError) {
+        // Tratar erro de email já cadastrado
+        if (signUpError.message?.includes('already') || 
+            signUpError.message?.includes('registered') ||
+            signUpError.status === 422) {
+          throw new Error('Este e-mail já está cadastrado. Faça login ou use outro e-mail.');
+        }
         throw signUpError;
       }
 
