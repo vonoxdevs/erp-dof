@@ -6,6 +6,7 @@ import { Plus, Building2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { BankAccountDialog } from "@/components/bank-accounts/BankAccountDialog";
 import { BankAccountCard } from "@/components/bank-accounts/BankAccountCard";
+import { TransferTransactionsDialog } from "@/components/bank-accounts/TransferTransactionsDialog";
 import { sanitizeError } from "@/lib/errorMapping";
 
 interface BankAccount {
@@ -28,6 +29,10 @@ const BankAccounts = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<BankAccount | null>(null);
+  const [transactionCount, setTransactionCount] = useState(0);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   useEffect(() => {
     loadAccounts();
@@ -70,15 +75,120 @@ const BankAccounts = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta conta?")) return;
-
     try {
-      const { error } = await supabase.from("bank_accounts").delete().eq("id", id);
-      if (error) throw error;
+      const account = accounts.find(acc => acc.id === id);
+      if (!account) return;
+
+      // Verificar quantas transações estão vinculadas a esta conta
+      const { count, error: countError } = await supabase
+        .from("transactions")
+        .select("*", { count: "exact", head: true })
+        .or(`account_from_id.eq.${id},account_to_id.eq.${id},bank_account_id.eq.${id}`)
+        .is("deleted_at", null);
+
+      if (countError) throw countError;
+
+      setAccountToDelete(account);
+      setTransactionCount(count || 0);
+      setTransferDialogOpen(true);
+    } catch (error: any) {
+      toast.error(sanitizeError(error));
+    }
+  };
+
+  const confirmDelete = async (targetAccountId: string | null) => {
+    if (!accountToDelete) return;
+
+    setDeleteLoading(true);
+    try {
+      // 1. Transferir transações se houver conta de destino
+      if (targetAccountId) {
+        // Atualizar account_from_id
+        const { error: error1 } = await supabase
+          .from("transactions")
+          .update({ account_from_id: targetAccountId })
+          .eq("account_from_id", accountToDelete.id)
+          .is("deleted_at", null);
+        
+        if (error1) throw error1;
+
+        // Atualizar account_to_id
+        const { error: error2 } = await supabase
+          .from("transactions")
+          .update({ account_to_id: targetAccountId })
+          .eq("account_to_id", accountToDelete.id)
+          .is("deleted_at", null);
+        
+        if (error2) throw error2;
+
+        // Atualizar bank_account_id
+        const { error: error3 } = await supabase
+          .from("transactions")
+          .update({ bank_account_id: targetAccountId })
+          .eq("bank_account_id", accountToDelete.id)
+          .is("deleted_at", null);
+        
+        if (error3) throw error3;
+      } else {
+        // Remover vinculação das transações (setar como null)
+        const { error: error1 } = await supabase
+          .from("transactions")
+          .update({ account_from_id: null })
+          .eq("account_from_id", accountToDelete.id)
+          .is("deleted_at", null);
+        
+        if (error1) throw error1;
+
+        const { error: error2 } = await supabase
+          .from("transactions")
+          .update({ account_to_id: null })
+          .eq("account_to_id", accountToDelete.id)
+          .is("deleted_at", null);
+        
+        if (error2) throw error2;
+
+        const { error: error3 } = await supabase
+          .from("transactions")
+          .update({ bank_account_id: null })
+          .eq("bank_account_id", accountToDelete.id)
+          .is("deleted_at", null);
+        
+        if (error3) throw error3;
+      }
+
+      // 2. Deletar contratos vinculados (soft delete)
+      const { error: contractsError } = await supabase
+        .from("contracts")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("bank_account_id", accountToDelete.id)
+        .is("deleted_at", null);
+      
+      if (contractsError) throw contractsError;
+
+      // 3. Deletar credenciais de API vinculadas
+      const { error: credentialsError } = await supabase
+        .from("bank_api_credentials")
+        .delete()
+        .eq("bank_account_id", accountToDelete.id);
+      
+      if (credentialsError) throw credentialsError;
+
+      // 4. Finalmente, deletar a conta bancária (soft delete)
+      const { error: deleteError } = await supabase
+        .from("bank_accounts")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", accountToDelete.id);
+
+      if (deleteError) throw deleteError;
+
       toast.success("Conta excluída com sucesso!");
+      setTransferDialogOpen(false);
+      setAccountToDelete(null);
       loadAccounts();
     } catch (error: any) {
       toast.error(sanitizeError(error));
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -181,6 +291,19 @@ const BankAccounts = () => {
         open={dialogOpen}
         onClose={handleDialogClose}
         account={selectedAccount}
+      />
+
+      <TransferTransactionsDialog
+        open={transferDialogOpen}
+        onClose={() => {
+          setTransferDialogOpen(false);
+          setAccountToDelete(null);
+        }}
+        onConfirm={confirmDelete}
+        accountToDelete={accountToDelete}
+        transactionCount={transactionCount}
+        availableAccounts={accounts.filter(acc => acc.id !== accountToDelete?.id)}
+        loading={deleteLoading}
       />
     </div>
   );
