@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { buscarCNPJ, CNPJData } from '@/services/externalApiService';
 import { validateCNPJ } from '@/lib/brazilian-validations';
 import { z } from 'zod';
+import { useAuth } from '@/hooks/useAuth';
 
 const companySchema = z.object({
   cnpj: z.string()
@@ -60,6 +61,7 @@ const companySchema = z.object({
 
 export default function CompanyOnboardingForm() {
   const navigate = useNavigate();
+  const { refreshProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [searchingCNPJ, setSearchingCNPJ] = useState(false);
   const [cnpjData, setCnpjData] = useState<CNPJData | null>(null);
@@ -275,12 +277,13 @@ export default function CompanyOnboardingForm() {
       
       toast.success('Empresa cadastrada com sucesso! Bem-vindo ao ERP Financeiro DOF!');
       
-      // Recarregar sessão para atualizar dados
-      await supabase.auth.refreshSession();
+      // Atualizar perfil do usuário no contexto
+      await refreshProfile();
       
+      // Pequeno delay para garantir que os dados foram atualizados
       setTimeout(() => {
         navigate('/dashboard', { replace: true });
-      }, 1500);
+      }, 500);
 
     } catch (error: any) {
       toast.error(error.message || 'Erro ao cadastrar empresa. Tente novamente.');
