@@ -7,14 +7,45 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
+import {
+  validateCPF,
+  validateCNPJ,
+  validateEmail,
+  validatePhone,
+  formatCPF,
+  formatCNPJ,
+  formatPhone,
+} from "@/lib/brazilian-validations";
 
 const clientSchema = z.object({
-  name: z.string().min(1, "Nome é obrigatório"),
-  document: z.string().min(1, "CPF/CNPJ é obrigatório"),
+  name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
+  document: z.string().trim().min(1, "CPF/CNPJ é obrigatório").max(20, "Documento inválido"),
+  document_type: z.enum(["cpf", "cnpj"]),
   type: z.enum(["customer", "supplier", "both"], { required_error: "Tipo é obrigatório" }),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
-  phone: z.string().optional(),
-});
+  email: z
+    .string()
+    .trim()
+    .max(255, "Email muito longo")
+    .refine((val) => !val || validateEmail(val), { message: "Email inválido" }),
+  phone: z
+    .string()
+    .trim()
+    .max(20, "Telefone muito longo")
+    .refine((val) => !val || validatePhone(val), { message: "Telefone inválido" })
+    .optional(),
+}).refine(
+  (data) => {
+    if (data.document_type === "cpf") {
+      return validateCPF(data.document);
+    } else {
+      return validateCNPJ(data.document);
+    }
+  },
+  {
+    message: "CPF/CNPJ inválido",
+    path: ["document"],
+  }
+);
 
 interface Props {
   open: boolean;
@@ -130,21 +161,10 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="document">CPF/CNPJ *</Label>
-              <Input
-                id="document"
-                value={formData.document}
-                onChange={(e) => setFormData({ ...formData, document: e.target.value })}
-                placeholder="000.000.000-00"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="document_type">Tipo de Documento</Label>
+              <Label htmlFor="document_type">Tipo de Documento *</Label>
               <Select
                 value={formData.document_type}
-                onValueChange={(value) => setFormData({ ...formData, document_type: value })}
+                onValueChange={(value) => setFormData({ ...formData, document_type: value, document: "" })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -154,6 +174,23 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
                   <SelectItem value="cnpj">CNPJ</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="document">CPF/CNPJ *</Label>
+              <Input
+                id="document"
+                value={formData.document}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const formatted =
+                    formData.document_type === "cpf" ? formatCPF(value) : formatCNPJ(value);
+                  setFormData({ ...formData, document: formatted });
+                }}
+                placeholder={formData.document_type === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+                maxLength={formData.document_type === "cpf" ? 14 : 18}
+                required
+              />
             </div>
           </div>
 
@@ -190,8 +227,12 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
             <Input
               id="phone"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) => {
+                const formatted = formatPhone(e.target.value);
+                setFormData({ ...formData, phone: formatted });
+              }}
               placeholder="(00) 00000-0000"
+              maxLength={15}
             />
           </div>
 

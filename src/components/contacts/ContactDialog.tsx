@@ -22,19 +22,58 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { z } from "zod";
 import { sanitizeError } from "@/lib/errorMapping";
+import {
+  validateCPF,
+  validateCNPJ,
+  validateEmail,
+  validatePhone,
+  formatCPF,
+  formatCNPJ,
+  formatPhone,
+} from "@/lib/brazilian-validations";
 
 const contactSchema = z.object({
-  name: z.string().trim().min(1, "Nome é obrigatório").max(100),
-  document: z.string().trim().min(1, "Documento é obrigatório").max(20),
+  name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
+  document: z.string().trim().min(1, "Documento é obrigatório").max(20, "Documento inválido"),
   document_type: z.enum(["cpf", "cnpj"]),
   type: z.enum(["client", "supplier", "both"]),
-  email: z.string().trim().email("Email inválido").or(z.literal("")),
-  phone: z.string().trim().max(20).or(z.literal("")),
-  manager_name: z.string().trim().max(100).optional(),
-  manager_position: z.string().trim().max(100).optional(),
-  manager_phone: z.string().trim().max(20).optional(),
-  manager_email: z.string().trim().email("Email inválido").or(z.literal("")).optional(),
-});
+  email: z
+    .string()
+    .trim()
+    .max(255, "Email muito longo")
+    .refine((val) => !val || validateEmail(val), { message: "Email inválido" }),
+  phone: z
+    .string()
+    .trim()
+    .max(20, "Telefone muito longo")
+    .refine((val) => !val || validatePhone(val), { message: "Telefone inválido" }),
+  manager_name: z.string().trim().max(100, "Nome muito longo").optional(),
+  manager_position: z.string().trim().max(100, "Cargo muito longo").optional(),
+  manager_phone: z
+    .string()
+    .trim()
+    .max(20, "Telefone muito longo")
+    .refine((val) => !val || validatePhone(val), { message: "Telefone inválido" })
+    .optional(),
+  manager_email: z
+    .string()
+    .trim()
+    .max(255, "Email muito longo")
+    .refine((val) => !val || validateEmail(val), { message: "Email inválido" })
+    .optional(),
+}).refine(
+  (data) => {
+    if (data.document_type === "cpf") {
+      return validateCPF(data.document);
+    } else {
+      return validateCNPJ(data.document);
+    }
+  },
+  {
+    message: "CPF/CNPJ inválido",
+    path: ["document"],
+  }
+);
 
 interface Contact {
   id?: string;
@@ -248,10 +287,14 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                   <Label>Documento *</Label>
                   <Input
                     value={formData.document}
-                    onChange={(e) =>
-                      setFormData({ ...formData, document: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const formatted =
+                        formData.document_type === "cpf" ? formatCPF(value) : formatCNPJ(value);
+                      setFormData({ ...formData, document: formatted });
+                    }}
                     placeholder={formData.document_type === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+                    maxLength={formData.document_type === "cpf" ? 14 : 18}
                     required
                   />
                 </div>
@@ -291,10 +334,12 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                   <Label>Telefone</Label>
                   <Input
                     value={formData.phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, phone: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const formatted = formatPhone(e.target.value);
+                      setFormData({ ...formData, phone: formatted });
+                    }}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                   />
                 </div>
               </div>
@@ -431,10 +476,12 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                   <Label>Telefone do Gestor</Label>
                   <Input
                     value={formData.manager_phone}
-                    onChange={(e) =>
-                      setFormData({ ...formData, manager_phone: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const formatted = formatPhone(e.target.value);
+                      setFormData({ ...formData, manager_phone: formatted });
+                    }}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                   />
                 </div>
 
