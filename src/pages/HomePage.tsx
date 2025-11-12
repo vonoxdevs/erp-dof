@@ -74,7 +74,7 @@ export default function HomePage() {
                 <TrendingUp className="w-6 h-6 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold text-foreground">
-                Conta Azul
+                ERP Financeiro DOF
               </span>
             </Link>
 
@@ -287,7 +287,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDE2YzAgNC40MTgtMy41ODIgOC04IDhzLTgtMy41ODItOC04IDMuNTgyLTggOC04IDggMy41ODIgOCA4TTEgMTJjMC0yLjIwOS0xLjc5MS00LTQtNHMtNCAxLjc5MS00IDQgMS43OTEgNCA0IDQgNC0xLjc5MSA0LTQiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-20"></div>
         <div className="container mx-auto text-center relative z-10 space-y-8">
           <h2 className="text-4xl lg:text-5xl xl:text-6xl font-bold max-w-4xl mx-auto leading-tight">
-            Deixe a Conta Azul trabalhar por você!
+            Deixe o ERP Financeiro DOF trabalhar por você!
           </h2>
           <p className="text-xl lg:text-2xl max-w-2xl mx-auto opacity-90">
             Simplifique sua gestão financeira e foque no crescimento do seu negócio
@@ -325,7 +325,7 @@ export default function HomePage() {
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-4xl lg:text-5xl font-bold">
-              Qual plano da Conta Azul é o ideal pra você?
+              Qual plano do ERP Financeiro DOF é o ideal pra você?
             </h2>
             <p className="text-xl text-muted-foreground">
               Escolha o plano perfeito para o tamanho da sua empresa
@@ -556,7 +556,7 @@ export default function HomePage() {
         <div className="container mx-auto">
           <div className="text-center mb-16 space-y-4">
             <h2 className="text-4xl lg:text-5xl font-bold">
-              Aprenda com a Conta Azul
+              Aprenda com o ERP Financeiro DOF
             </h2>
             <p className="text-xl text-muted-foreground">
               Conteúdos exclusivos para ajudar seu negócio a crescer
@@ -613,7 +613,7 @@ export default function HomePage() {
                 <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center">
                   <TrendingUp className="w-6 h-6 text-primary-foreground" />
                 </div>
-                <span className="text-xl font-bold">Conta Azul</span>
+                <span className="text-xl font-bold">ERP Financeiro DOF</span>
               </Link>
               <p className="text-muted-foreground max-w-sm">
                 Sistema completo de gestão financeira para pequenas e médias empresas. Simplifique sua gestão e foque no crescimento.
@@ -657,7 +657,7 @@ export default function HomePage() {
           {/* Bottom Bar */}
           <div className="pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2024 Conta Azul. Todos os direitos reservados.
+              © 2024 ERP Financeiro DOF. Todos os direitos reservados.
             </p>
             <div className="flex gap-6 text-sm text-muted-foreground">
               <a href="#" className="hover:text-primary transition-colors">Privacidade</a>
