@@ -12,17 +12,50 @@ import { validateCNPJ } from '@/lib/brazilian-validations';
 import { z } from 'zod';
 
 const companySchema = z.object({
-  cnpj: z.string().min(14, 'CNPJ inválido'),
-  legalName: z.string().min(1, 'Razão social é obrigatória').max(200),
-  tradeName: z.string().min(1, 'Nome fantasia é obrigatório').max(200),
-  email: z.string().email('Email inválido').max(255),
-  phone: z.string().optional(),
-  cep: z.string().min(8, 'CEP inválido'),
-  street: z.string().min(1, 'Logradouro é obrigatório'),
-  number: z.string().min(1, 'Número é obrigatório'),
-  neighborhood: z.string().min(1, 'Bairro é obrigatório'),
-  city: z.string().min(1, 'Cidade é obrigatória'),
-  state: z.string().length(2, 'UF inválida'),
+  cnpj: z.string()
+    .min(14, 'CNPJ deve ter 14 dígitos')
+    .refine((val) => validateCNPJ(val.replace(/\D/g, '')), 'CNPJ inválido'),
+  legalName: z.string()
+    .trim()
+    .min(3, 'Razão social deve ter no mínimo 3 caracteres')
+    .max(200, 'Razão social deve ter no máximo 200 caracteres'),
+  tradeName: z.string()
+    .trim()
+    .min(3, 'Nome fantasia deve ter no mínimo 3 caracteres')
+    .max(200, 'Nome fantasia deve ter no máximo 200 caracteres'),
+  email: z.string()
+    .trim()
+    .email('Email inválido')
+    .max(255, 'Email deve ter no máximo 255 caracteres'),
+  phone: z.string()
+    .min(10, 'Telefone deve ter no mínimo 10 dígitos')
+    .optional()
+    .or(z.literal('')),
+  cep: z.string()
+    .min(8, 'CEP deve ter 8 dígitos')
+    .max(9, 'CEP inválido'),
+  street: z.string()
+    .trim()
+    .min(3, 'Logradouro é obrigatório')
+    .max(200, 'Logradouro deve ter no máximo 200 caracteres'),
+  number: z.string()
+    .trim()
+    .min(1, 'Número é obrigatório')
+    .max(10, 'Número deve ter no máximo 10 caracteres'),
+  neighborhood: z.string()
+    .trim()
+    .min(3, 'Bairro é obrigatório')
+    .max(100, 'Bairro deve ter no máximo 100 caracteres'),
+  city: z.string()
+    .trim()
+    .min(3, 'Cidade é obrigatória')
+    .max(100, 'Cidade deve ter no máximo 100 caracteres'),
+  state: z.string()
+    .length(2, 'UF deve ter 2 caracteres')
+    .toUpperCase(),
+  complement: z.string().optional(),
+  industry: z.string().optional(),
+  size: z.string().optional(),
 });
 
 export default function CompanyOnboardingForm() {
@@ -30,6 +63,7 @@ export default function CompanyOnboardingForm() {
   const [loading, setLoading] = useState(false);
   const [searchingCNPJ, setSearchingCNPJ] = useState(false);
   const [cnpjData, setCnpjData] = useState<CNPJData | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   
   const [formData, setFormData] = useState({
     cnpj: '',
@@ -48,17 +82,72 @@ export default function CompanyOnboardingForm() {
     state: ''
   });
 
+  // Máscaras de formatação
+  const formatCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 14) {
+      return numbers
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+    }
+    return value;
+  };
+
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 8) {
+      return numbers.replace(/(\d{5})(\d{0,3})/, '$1-$2');
+    }
+    return value;
+  };
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      if (numbers.length <= 10) {
+        return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      }
+      return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    }
+    return value;
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    let formattedValue = value;
+    
+    if (field === 'cnpj') {
+      formattedValue = formatCNPJ(value);
+    } else if (field === 'cep') {
+      formattedValue = formatCEP(value);
+    } else if (field === 'phone') {
+      formattedValue = formatPhone(value);
+    } else if (field === 'state') {
+      formattedValue = value.toUpperCase();
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: formattedValue }));
+    
+    // Limpar erro do campo ao digitar
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
   const handleCNPJSearch = async () => {
     const cleanCNPJ = formData.cnpj.replace(/\D/g, '');
     
     if (!validateCNPJ(cleanCNPJ)) {
+      setErrors(prev => ({ ...prev, cnpj: 'CNPJ inválido' }));
       toast.error('CNPJ inválido');
       return;
     }
 
     setSearchingCNPJ(true);
+    setErrors({});
+    
     try {
-      console.log('🔍 Buscando dados do CNPJ:', cleanCNPJ);
       const data = await buscarCNPJ(cleanCNPJ);
       
       if (data) {
@@ -70,8 +159,8 @@ export default function CompanyOnboardingForm() {
           legalName: data.razao_social,
           tradeName: data.nome_fantasia,
           email: data.email || prev.email,
-          phone: data.telefone || prev.phone,
-          cep: data.cep,
+          phone: data.telefone ? formatPhone(data.telefone) : prev.phone,
+          cep: formatCEP(data.cep),
           street: data.logradouro,
           number: data.numero,
           complement: data.complemento,
@@ -83,7 +172,6 @@ export default function CompanyOnboardingForm() {
         toast.success('Dados da empresa carregados!');
       }
     } catch (error: any) {
-      console.error('Erro ao buscar CNPJ:', error);
       toast.error(error.message || 'Erro ao buscar dados do CNPJ');
     } finally {
       setSearchingCNPJ(false);
@@ -92,21 +180,37 @@ export default function CompanyOnboardingForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     
-    // Validar dados
-    try {
-      companySchema.parse(formData);
-    } catch (error: any) {
-      const firstError = error.errors?.[0];
-      toast.error(firstError?.message || 'Preencha todos os campos obrigatórios');
+    // Limpar máscaras antes de validar
+    const dataToValidate = {
+      ...formData,
+      cnpj: formData.cnpj.replace(/\D/g, ''),
+      cep: formData.cep.replace(/\D/g, ''),
+      phone: formData.phone.replace(/\D/g, '')
+    };
+    
+    // Validar dados com zod
+    const validation = companySchema.safeParse(dataToValidate);
+    
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.errors.forEach((error) => {
+        const path = error.path[0] as string;
+        if (!fieldErrors[path]) {
+          fieldErrors[path] = error.message;
+        }
+      });
+      setErrors(fieldErrors);
+      
+      const firstError = Object.values(fieldErrors)[0];
+      toast.error(firstError);
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log('🏢 Criando empresa...');
-
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session) {
@@ -122,21 +226,21 @@ export default function CompanyOnboardingForm() {
       // Preparar dados para a edge function
       const onboardingData = {
         company: {
-          name: formData.tradeName,
-          legal_name: formData.legalName,
-          cnpj: formData.cnpj.replace(/\D/g, ''),
-          email: formData.email,
-          phone: formData.phone,
+          name: formData.tradeName.trim(),
+          legal_name: formData.legalName.trim(),
+          cnpj: dataToValidate.cnpj,
+          email: formData.email.trim(),
+          phone: dataToValidate.phone,
           industry: formData.industry,
           size: formData.size
         },
         address: {
-          cep: formData.cep,
-          street: formData.street,
-          number: formData.number,
-          complement: formData.complement,
-          neighborhood: formData.neighborhood,
-          city: formData.city,
+          cep: dataToValidate.cep,
+          street: formData.street.trim(),
+          number: formData.number.trim(),
+          complement: formData.complement.trim(),
+          neighborhood: formData.neighborhood.trim(),
+          city: formData.city.trim(),
           state: formData.state
         },
         responsible: {
@@ -168,8 +272,6 @@ export default function CompanyOnboardingForm() {
       if (!result?.success) {
         throw new Error('Erro ao criar empresa');
       }
-
-      console.log('✅ Empresa criada com sucesso!');
       
       toast.success('Empresa cadastrada com sucesso! Bem-vindo ao ERP Financeiro DOF!');
       
@@ -181,7 +283,6 @@ export default function CompanyOnboardingForm() {
       }, 1500);
 
     } catch (error: any) {
-      console.error('Erro ao criar empresa:', error);
       toast.error(error.message || 'Erro ao cadastrar empresa. Tente novamente.');
     } finally {
       setLoading(false);
@@ -223,9 +324,11 @@ export default function CompanyOnboardingForm() {
                     type="text"
                     placeholder="00.000.000/0000-00"
                     value={formData.cnpj}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cnpj: e.target.value }))}
+                    onChange={(e) => handleInputChange('cnpj', e.target.value)}
                     disabled={loading || searchingCNPJ}
                     required
+                    maxLength={18}
+                    className={errors.cnpj ? 'border-destructive' : ''}
                   />
                   <Button
                     type="button"
@@ -240,9 +343,14 @@ export default function CompanyOnboardingForm() {
                     )}
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Clique na lupa para buscar os dados automaticamente
-                </p>
+                {errors.cnpj && (
+                  <p className="text-sm text-destructive">{errors.cnpj}</p>
+                )}
+                {!errors.cnpj && (
+                  <p className="text-xs text-muted-foreground">
+                    Clique na lupa para buscar os dados automaticamente
+                  </p>
+                )}
               </div>
 
               {/* Dados da empresa */}
@@ -252,10 +360,15 @@ export default function CompanyOnboardingForm() {
                   <Input
                     id="legalName"
                     value={formData.legalName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, legalName: e.target.value }))}
+                    onChange={(e) => handleInputChange('legalName', e.target.value)}
                     disabled={loading}
                     required
+                    maxLength={200}
+                    className={errors.legalName ? 'border-destructive' : ''}
                   />
+                  {errors.legalName && (
+                    <p className="text-sm text-destructive">{errors.legalName}</p>
+                  )}
                 </div>
 
                 <div className="col-span-2 space-y-2">
@@ -263,10 +376,15 @@ export default function CompanyOnboardingForm() {
                   <Input
                     id="tradeName"
                     value={formData.tradeName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, tradeName: e.target.value }))}
+                    onChange={(e) => handleInputChange('tradeName', e.target.value)}
                     disabled={loading}
                     required
+                    maxLength={200}
+                    className={errors.tradeName ? 'border-destructive' : ''}
                   />
+                  {errors.tradeName && (
+                    <p className="text-sm text-destructive">{errors.tradeName}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -275,10 +393,15 @@ export default function CompanyOnboardingForm() {
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                     disabled={loading}
                     required
+                    maxLength={255}
+                    className={errors.email ? 'border-destructive' : ''}
                   />
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -287,9 +410,14 @@ export default function CompanyOnboardingForm() {
                     id="phone"
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                     disabled={loading}
+                    maxLength={15}
+                    className={errors.phone ? 'border-destructive' : ''}
                   />
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">{errors.phone}</p>
+                  )}
                 </div>
               </div>
 
@@ -306,10 +434,15 @@ export default function CompanyOnboardingForm() {
                     <Input
                       id="street"
                       value={formData.street}
-                      onChange={(e) => setFormData(prev => ({ ...prev, street: e.target.value }))}
+                      onChange={(e) => handleInputChange('street', e.target.value)}
                       disabled={loading}
                       required
+                      maxLength={200}
+                      className={errors.street ? 'border-destructive' : ''}
                     />
+                    {errors.street && (
+                      <p className="text-sm text-destructive">{errors.street}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -317,10 +450,15 @@ export default function CompanyOnboardingForm() {
                     <Input
                       id="number"
                       value={formData.number}
-                      onChange={(e) => setFormData(prev => ({ ...prev, number: e.target.value }))}
+                      onChange={(e) => handleInputChange('number', e.target.value)}
                       disabled={loading}
                       required
+                      maxLength={10}
+                      className={errors.number ? 'border-destructive' : ''}
                     />
+                    {errors.number && (
+                      <p className="text-sm text-destructive">{errors.number}</p>
+                    )}
                   </div>
 
                   <div className="col-span-2 space-y-2">
@@ -328,10 +466,15 @@ export default function CompanyOnboardingForm() {
                     <Input
                       id="neighborhood"
                       value={formData.neighborhood}
-                      onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                      onChange={(e) => handleInputChange('neighborhood', e.target.value)}
                       disabled={loading}
                       required
+                      maxLength={100}
+                      className={errors.neighborhood ? 'border-destructive' : ''}
                     />
+                    {errors.neighborhood && (
+                      <p className="text-sm text-destructive">{errors.neighborhood}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -339,10 +482,15 @@ export default function CompanyOnboardingForm() {
                     <Input
                       id="cep"
                       value={formData.cep}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cep: e.target.value }))}
+                      onChange={(e) => handleInputChange('cep', e.target.value)}
                       disabled={loading}
                       required
+                      maxLength={9}
+                      className={errors.cep ? 'border-destructive' : ''}
                     />
+                    {errors.cep && (
+                      <p className="text-sm text-destructive">{errors.cep}</p>
+                    )}
                   </div>
 
                   <div className="col-span-2 space-y-2">
@@ -350,10 +498,15 @@ export default function CompanyOnboardingForm() {
                     <Input
                       id="city"
                       value={formData.city}
-                      onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
                       disabled={loading}
                       required
+                      maxLength={100}
+                      className={errors.city ? 'border-destructive' : ''}
                     />
+                    {errors.city && (
+                      <p className="text-sm text-destructive">{errors.city}</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -361,11 +514,15 @@ export default function CompanyOnboardingForm() {
                     <Input
                       id="state"
                       value={formData.state}
-                      onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value.toUpperCase() }))}
+                      onChange={(e) => handleInputChange('state', e.target.value)}
                       maxLength={2}
                       disabled={loading}
                       required
+                      className={errors.state ? 'border-destructive' : ''}
                     />
+                    {errors.state && (
+                      <p className="text-sm text-destructive">{errors.state}</p>
+                    )}
                   </div>
                 </div>
               </div>

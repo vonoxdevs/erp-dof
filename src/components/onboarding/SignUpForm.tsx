@@ -10,12 +10,46 @@ import { toast } from 'sonner';
 import { validateCPF } from '@/lib/brazilian-validations';
 import { getPasswordStrength } from '@/lib/brazilian-validations';
 import { Progress } from '@/components/ui/progress';
+import { z } from 'zod';
+
+const signUpSchema = z.object({
+  fullName: z.string()
+    .trim()
+    .min(3, 'Nome deve ter no mínimo 3 caracteres')
+    .max(100, 'Nome deve ter no máximo 100 caracteres')
+    .regex(/^[a-zA-ZÀ-ÿ\s]+$/, 'Nome deve conter apenas letras'),
+  email: z.string()
+    .trim()
+    .email('Email inválido')
+    .max(255, 'Email deve ter no máximo 255 caracteres')
+    .toLowerCase(),
+  cpf: z.string()
+    .min(11, 'CPF inválido')
+    .refine((val) => validateCPF(val), 'CPF inválido'),
+  phone: z.string()
+    .min(10, 'Telefone deve ter no mínimo 10 dígitos')
+    .max(11, 'Telefone deve ter no máximo 11 dígitos')
+    .optional()
+    .or(z.literal('')),
+  password: z.string()
+    .min(8, 'Senha deve ter no mínimo 8 caracteres')
+    .max(100, 'Senha deve ter no máximo 100 caracteres')
+    .regex(/[a-z]/, 'Senha deve conter letras minúsculas')
+    .regex(/[A-Z]/, 'Senha deve conter letras maiúsculas')
+    .regex(/[0-9]/, 'Senha deve conter números')
+    .regex(/[^a-zA-Z0-9]/, 'Senha deve conter símbolos'),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "As senhas não coincidem",
+  path: ["confirmPassword"],
+});
 
 export default function SignUpForm() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -27,43 +61,88 @@ export default function SignUpForm() {
 
   const passwordStrength = getPasswordStrength(formData.password);
 
+  // Máscaras de formatação
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+    return value;
+  };
+
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      if (numbers.length <= 10) {
+        return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+      }
+      return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3');
+    }
+    return value;
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    let formattedValue = value;
+    
+    if (field === 'cpf') {
+      formattedValue = formatCPF(value);
+    } else if (field === 'phone') {
+      formattedValue = formatPhone(value);
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: formattedValue }));
+    
+    // Limpar erro do campo ao digitar
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrors({});
     
-    // Validações
-    if (!formData.fullName.trim()) {
-      toast.error('Nome completo é obrigatório');
-      return;
-    }
+    // Validação com zod
+    const dataToValidate = {
+      ...formData,
+      cpf: formData.cpf.replace(/\D/g, ''),
+      phone: formData.phone.replace(/\D/g, '')
+    };
 
-    if (!validateCPF(formData.cpf)) {
-      toast.error('CPF inválido');
-      return;
-    }
-
-    if (passwordStrength.strength < 3) {
-      toast.error('Senha muito fraca. Use maiúsculas, minúsculas, números e símbolos.');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('As senhas não coincidem');
+    const validation = signUpSchema.safeParse(dataToValidate);
+    
+    if (!validation.success) {
+      const fieldErrors: Record<string, string> = {};
+      validation.error.errors.forEach((error) => {
+        const path = error.path[0] as string;
+        if (!fieldErrors[path]) {
+          fieldErrors[path] = error.message;
+        }
+      });
+      setErrors(fieldErrors);
+      
+      const firstError = Object.values(fieldErrors)[0];
+      toast.error(firstError);
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log('🚀 Criando usuário...');
+      const cleanCPF = formData.cpf.replace(/\D/g, '');
+      const cleanPhone = formData.phone.replace(/\D/g, '');
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
+        email: dataToValidate.email,
         password: formData.password,
         options: {
           data: {
-            full_name: formData.fullName,
-            cpf: formData.cpf,
-            phone: formData.phone
+            full_name: formData.fullName.trim(),
+            cpf: cleanCPF,
+            phone: cleanPhone
           },
           emailRedirectTo: `${window.location.origin}/login`
         }
@@ -84,8 +163,6 @@ export default function SignUpForm() {
         throw new Error('Erro ao criar usuário');
       }
 
-      console.log('✅ Usuário criado:', authData.user.id);
-
       // Se temos sessão (email confirmation OFF), redirecionar para onboarding
       if (authData.session) {
         toast.success('Conta criada! Redirecionando para cadastro da empresa...');
@@ -104,7 +181,6 @@ export default function SignUpForm() {
       }
 
     } catch (error: any) {
-      console.error('Erro ao criar conta:', error);
       toast.error(error.message || 'Erro ao criar conta. Tente novamente.');
     } finally {
       setLoading(false);
@@ -164,43 +240,56 @@ export default function SignUpForm() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Nome Completo</Label>
+                <Label htmlFor="fullName">Nome Completo *</Label>
                 <Input
                   id="fullName"
                   type="text"
                   placeholder="Seu nome completo"
                   value={formData.fullName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                  onChange={(e) => handleInputChange('fullName', e.target.value)}
                   disabled={loading}
                   required
+                  className={errors.fullName ? 'border-destructive' : ''}
                 />
+                {errors.fullName && (
+                  <p className="text-sm text-destructive">{errors.fullName}</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="seu@email.com"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => handleInputChange('email', e.target.value.toLowerCase())}
                   disabled={loading}
                   required
+                  className={errors.email ? 'border-destructive' : ''}
                 />
+                {errors.email && (
+                  <p className="text-sm text-destructive">{errors.email}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
+                  <Label htmlFor="cpf">CPF *</Label>
                   <Input
                     id="cpf"
                     type="text"
                     placeholder="000.000.000-00"
                     value={formData.cpf}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
+                    onChange={(e) => handleInputChange('cpf', e.target.value)}
                     disabled={loading}
                     required
+                    maxLength={14}
+                    className={errors.cpf ? 'border-destructive' : ''}
                   />
+                  {errors.cpf && (
+                    <p className="text-sm text-destructive">{errors.cpf}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -210,23 +299,29 @@ export default function SignUpForm() {
                     type="tel"
                     placeholder="(00) 00000-0000"
                     value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
                     disabled={loading}
+                    maxLength={15}
+                    className={errors.phone ? 'border-destructive' : ''}
                   />
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">{errors.phone}</p>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
+                <Label htmlFor="password">Senha *</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={formData.password}
-                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
                     disabled={loading}
                     required
+                    className={errors.password ? 'border-destructive' : ''}
                   />
                   <button
                     type="button"
@@ -236,7 +331,10 @@ export default function SignUpForm() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {formData.password && (
+                {errors.password && (
+                  <p className="text-sm text-destructive">{errors.password}</p>
+                )}
+                {formData.password && !errors.password && (
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <Progress value={passwordStrength.strength * 25} className="h-1.5" />
@@ -245,23 +343,24 @@ export default function SignUpForm() {
                       </span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Use maiúsculas, minúsculas, números e símbolos
+                      Mín. 8 caracteres com maiúsculas, minúsculas, números e símbolos
                     </p>
                   </div>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+                <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={formData.confirmPassword}
-                    onChange={(e) => setFormData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     disabled={loading}
                     required
+                    className={errors.confirmPassword ? 'border-destructive' : ''}
                   />
                   <button
                     type="button"
@@ -271,6 +370,9 @@ export default function SignUpForm() {
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {errors.confirmPassword && (
+                  <p className="text-sm text-destructive">{errors.confirmPassword}</p>
+                )}
               </div>
 
               <Button 
