@@ -67,6 +67,10 @@ export const MultiStepOnboardingForm = () => {
             errorMsg.includes('email already exists')) {
           throw new Error('Este e-mail já está cadastrado. Faça login ou use outro e-mail.');
         }
+        // Tratar erro de senha fraca
+        if (errorMsg.includes('weak') || errorMsg.includes('password')) {
+          throw new Error('Senha muito fraca. Use maiúsculas, minúsculas, números e símbolos.');
+        }
         // Para outros erros, mostrar mensagem original
         throw new Error(signUpError.message || 'Erro ao criar conta');
       }

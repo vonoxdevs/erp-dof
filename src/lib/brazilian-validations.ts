@@ -84,11 +84,33 @@ export const validateEmail = (email: string): boolean => {
 
 // Validação de senha segura
 export const validatePassword = (password: string): boolean => {
-  // Mínimo 8 caracteres, pelo menos 1 letra e 1 número
+  // Mínimo 8 caracteres, pelo menos 1 maiúscula, 1 minúscula, 1 número e 1 caractere especial
   const hasMinLength = password.length >= 8;
-  const hasLetter = /[a-zA-Z]/.test(password);
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
   const hasNumber = /\d/.test(password);
-  return hasMinLength && hasLetter && hasNumber;
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>_\-+=[\]\\';/~`]/.test(password);
+  return hasMinLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+};
+
+// Função para calcular força da senha
+export const getPasswordStrength = (password: string): { strength: number; label: string; color: string } => {
+  if (!password) return { strength: 0, label: '', color: '' };
+  
+  let score = 0;
+  
+  // Critérios de pontuação
+  if (password.length >= 8) score += 20;
+  if (password.length >= 12) score += 10;
+  if (/[A-Z]/.test(password)) score += 20;
+  if (/[a-z]/.test(password)) score += 20;
+  if (/\d/.test(password)) score += 15;
+  if (/[!@#$%^&*(),.?":{}|<>_\-+=[\]\\';/~`]/.test(password)) score += 15;
+  
+  // Classificação
+  if (score < 50) return { strength: 33, label: 'Fraca', color: 'bg-red-500' };
+  if (score < 85) return { strength: 66, label: 'Média', color: 'bg-yellow-500' };
+  return { strength: 100, label: 'Forte', color: 'bg-green-500' };
 };
 
 // Validação de nome completo (mínimo 2 palavras)

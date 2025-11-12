@@ -2,7 +2,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
-import { validateCPF, validateEmail, validatePhone, validatePassword, validateFullName, formatCPF, formatPhone } from '@/lib/brazilian-validations';
+import { validateCPF, validateEmail, validatePhone, validatePassword, validateFullName, formatCPF, formatPhone, getPasswordStrength } from '@/lib/brazilian-validations';
 import { ChevronRight, Eye, EyeOff } from 'lucide-react';
 
 export interface PersonalData {
@@ -45,7 +45,7 @@ export const PersonalDataStep = ({ data, onChange, onNext }: PersonalDataStepPro
     }
 
     if (!validatePassword(data.password)) {
-      newErrors.password = 'Senha deve ter no mínimo 8 caracteres, letras e números';
+      newErrors.password = 'Senha deve ter 8+ caracteres, maiúscula, minúscula, número e símbolo';
     }
 
     if (data.password !== data.confirmPassword) {
@@ -149,7 +149,7 @@ export const PersonalDataStep = ({ data, onChange, onNext }: PersonalDataStepPro
               type={showPassword ? 'text' : 'password'}
               value={data.password}
               onChange={(e) => handleChange('password', e.target.value)}
-              placeholder="Mínimo 8 caracteres"
+              placeholder="Crie uma senha forte"
               className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
             />
             <button
@@ -160,11 +160,34 @@ export const PersonalDataStep = ({ data, onChange, onNext }: PersonalDataStepPro
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+          
+          {/* Indicador de força da senha */}
+          {data.password && !errors.password && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Força da senha:</span>
+                <span className={`text-xs font-semibold ${
+                  getPasswordStrength(data.password).label === 'Forte' ? 'text-green-600' :
+                  getPasswordStrength(data.password).label === 'Média' ? 'text-yellow-600' :
+                  'text-red-600'
+                }`}>
+                  {getPasswordStrength(data.password).label}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-300 ${getPasswordStrength(data.password).color}`}
+                  style={{ width: `${getPasswordStrength(data.password).strength}%` }}
+                />
+              </div>
+            </div>
+          )}
+          
           {errors.password && (
             <p className="text-sm text-destructive">{errors.password}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            Use letras, números e no mínimo 8 caracteres
+            Mínimo 8 caracteres com maiúscula, minúscula, número e símbolo (!@#$%...)
           </p>
         </div>
 
