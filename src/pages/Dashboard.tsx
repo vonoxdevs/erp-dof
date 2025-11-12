@@ -8,6 +8,10 @@ import { TrendingUp, TrendingDown, DollarSign, Building2, Calendar, ArrowUpRight
 import type { User } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 import { AccountsBalance } from "@/components/dashboard/AccountsBalance";
+import { DashboardPeriodFilter } from "@/components/dashboard/DashboardPeriodFilter";
+import { BudgetForecast } from "@/components/dashboard/BudgetForecast";
+import { PendingAlerts } from "@/components/dashboard/PendingAlerts";
+import { DateRange } from "react-day-picker";
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -18,8 +22,17 @@ const Dashboard = () => {
     monthlyExpenses: 0,
     pendingCount: 0,
     overdueCount: 0,
-    pendingRevenue: 0
+    pendingRevenue: 0,
+    futureRevenue: 0,
+    futureExpenses: 0,
+    projectedBalance: 0
   });
+  const [selectedPeriod, setSelectedPeriod] = useState<'30' | '90' | 'custom'>('30');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [overdueTransactions, setOverdueTransactions] = useState<{
+    revenues: any[];
+    expenses: any[];
+  }>({ revenues: [], expenses: [] });
   useEffect(() => {
     supabase.auth.getSession().then(({
       data: {
@@ -64,12 +77,26 @@ const Dashboard = () => {
         return;
       }
 
-      // Calcular data de 30 dias atrás
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const dateFilter = thirtyDaysAgo.toISOString().split('T')[0];
+      // Calcular datas baseado no período selecionado
+      let daysAgo = selectedPeriod === '30' ? 30 : 90;
+      let startDate: Date;
+      let endDate: Date = new Date();
 
-      // Load transactions dos últimos 30 dias para receitas e despesas
+      if (selectedPeriod === 'custom' && dateRange?.from && dateRange?.to) {
+        startDate = dateRange.from;
+        endDate = dateRange.to;
+      } else {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - daysAgo);
+      }
+
+      const dateFilter = startDate.toISOString().split('T')[0];
+      const today = new Date().toISOString().split('T')[0];
+      const thirtyDaysFromNow = new Date();
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      const futureDate = thirtyDaysFromNow.toISOString().split('T')[0];
+
+      // Load transactions do período selecionado
       const {
         data: recentTransactions
       } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id).gte("due_date", dateFilter);
@@ -78,32 +105,67 @@ const Dashboard = () => {
       const {
         data: allTransactions
       } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id);
+
+      // Load transações futuras (próximos 30 dias)
+      const {
+        data: futureTransactions
+      } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id).gt("due_date", today).lte("due_date", futureDate).in("status", ["pending"]);
+
       if (recentTransactions && allTransactions) {
         const paidRevenue = recentTransactions.filter(t => t.type === "revenue" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
         const pendingRevenue = allTransactions.filter(t => t.type === "revenue" && (t.status === "pending" || t.status === "overdue")).reduce((sum, t) => sum + Number(t.amount), 0);
         const expenses = recentTransactions.filter(t => t.type === "expense" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
-        const today = new Date().toISOString().split('T')[0];
         const pending = allTransactions.filter(t => t.status === "pending" || t.status === "overdue").length;
         const overdue = allTransactions.filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today).length;
+
+        // Calcular receitas e despesas futuras
+        const futureRevenue = futureTransactions?.filter(t => t.type === "revenue").reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+        const futureExpenses = futureTransactions?.filter(t => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+        // Separar transações vencidas por tipo
+        const overdueRevenues = allTransactions.filter(t => 
+          t.type === "revenue" && 
+          (t.status === "pending" || t.status === "overdue") && 
+          t.due_date < today
+        );
+        const overdueExpenses = allTransactions.filter(t => 
+          t.type === "expense" && 
+          (t.status === "pending" || t.status === "overdue") && 
+          t.due_date < today
+        );
+
+        setOverdueTransactions({ revenues: overdueRevenues, expenses: overdueExpenses });
 
         // Load bank accounts
         const {
           data: accounts
         } = await supabase.from("bank_accounts").select("current_balance").eq("company_id", profile.company_id).eq("is_active", true);
         const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.current_balance), 0) || 0;
+
+        const projectedBalance = totalBalance + futureRevenue - futureExpenses;
+
         setStats({
           totalBalance,
           monthlyRevenue: paidRevenue,
           monthlyExpenses: expenses,
           pendingCount: pending,
           overdueCount: overdue,
-          pendingRevenue
+          pendingRevenue,
+          futureRevenue,
+          futureExpenses,
+          projectedBalance
         });
       }
     } catch (error: any) {
       console.error("Error loading stats:", error);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      loadStats();
+    }
+  }, [selectedPeriod, dateRange, user]);
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -115,6 +177,14 @@ const Dashboard = () => {
           <h2 className="text-3xl font-bold mb-2">Dashboard Executivo</h2>
           <p className="text-muted-foreground">Visão 360° das suas finanças em tempo real</p>
         </div>
+
+        {/* Filtro de Período */}
+        <DashboardPeriodFilter
+          selectedPeriod={selectedPeriod}
+          dateRange={dateRange}
+          onPeriodChange={setSelectedPeriod}
+          onDateRangeChange={setDateRange}
+        />
 
         {/* Saldos das Contas Bancárias */}
         <AccountsBalance />
@@ -222,6 +292,23 @@ const Dashboard = () => {
               <span>Clique para ver detalhes →</span>
             </div>
           </Card>
+        </div>
+
+        {/* Previsão Orçamentária */}
+        <div className="mb-8 animate-fade-in">
+          <BudgetForecast
+            futureRevenue={stats.futureRevenue}
+            futureExpenses={stats.futureExpenses}
+            projectedBalance={stats.projectedBalance}
+          />
+        </div>
+
+        {/* Alertas de Pendências */}
+        <div className="mb-8 animate-fade-in">
+          <PendingAlerts
+            overdueRevenues={overdueTransactions.revenues}
+            overdueExpenses={overdueTransactions.expenses}
+          />
         </div>
 
         {/* Quick Actions */}
