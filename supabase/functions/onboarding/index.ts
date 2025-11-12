@@ -258,26 +258,52 @@ serve(async (req) => {
     console.log(`✅ Company created: ${newCompany.id}`);
     console.log(`📅 Trial period: ${now.toISOString()} até ${trialEndDate.toISOString()} (3 dias)`);
 
-    // 2. Atualizar perfil do usuário existente (criado pelo trigger)
-    // Marcar como trial_owner já que este usuário está criando a empresa pelo teste grátis
-    const { error: profileError } = await supabase
+    // 2. Criar ou atualizar perfil do usuário
+    // Verificar se o profile já existe (pode ter sido criado pelo trigger)
+    const { data: existingUserProfile } = await supabase
       .from('user_profiles')
-      .update({
-        company_id: newCompany.id,
-        full_name: responsible.name,
-        permissions: { all: true },
-        is_trial_owner: true
-      })
-      .eq('id', user.id);
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle();
 
-    if (profileError) {
-      console.error('Error updating profile:', profileError);
-      // Rollback: deletar empresa
-      await supabase.from('companies').delete().eq('id', newCompany.id);
-      throw new Error('Erro ao atualizar perfil');
+    let profileError;
+    
+    if (existingUserProfile) {
+      // Profile existe, fazer UPDATE
+      console.log('⚙️ Atualizando profile existente...');
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          company_id: newCompany.id,
+          full_name: responsible.name,
+          permissions: { all: true },
+          is_trial_owner: true
+        })
+        .eq('id', user.id);
+      profileError = error;
+    } else {
+      // Profile não existe, fazer INSERT
+      console.log('🆕 Criando novo profile...');
+      const { error } = await supabase
+        .from('user_profiles')
+        .insert({
+          id: user.id,
+          company_id: newCompany.id,
+          full_name: responsible.name,
+          permissions: { all: true },
+          is_trial_owner: true
+        });
+      profileError = error;
     }
 
-    console.log('User profile updated with company_id');
+    if (profileError) {
+      console.error('❌ Error with profile:', profileError);
+      // Rollback: deletar empresa
+      await supabase.from('companies').delete().eq('id', newCompany.id);
+      throw new Error('Erro ao criar/atualizar perfil');
+    }
+
+    console.log('✅ User profile created/updated with company_id');
 
     // 3. Criar role de admin (dono da empresa)
     const { error: roleError } = await supabase
