@@ -18,7 +18,7 @@ export function useBankAccounts() {
 
       const { data, error } = await supabase
         .from('bank_accounts')
-        .select('*, credit_limit, closing_day, due_day, available_credit')
+        .select('*')
         .eq('company_id', profile.company_id)
         .eq('is_active', true)
         .is('deleted_at', null)

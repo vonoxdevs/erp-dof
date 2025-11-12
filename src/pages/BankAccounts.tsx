@@ -48,9 +48,12 @@ const BankAccounts = () => {
 
       const { data, error } = await supabase
         .from("bank_accounts")
-        .select("*, credit_limit, closing_day, due_day, available_credit")
+        .select("*")
         .eq("company_id", profile.company_id)
-        .order("is_default", { ascending: false });
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .order("is_default", { ascending: false })
+        .order("bank_name");
 
       if (error) throw error;
       setAccounts(data || []);

@@ -103,20 +103,22 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
   });
 
   useEffect(() => {
-    if (account) {
-      setFormData(account);
-    } else {
-      setFormData({
-        bank_name: "",
-        account_number: "",
-        account_type: "checking",
-        initial_balance: 0,
-        is_active: true,
-        is_default: false,
-        credit_limit: 0,
-        closing_day: undefined,
-        due_day: undefined,
-      });
+    if (open) {
+      if (account) {
+        setFormData(account);
+      } else {
+        setFormData({
+          bank_name: "",
+          account_number: "",
+          account_type: "checking",
+          initial_balance: 0,
+          is_active: true,
+          is_default: false,
+          credit_limit: 0,
+          closing_day: undefined,
+          due_day: undefined,
+        });
+      }
     }
   }, [account, open]);
 
@@ -180,16 +182,19 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
       };
 
       if (account?.id) {
-        // Na edição, não atualiza o current_balance
+        // Na edição, NUNCA atualiza initial_balance nem current_balance
+        // Remover campos que não podem ser editados
+        const { initial_balance, current_balance, ...editableData } = dataToSave;
         const { error } = await supabase
           .from("bank_accounts")
-          .update(dataToSave)
+          .update(editableData)
           .eq("id", account.id);
         if (error) throw error;
         toast.success("Conta atualizada com sucesso!");
       } else {
-        // Na criação, define current_balance igual ao initial_balance
+        // Na criação, define current_balance E available_balance iguais ao initial_balance
         dataToSave.current_balance = validatedData.initial_balance;
+        dataToSave.available_balance = validatedData.initial_balance;
         const { error } = await supabase.from("bank_accounts").insert([dataToSave]);
         if (error) throw error;
         toast.success("Conta criada com sucesso!");
@@ -253,12 +258,25 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label>Saldo Inicial (R$)</Label>
+              <Label>
+                {account?.id ? "Saldo Inicial (não editável)" : "Saldo Inicial (R$) *"}
+              </Label>
               <CurrencyInput
                 value={formData.initial_balance}
                 onChange={(value) => setFormData({ ...formData, initial_balance: value })}
                 placeholder="R$ 0,00"
+                disabled={!!account?.id}
               />
+              {account?.id && (
+                <p className="text-xs text-muted-foreground">
+                  O saldo inicial não pode ser alterado após a criação. O saldo atual é calculado automaticamente pelas transações.
+                </p>
+              )}
+              {account?.id && account.current_balance !== undefined && (
+                <p className="text-sm font-semibold text-accent mt-2">
+                  Saldo Atual: R$ {account.current_balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

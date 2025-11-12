@@ -7,6 +7,7 @@ interface BankAccount {
   id: string;
   bank_name: string;
   account_number: string;
+  initial_balance: number;
   current_balance: number;
   account_type: string;
   is_active: boolean;
@@ -100,13 +101,30 @@ export function BankAccountCard({ account, onEdit, onDelete }: Props) {
             )}
           </>
         ) : (
-          <div>
-            <p className="text-sm text-muted-foreground mb-1">Saldo Atual</p>
-            <p className="text-2xl font-bold">
-              R$ {Number(account.current_balance).toLocaleString("pt-BR", {
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Saldo Atual</p>
+              <p className="text-2xl font-bold">
+                R$ {Number(account.current_balance).toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+            <div className="text-xs text-muted-foreground border-t pt-2">
+              <p>Saldo Inicial: R$ {Number(account.initial_balance).toLocaleString("pt-BR", {
                 minimumFractionDigits: 2,
-              })}
-            </p>
+              })}</p>
+              <p className={
+                account.current_balance - account.initial_balance >= 0 
+                  ? "text-accent font-semibold" 
+                  : "text-destructive font-semibold"
+              }>
+                Variação: R$ {(account.current_balance - account.initial_balance).toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                  signDisplay: "always"
+                })}
+              </p>
+            </div>
           </div>
         )}
 
