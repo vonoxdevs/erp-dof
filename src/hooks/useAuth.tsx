@@ -56,18 +56,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      // Timeout de segurança de 10 segundos
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao carregar perfil')), 10000)
+      );
+
       // OTIMIZAÇÃO: checkUserStatus agora faz apenas 1 query com JOIN
-      // Antes: 3 queries separadas (user → profile → company)
-      // Agora: 1 query apenas!
-      const status = await authService.checkUserStatus();
-      
-      // Buscar roles do usuário
-      const { data: rolesData } = await supabase
+      const statusPromise = authService.checkUserStatus();
+      const rolesPromise = supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user.id);
+
+      // Executar com timeout
+      const [status, { data: rolesData }] = await Promise.race([
+        Promise.all([statusPromise, rolesPromise]),
+        timeoutPromise
+      ]) as any;
       
-      const userRoles = rolesData?.map(r => r.role) || [];
+      const userRoles = rolesData?.map((r: any) => r.role) || [];
       
       setState({
         user,
@@ -83,24 +90,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const currentPath = window.location.pathname;
       const isAuthPage = ['/login', '/register', '/'].includes(currentPath);
       
+      console.log('✅ Perfil carregado com sucesso', { needsOnboarding: status.needsOnboarding, currentPath });
+      
       if (status.needsOnboarding && isAuthPage) {
+        console.log('🔄 Redirecionando para onboarding');
         navigate('/onboarding');
       } else if (!status.needsOnboarding && isAuthPage) {
+        console.log('🔄 Redirecionando para dashboard');
         navigate('/dashboard');
       }
     } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
+      console.error('❌ Erro ao carregar perfil:', error);
       
       // Retry logic com exponential backoff
       if (retries > 0) {
         const delay = (4 - retries) * 1000; // 1s, 2s, 3s
-        console.log(`Tentando novamente em ${delay}ms... (${retries} tentativas restantes)`);
+        console.log(`🔄 Tentando novamente em ${delay}ms... (${retries} tentativas restantes)`);
         setTimeout(() => loadUserProfile(user, retries - 1), delay);
         return;
       }
       
-      // Após todas as tentativas falharem
-      toast.error('Erro ao carregar perfil. Por favor, tente fazer login novamente.');
+      // Após todas as tentativas falharem - redirecionar para dashboard mesmo assim
+      console.error('❌ Todas as tentativas falharam, redirecionando para dashboard');
+      toast.error('Erro ao carregar alguns dados. Você será redirecionado.');
+      
       setState({
         user,
         profile: null,
@@ -108,8 +121,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         roles: [],
         loading: false,
         initialized: true,
-        needsOnboarding: true,
+        needsOnboarding: false, // Permitir acesso mesmo com erro
       });
+      
+      // Redirecionar para dashboard após 2 segundos
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        if (['/login', '/register', '/'].includes(currentPath)) {
+          navigate('/dashboard');
+        }
+      }, 2000);
     }
   }, [navigate]);
 
