@@ -64,8 +64,8 @@ export function SelectCliente({
     }
   }
 
-  const handleClientCreated = (clientId: string) => {
-    fetchContacts();
+  const handleClientCreated = async (clientId: string) => {
+    await fetchContacts();
     onChange(clientId);
   };
 
