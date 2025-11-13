@@ -43,10 +43,31 @@ interface Transaction {
   account_to_id?: string | null;
   is_recurring?: boolean;
   reference_number?: string | null;
+  centro_custo_id?: string | null;
+  categoria_receita_id?: string | null;
+  categoria_despesa_id?: string | null;
   categories?: {
     name: string;
     icon?: string;
     color?: string;
+  } | null;
+  centro_custo?: {
+    id: string;
+    nome: string;
+    cor?: string;
+    icon?: string;
+  } | null;
+  categoria_receita?: {
+    id: string;
+    nome: string;
+    cor?: string;
+    icon?: string;
+  } | null;
+  categoria_despesa?: {
+    id: string;
+    nome: string;
+    cor?: string;
+    icon?: string;
   } | null;
   bank_account?: {
     id: string;
@@ -126,6 +147,9 @@ const Transactions = () => {
         .select(`
           *,
           categories(name, icon, color),
+          centro_custo:categorias!centro_custo_id(id, nome, cor, icon),
+          categoria_receita:categorias!categoria_receita_id(id, nome, cor, icon),
+          categoria_despesa:categorias!categoria_despesa_id(id, nome, cor, icon),
           bank_account:bank_accounts!bank_account_id(id, bank_name, account_number),
           account_from:bank_accounts!account_from_id(id, bank_name, account_number),
           account_to:bank_accounts!account_to_id(id, bank_name, account_number)
@@ -628,11 +652,35 @@ const Transactions = () => {
                     <td className="p-3">
                       <div>
                         <p className="font-medium text-sm">{transaction.description}</p>
-                        {transaction.categories && (
-                          <p className="text-xs text-muted-foreground">
-                            {transaction.categories.icon} {transaction.categories.name}
-                          </p>
-                        )}
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {/* Centro de Custo */}
+                          {transaction.centro_custo && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                              {transaction.centro_custo.icon} {transaction.centro_custo.nome}
+                            </span>
+                          )}
+                          
+                          {/* Categoria de Receita */}
+                          {transaction.type === 'revenue' && transaction.categoria_receita && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-accent/10 text-accent">
+                              {transaction.categoria_receita.icon} {transaction.categoria_receita.nome}
+                            </span>
+                          )}
+                          
+                          {/* Categoria de Despesa */}
+                          {transaction.type === 'expense' && transaction.categoria_despesa && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                              {transaction.categoria_despesa.icon} {transaction.categoria_despesa.nome}
+                            </span>
+                          )}
+                          
+                          {/* Categoria antiga (fallback) */}
+                          {transaction.categories && !transaction.centro_custo && !transaction.categoria_receita && !transaction.categoria_despesa && (
+                            <span className="text-xs text-muted-foreground">
+                              {transaction.categories.icon} {transaction.categories.name}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="p-3">
