@@ -18,6 +18,8 @@ import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
 import { format, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import type { DateRange } from "react-day-picker";
 const Dashboard = () => {
   const navigate = useNavigate();
   const { accounts } = useBankAccounts();
@@ -26,6 +28,10 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
   const [currentPeriod, setCurrentPeriod] = useState(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
   const [stats, setStats] = useState({
     totalBalance: 0,
     monthlyRevenue: 0,
@@ -210,9 +216,9 @@ const Dashboard = () => {
       
       const { user, profile } = result;
 
-      // Calcular datas baseado no período selecionado
-      const startDate = startOfMonth(currentPeriod);
-      const endDate = endOfMonth(currentPeriod);
+      // Calcular datas baseado no período selecionado (date range ou mês atual)
+      const startDate = dateRange?.from || startOfMonth(currentPeriod);
+      const endDate = dateRange?.to || endOfMonth(currentPeriod);
       const dateFilter = startDate.toISOString().split('T')[0];
       const today = new Date().toISOString().split('T')[0];
       const thirtyDaysFromNow = new Date();
@@ -426,12 +432,16 @@ const Dashboard = () => {
     if (user) {
       loadStats();
     }
-  }, [currentPeriod, selectedAccount, user]);
+  }, [currentPeriod, selectedAccount, dateRange, user]);
 
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedAccount("all");
     setCurrentPeriod(new Date());
+    setDateRange({
+      from: startOfMonth(new Date()),
+      to: endOfMonth(new Date()),
+    });
     toast.info("Filtros limpos");
   };
   if (loading) {
@@ -449,28 +459,13 @@ const Dashboard = () => {
         {/* Filtros */}
         <Card className="p-4 mb-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            {/* Filtro de Período */}
+            {/* Filtro de Período por Data */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Período</label>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPeriod(subMonths(currentPeriod, 1))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex-1 text-center font-medium text-primary">
-                  {format(currentPeriod, "MMMM 'de' yyyy", { locale: ptBR })}
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setCurrentPeriod(addMonths(currentPeriod, 1))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <DateRangePicker
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+              />
             </div>
 
             {/* Pesquisar */}
@@ -549,7 +544,7 @@ const Dashboard = () => {
                 Receitas
               </span>
             </div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Recebidas (30d)</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Recebidas</h3>
             <p className="text-3xl font-bold mb-2 text-accent">
               R$ {stats.monthlyRevenue.toLocaleString("pt-BR", {
               minimumFractionDigits: 2
