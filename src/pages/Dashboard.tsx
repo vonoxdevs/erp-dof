@@ -271,8 +271,8 @@ const Dashboard = () => {
           )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
-        // 3. CONTAS A RECEBER (receitas pendentes/overdue com due_date no período filtrado)
-        const contasAReceber = recentTransactions
+        // 3. RECEITAS PENDENTES (receitas pendentes/overdue com due_date no período filtrado)
+        const receitasPendentes = recentTransactions
           .filter(t => 
             t.type === "revenue" && 
             (t.status === "pending" || t.status === "overdue") &&
@@ -281,8 +281,8 @@ const Dashboard = () => {
           )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
-        // 4. CONTAS A PAGAR (despesas pendentes/overdue com due_date no período filtrado)
-        const contasAPagar = recentTransactions
+        // 4. DESPESAS PENDENTES (despesas pendentes/overdue com due_date no período filtrado)
+        const despesasPendentes = recentTransactions
           .filter(t => 
             t.type === "expense" && 
             (t.status === "pending" || t.status === "overdue") &&
@@ -342,9 +342,6 @@ const Dashboard = () => {
         const { data: accounts } = await accountsQuery;
         const saldoAtual = accounts?.reduce((sum, acc) => sum + Number(acc.current_balance), 0) || 0;
 
-        // 8. SALDO PREVISTO = saldo atual + contas a receber - contas a pagar (do período filtrado)
-        const saldoPrevisto = saldoAtual + contasAReceber - contasAPagar;
-
         // Atualizar estados
         setStats({
           totalBalance: saldoAtual,
@@ -352,10 +349,10 @@ const Dashboard = () => {
           monthlyExpenses: despesasRealizadas,
           pendingCount: pending,
           overdueCount: overdue,
-          pendingRevenue: contasAReceber,  // CONTAS A RECEBER
-          futureRevenue: contasAReceber,    // Mantido para compatibilidade
-          futureExpenses: contasAPagar,     // CONTAS A PAGAR
-          projectedBalance: saldoPrevisto   // SALDO PREVISTO
+          pendingRevenue: receitasPendentes,
+          futureRevenue: 0,
+          futureExpenses: despesasPendentes,
+          projectedBalance: 0
         });
 
         // Preparar dados para gráficos
@@ -622,7 +619,7 @@ const Dashboard = () => {
         <AccountsBalance />
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 animate-slide-up">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8 animate-slide-up">
           <Card className="p-6 glass border-l-4 border-l-primary hover:shadow-xl transition-all">
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -707,6 +704,27 @@ const Dashboard = () => {
             </div>
           </Card>
 
+          <Card className="p-6 glass border-l-4 border-l-destructive hover:shadow-xl transition-all">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-destructive" />
+              </div>
+              <span className="text-xs px-2 py-1 rounded-full bg-destructive/10 text-destructive font-medium">
+                A Pagar
+              </span>
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">Despesas Pendentes</h3>
+            <p className="text-3xl font-bold mb-2 text-destructive">
+              R$ {stats.futureExpenses.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2
+            })}
+            </p>
+            <div className="flex items-center gap-1 text-destructive text-sm">
+              <ArrowDownRight className="w-4 h-4" />
+              <span>Aguardando pagamento</span>
+            </div>
+          </Card>
+
           <Card className="p-6 glass border-l-4 border-l-warning hover:shadow-xl transition-all cursor-pointer" onClick={() => navigate('/dashboard/overdue')}>
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
@@ -724,15 +742,6 @@ const Dashboard = () => {
               <span>Clique para ver detalhes →</span>
             </div>
           </Card>
-        </div>
-
-        {/* Previsão Orçamentária */}
-        <div className="mb-8 animate-fade-in">
-          <BudgetForecast
-            futureRevenue={stats.futureRevenue}
-            futureExpenses={stats.futureExpenses}
-            projectedBalance={stats.projectedBalance}
-          />
         </div>
 
         {/* Alertas de Pendências */}
