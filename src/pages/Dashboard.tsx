@@ -143,6 +143,13 @@ const Dashboard = () => {
     };
   }, [navigate]);
 
+  // Recarregar stats quando filtros mudarem
+  useEffect(() => {
+    if (user) {
+      loadStats();
+    }
+  }, [dateRange, selectedAccount]);
+
   const generateAutomaticTransactions = async () => {
     try {
       console.log('🔄 Iniciando geração automática de transações...');
@@ -184,7 +191,7 @@ const Dashboard = () => {
   };
   const loadStats = async () => {
     try {
-      console.log('📊 Carregando estatísticas...');
+      console.log('📊 [v2] Carregando estatísticas...');
       
       // Timeout de 10 segundos
       const timeout = new Promise((_, reject) => 
