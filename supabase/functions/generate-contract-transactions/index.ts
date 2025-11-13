@@ -79,26 +79,13 @@ serve(async (req) => {
 
         const bankAccountId = linkedAccounts[0].conta_bancaria_id;
 
-        // Data de início do contrato (nunca gerar antes disso)
+        // Data de início do contrato
         const contractStartDate = new Date(contract.start_date);
         contractStartDate.setHours(0, 0, 0, 0);
 
-        // Determinar a próxima data a partir de onde gerar
-        let currentDate: Date;
-        
-        if (contract.next_generation_date) {
-          currentDate = new Date(contract.next_generation_date);
-        } else {
-          // Se nunca gerou, começar da data de início
-          currentDate = new Date(contract.start_date);
-        }
-        
-        currentDate.setHours(0, 0, 0, 0);
-        
-        // Garantir que nunca comece antes da data de início
-        if (currentDate < contractStartDate) {
-          currentDate = new Date(contractStartDate);
-        }
+        console.log(`\n📋 Processando: ${contract.contract_name}`);
+        console.log(`   📅 Data início: ${contractStartDate.toISOString().split('T')[0]}`);
+        console.log(`   🔄 Frequência: ${contract.frequency}`);
 
         // Se tem data final e já passou, desativar contrato
         if (contract.end_date) {
@@ -106,13 +93,64 @@ serve(async (req) => {
           endDate.setHours(0, 0, 0, 0);
           
           if (today > endDate) {
-            console.log(`🏁 Contrato ${contract.contract_name} encerrado`);
+            console.log(`   🏁 Contrato encerrado (data final atingida)`);
             await supabaseClient
               .from('contracts')
               .update({ is_active: false })
               .eq('id', contract.id);
             continue;
           }
+        }
+
+        // Buscar a última transação gerada para este contrato
+        const { data: lastTransaction } = await supabaseClient
+          .from('transactions')
+          .select('due_date')
+          .eq('contract_id', contract.id)
+          .order('due_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        // Determinar data inicial de geração
+        let startGenerationDate: Date;
+        
+        if (lastTransaction) {
+          // Se já existe transação, começar da próxima data após a última
+          startGenerationDate = new Date(lastTransaction.due_date);
+          
+          // Avançar para a próxima ocorrência
+          switch (contract.frequency) {
+            case 'daily':
+              startGenerationDate.setDate(startGenerationDate.getDate() + 1);
+              break;
+            case 'weekly':
+              startGenerationDate.setDate(startGenerationDate.getDate() + 7);
+              break;
+            case 'monthly':
+              startGenerationDate.setMonth(startGenerationDate.getMonth() + 1);
+              break;
+            case 'quarterly':
+              startGenerationDate.setMonth(startGenerationDate.getMonth() + 3);
+              break;
+            case 'semiannual':
+              startGenerationDate.setMonth(startGenerationDate.getMonth() + 6);
+              break;
+            case 'annual':
+              startGenerationDate.setFullYear(startGenerationDate.getFullYear() + 1);
+              break;
+          }
+          
+          console.log(`   ⏭️  Última transação: ${lastTransaction.due_date}`);
+          console.log(`   🎯 Próxima geração: ${startGenerationDate.toISOString().split('T')[0]}`);
+        } else {
+          // Se nunca gerou, começar da data de início
+          startGenerationDate = new Date(contractStartDate);
+          console.log(`   🆕 Primeira geração a partir de: ${startGenerationDate.toISOString().split('T')[0]}`);
+        }
+
+        // Garantir que não comece antes da data de início
+        if (startGenerationDate < contractStartDate) {
+          startGenerationDate = new Date(contractStartDate);
         }
 
         // Se tem total de parcelas, verificar quantas já foram geradas
@@ -124,9 +162,10 @@ serve(async (req) => {
             .eq('contract_id', contract.id);
 
           existingCount = count || 0;
+          console.log(`   📊 Parcelas: ${existingCount}/${contract.total_installments}`);
           
           if (existingCount >= contract.total_installments) {
-            console.log(`✅ Contrato ${contract.contract_name} completou todas as ${contract.total_installments} parcelas`);
+            console.log(`   ✅ Todas as parcelas geradas`);
             await supabaseClient
               .from('contracts')
               .update({ is_active: false })
@@ -135,42 +174,36 @@ serve(async (req) => {
           }
         }
 
-        // Gerar múltiplas transações futuras
+        // Gerar múltiplas transações (passadas, hoje e futuras)
         const datesToGenerate: Date[] = [];
         const futureOccurrences = 12; // Gera até 12 parcelas futuras
+        let currentDate = new Date(startGenerationDate);
         let iterationCount = 0;
         const maxIterations = 100;
         
-        console.log(`📅 Gerando parcelas para ${contract.contract_name} a partir de ${currentDate.toISOString().split('T')[0]}`);
-        console.log(`📍 Data de início do contrato: ${contractStartDate.toISOString().split('T')[0]}`);
-        console.log(`📍 Parcelas já existentes: ${existingCount}`);
-        console.log(`📍 Total de parcelas do contrato: ${contract.total_installments || 'ilimitado'}`);
-        
         while (iterationCount < maxIterations) {
-          // CRÍTICO: Só adicionar se for >= data de início do contrato
-          if (currentDate >= contractStartDate) {
-            // Adicionar se for passada, hoje ou futura (até o limite)
-            const isPastOrToday = currentDate <= today;
-            const isFuture = currentDate > today && datesToGenerate.filter(d => d > today).length < futureOccurrences;
-            
-            if (isPastOrToday || isFuture) {
-              // Verificar se não passou da data final
-              if (contract.end_date) {
-                const endDate = new Date(contract.end_date);
-                endDate.setHours(0, 0, 0, 0);
-                if (currentDate > endDate) break;
-              }
-              
-              // Verificar se não atingiu o total de parcelas
-              if (contract.total_installments && (existingCount + datesToGenerate.length) >= contract.total_installments) {
-                break;
-              }
-              
-              datesToGenerate.push(new Date(currentDate));
-            } else if (!isPastOrToday && !isFuture) {
-              // Se já gerou todas as futuras, parar
-              break;
-            }
+          // Verificar se não passou da data final
+          if (contract.end_date) {
+            const endDate = new Date(contract.end_date);
+            endDate.setHours(0, 0, 0, 0);
+            if (currentDate > endDate) break;
+          }
+          
+          // Verificar se não atingiu o total de parcelas
+          if (contract.total_installments && (existingCount + datesToGenerate.length) >= contract.total_installments) {
+            break;
+          }
+          
+          // Adicionar se for passada, hoje ou futura (até o limite)
+          const isPastOrToday = currentDate <= today;
+          const futureCount = datesToGenerate.filter(d => d > today).length;
+          const isFuture = currentDate > today && futureCount < futureOccurrences;
+          
+          if (isPastOrToday || isFuture) {
+            datesToGenerate.push(new Date(currentDate));
+          } else if (!isPastOrToday && !isFuture) {
+            // Se já gerou todas as futuras necessárias, parar
+            break;
           }
           
           // Avançar para próxima ocorrência
@@ -198,10 +231,10 @@ serve(async (req) => {
           iterationCount++;
         }
 
-        console.log(`📊 ${contract.contract_name}: ${datesToGenerate.length} parcelas a gerar`);
+        console.log(`   🎲 Datas a gerar: ${datesToGenerate.length}`);
         if (datesToGenerate.length > 0) {
-          console.log(`   📅 Primeira: ${datesToGenerate[0].toISOString().split('T')[0]}`);
-          console.log(`   📅 Última: ${datesToGenerate[datesToGenerate.length - 1].toISOString().split('T')[0]}`);
+          console.log(`      Primeira: ${datesToGenerate[0].toISOString().split('T')[0]}`);
+          console.log(`      Última: ${datesToGenerate[datesToGenerate.length - 1].toISOString().split('T')[0]}`);
         }
 
         // Gerar transações
@@ -217,7 +250,7 @@ serve(async (req) => {
             .maybeSingle();
 
           if (existing) {
-            console.log(`⏩ Parcela já existe: ${dueDateStr}`);
+            console.log(`      ⏩ ${dueDateStr} já existe`);
             continue;
           }
 
@@ -270,14 +303,15 @@ serve(async (req) => {
           }
 
           totalGerado++;
-          console.log(`✅ Parcela gerada: ${dueDateStr} [${transactionStatus}]`);
+          console.log(`      ✅ ${dueDateStr} [${transactionStatus}]`);
         }
 
-        // Atualizar contrato com a última data gerada
+        // Atualizar contrato com as datas corretas
         if (datesToGenerate.length > 0) {
-          const lastDate = datesToGenerate[datesToGenerate.length - 1];
-          const nextDate = new Date(lastDate);
+          const lastGenerated = datesToGenerate[datesToGenerate.length - 1];
+          const nextDate = new Date(lastGenerated);
           
+          // Calcular próxima data de geração
           switch (contract.frequency) {
             case 'daily':
               nextDate.setDate(nextDate.getDate() + 1);
@@ -303,9 +337,11 @@ serve(async (req) => {
             .from('contracts')
             .update({ 
               next_generation_date: nextDate.toISOString().split('T')[0],
-              last_generated_date: lastDate.toISOString().split('T')[0]
+              last_generated_date: lastGenerated.toISOString().split('T')[0]
             })
             .eq('id', contract.id);
+            
+          console.log(`   💾 Atualizado: next=${nextDate.toISOString().split('T')[0]}`);
         }
 
       } catch (error) {
@@ -314,7 +350,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`✅ Total: ${totalGerado} parcelas geradas`);
+    console.log(`\n✅ Total: ${totalGerado} parcelas geradas`);
 
     return new Response(
       JSON.stringify({
