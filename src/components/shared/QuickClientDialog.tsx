@@ -147,10 +147,15 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
       if (!isOpen && !loading) {
         handleClose();
       }
-    }} modal>
+    }}>
       <DialogContent 
-        className="sm:max-w-[500px] z-[100]" 
-        onInteractOutside={(e) => e.preventDefault()}
+        className="sm:max-w-[500px]" 
+        onInteractOutside={(e) => {
+          // Permitir interação fora apenas se não estiver carregando
+          if (loading) {
+            e.preventDefault();
+          }
+        }}
         onEscapeKeyDown={(e) => {
           if (loading) e.preventDefault();
         }}
