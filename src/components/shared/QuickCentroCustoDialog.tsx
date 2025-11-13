@@ -92,8 +92,8 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()} modal={true}>
+      <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Novo Centro de Custo</DialogTitle>
         </DialogHeader>
