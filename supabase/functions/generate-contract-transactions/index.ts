@@ -86,6 +86,9 @@ serve(async (req) => {
         
         startDate.setHours(0, 0, 0, 0);
 
+        // Extrair o dia do start_date para usar nas transações
+        const contractDay = new Date(contract.start_date).getDate();
+
         // Se tem data final e já passou, desativar contrato
         if (contract.end_date) {
           const endDate = new Date(contract.end_date);
@@ -130,7 +133,7 @@ serve(async (req) => {
         
         while (count < maxIterations) {
           const dueDate = new Date(currentDate);
-          dueDate.setDate(contract.generation_day || 1);
+          dueDate.setDate(contractDay);
           
           // Adicionar se for passada, hoje ou futura (até o limite)
           const isPastOrToday = dueDate <= today;
