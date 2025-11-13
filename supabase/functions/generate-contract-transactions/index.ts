@@ -83,20 +83,22 @@ serve(async (req) => {
         const contractStartDate = new Date(contract.start_date);
         contractStartDate.setHours(0, 0, 0, 0);
 
-        // Data inicial de geração
-        let startDate = contract.next_generation_date 
-          ? new Date(contract.next_generation_date) 
-          : new Date(contract.start_date);
+        // Determinar a próxima data a partir de onde gerar
+        let currentDate: Date;
         
-        startDate.setHours(0, 0, 0, 0);
-
-        // Garantir que startDate nunca seja anterior à data de início do contrato
-        if (startDate < contractStartDate) {
-          startDate = new Date(contractStartDate);
+        if (contract.next_generation_date) {
+          currentDate = new Date(contract.next_generation_date);
+        } else {
+          // Se nunca gerou, começar da data de início
+          currentDate = new Date(contract.start_date);
         }
-
-        // Extrair o dia do start_date para usar nas transações
-        const contractDay = contractStartDate.getDate();
+        
+        currentDate.setHours(0, 0, 0, 0);
+        
+        // Garantir que nunca comece antes da data de início
+        if (currentDate < contractStartDate) {
+          currentDate = new Date(contractStartDate);
+        }
 
         // Se tem data final e já passou, desativar contrato
         if (contract.end_date) {
@@ -136,61 +138,39 @@ serve(async (req) => {
         // Gerar múltiplas transações futuras
         const datesToGenerate: Date[] = [];
         const futureOccurrences = 12; // Gera até 12 parcelas futuras
-        let currentDate = new Date(startDate);
-        let count = 0;
+        let iterationCount = 0;
         const maxIterations = 100;
         
-        while (count < maxIterations) {
-          const dueDate = new Date(currentDate);
-          dueDate.setDate(contractDay);
-          
-          // CRÍTICO: Nunca gerar transação anterior à data de início do contrato
-          if (dueDate < contractStartDate) {
-            // Avançar para próxima ocorrência sem adicionar
-            switch (contract.frequency) {
-              case 'daily':
-                currentDate.setDate(currentDate.getDate() + 1);
-                break;
-              case 'weekly':
-                currentDate.setDate(currentDate.getDate() + 7);
-                break;
-              case 'monthly':
-                currentDate.setMonth(currentDate.getMonth() + 1);
-                break;
-              case 'quarterly':
-                currentDate.setMonth(currentDate.getMonth() + 3);
-                break;
-              case 'semiannual':
-                currentDate.setMonth(currentDate.getMonth() + 6);
-                break;
-              case 'annual':
-                currentDate.setFullYear(currentDate.getFullYear() + 1);
-                break;
-            }
-            count++;
-            continue;
-          }
-          
-          // Adicionar se for passada, hoje ou futura (até o limite)
-          const isPastOrToday = dueDate <= today;
-          const isFuture = dueDate > today && datesToGenerate.filter(d => d > today).length < futureOccurrences;
-          
-          if (isPastOrToday || isFuture) {
-            // Verificar se não passou da data final
-            if (contract.end_date) {
-              const endDate = new Date(contract.end_date);
-              endDate.setHours(0, 0, 0, 0);
-              if (dueDate > endDate) break;
-            }
+        console.log(`📅 Gerando parcelas para ${contract.contract_name} a partir de ${currentDate.toISOString().split('T')[0]}`);
+        console.log(`📍 Data de início do contrato: ${contractStartDate.toISOString().split('T')[0]}`);
+        console.log(`📍 Parcelas já existentes: ${existingCount}`);
+        console.log(`📍 Total de parcelas do contrato: ${contract.total_installments || 'ilimitado'}`);
+        
+        while (iterationCount < maxIterations) {
+          // CRÍTICO: Só adicionar se for >= data de início do contrato
+          if (currentDate >= contractStartDate) {
+            // Adicionar se for passada, hoje ou futura (até o limite)
+            const isPastOrToday = currentDate <= today;
+            const isFuture = currentDate > today && datesToGenerate.filter(d => d > today).length < futureOccurrences;
             
-            // Verificar se não atingiu o total de parcelas
-            if (contract.total_installments && (existingCount + datesToGenerate.length) >= contract.total_installments) {
+            if (isPastOrToday || isFuture) {
+              // Verificar se não passou da data final
+              if (contract.end_date) {
+                const endDate = new Date(contract.end_date);
+                endDate.setHours(0, 0, 0, 0);
+                if (currentDate > endDate) break;
+              }
+              
+              // Verificar se não atingiu o total de parcelas
+              if (contract.total_installments && (existingCount + datesToGenerate.length) >= contract.total_installments) {
+                break;
+              }
+              
+              datesToGenerate.push(new Date(currentDate));
+            } else if (!isPastOrToday && !isFuture) {
+              // Se já gerou todas as futuras, parar
               break;
             }
-            
-            datesToGenerate.push(new Date(dueDate));
-          } else if (!isPastOrToday && !isFuture) {
-            break;
           }
           
           // Avançar para próxima ocorrência
@@ -215,10 +195,14 @@ serve(async (req) => {
               break;
           }
           
-          count++;
+          iterationCount++;
         }
 
-        console.log(`📅 ${contract.contract_name}: ${datesToGenerate.length} parcelas a gerar`);
+        console.log(`📊 ${contract.contract_name}: ${datesToGenerate.length} parcelas a gerar`);
+        if (datesToGenerate.length > 0) {
+          console.log(`   📅 Primeira: ${datesToGenerate[0].toISOString().split('T')[0]}`);
+          console.log(`   📅 Última: ${datesToGenerate[datesToGenerate.length - 1].toISOString().split('T')[0]}`);
+        }
 
         // Gerar transações
         for (const dueDate of datesToGenerate) {
@@ -247,7 +231,7 @@ serve(async (req) => {
           
           console.log(`📝 Criando transação: tipo=${transactionType}, conta=${bankAccountId}`);
           
-          // Criar transação (marcada como recorrente pois vem de contrato)
+          // Criar transação (marcada como recorrente pois vem de contrato, mas SEM recurrence_config)
           const newTransaction = {
             company_id: contract.company_id,
             type: transactionType,
@@ -264,8 +248,9 @@ serve(async (req) => {
             categoria_receita_id: contract.categoria_receita_id,
             categoria_despesa_id: contract.categoria_despesa_id,
             payment_method: contract.payment_method,
-            is_recurring: true,
-            reference_number: contract.id, // Usa o contract_id como referência para agrupar
+            is_recurring: false, // IMPORTANTE: FALSE para não ser processada pela função de recorrentes
+            recurrence_config: null, // IMPORTANTE: NULL para não gerar duplicatas
+            reference_number: contract.id,
           };
           
           console.log(`📝 Transação preparada:`, JSON.stringify({
