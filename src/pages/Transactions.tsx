@@ -4,22 +4,25 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Filter, Download, TrendingUp, TrendingDown, ArrowRightLeft, Repeat, Calendar as CalendarIcon, X, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronLeft, ChevronRight, Search, HelpCircle, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
-import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
 import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
 import { TransferDialog } from "@/components/transactions/TransferDialog";
-import { TransactionTable } from "@/components/transactions/TransactionTable";
-import { TransactionFilters } from "@/components/transactions/TransactionFilters";
-import { ImportBankStatementDialog } from "@/components/bank-accounts/ImportBankStatementDialog";
 import { sanitizeError } from "@/lib/errorMapping";
-import { exportTransactionsToPDF } from "@/lib/exportUtils";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 
 interface Transaction {
   id: string;
@@ -29,45 +32,19 @@ interface Transaction {
   description: string;
   due_date: string;
   payment_date: string | null;
-  status: "pending" | "paid" | "overdue" | "cancelled";
+  status: "paid" | "overdue" | "cancelled";
   category_id: string | null;
   bank_account_id: string | null;
   contact_id: string | null;
   created_at: string;
-  customer_name?: string | null;
-  supplier_name?: string | null;
   account_from_id?: string | null;
   account_to_id?: string | null;
-  transfer_to_account_id?: string | null;
-  is_recurring?: boolean;
-  recurrence_config?: any;
-  centro_custo_id?: string | null;
   categories?: {
     name: string;
     icon?: string;
     color?: string;
   } | null;
-  centro_custo?: {
-    id: string;
-    nome: string;
-    cor?: string;
-  } | null;
-  bank_accounts?: {
-    id: string;
-    bank_name: string;
-    account_number: string;
-  } | null;
   bank_account?: {
-    id: string;
-    bank_name: string;
-    account_number: string;
-  } | null;
-  account_from?: {
-    id: string;
-    bank_name: string;
-    account_number: string;
-  } | null;
-  account_to?: {
     id: string;
     bank_name: string;
     account_number: string;
@@ -76,39 +53,21 @@ interface Transaction {
 
 const Transactions = () => {
   const queryClient = useQueryClient();
+  const { accounts } = useBankAccounts();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [currentPeriod, setCurrentPeriod] = useState(new Date());
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [companyName, setCompanyName] = useState<string>("Minha Empresa");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [centroCustoFilter, setCentroCustoFilter] = useState<string>("all");
-  
-  // Calcular últimos 30 dias como padrão
-  const defaultEndDate = new Date();
-  const defaultStartDate = new Date();
-  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
-  
-  // Estados para datas selecionadas (temporárias)
-  const [tempStartDate, setTempStartDate] = useState<Date | undefined>(defaultStartDate);
-  const [tempEndDate, setTempEndDate] = useState<Date | undefined>(defaultEndDate);
-
-  // Estados para datas aplicadas (usadas no filtro) - já com os últimos 30 dias
-  const [appliedStartDate, setAppliedStartDate] = useState<Date | undefined>(defaultStartDate);
-  const [appliedEndDate, setAppliedEndDate] = useState<Date | undefined>(defaultEndDate);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadTransactions();
 
-    // Configurar realtime para atualizações automáticas
     const channel = supabase
       .channel('transactions-changes')
       .on(
@@ -138,7 +97,7 @@ const Transactions = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [currentPeriod, selectedAccount]);
 
   const loadTransactions = async () => {
     try {
@@ -152,33 +111,33 @@ const Transactions = () => {
         .single();
 
       if (!profile || !profile.company_id) {
-        console.error('❌ Usuário sem empresa associada');
         toast.error('Complete o cadastro da empresa primeiro');
         setLoading(false);
         return;
       }
 
-      // Buscar nome da empresa
-      const { data: company } = await supabase
-        .from("companies")
-        .select("name")
-        .eq("id", profile.company_id)
-        .single();
+      const startDate = startOfMonth(currentPeriod);
+      const endDate = endOfMonth(currentPeriod);
 
-      if (company) setCompanyName(company.name);
-
-      const { data, error } = await supabase
+      let query = supabase
         .from("transactions")
         .select(`
           *,
           categories(name, icon, color),
-          centro_custo:categorias!centro_custo_id(id, nome, cor),
           bank_account:bank_accounts!bank_account_id(id, bank_name, account_number),
           account_from:bank_accounts!account_from_id(id, bank_name, account_number),
           account_to:bank_accounts!account_to_id(id, bank_name, account_number)
         `)
         .eq("company_id", profile.company_id)
+        .gte("due_date", startDate.toISOString())
+        .lte("due_date", endDate.toISOString())
         .order("due_date", { ascending: false });
+
+      if (selectedAccount !== "all") {
+        query = query.or(`bank_account_id.eq.${selectedAccount},account_from_id.eq.${selectedAccount},account_to_id.eq.${selectedAccount}`);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       setTransactions((data || []) as Transaction[]);
@@ -191,7 +150,6 @@ const Transactions = () => {
 
   const handleEdit = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
-    // Abrir o dialog correto baseado no tipo da transação
     if (transaction.type === "revenue") {
       setRevenueDialogOpen(true);
     } else if (transaction.type === "expense") {
@@ -221,7 +179,6 @@ const Transactions = () => {
   };
 
   const handleDialogClose = (refresh?: boolean) => {
-    setDialogOpen(false);
     setRevenueDialogOpen(false);
     setExpenseDialogOpen(false);
     setTransferDialogOpen(false);
@@ -229,98 +186,65 @@ const Transactions = () => {
     if (refresh) loadTransactions();
   };
 
-  const handleExport = () => {
-    try {
-      if (filteredTransactions.length === 0) {
-        toast.warning("Não há transações para exportar");
-        return;
-      }
-
-      exportTransactionsToPDF(filteredTransactions, companyName);
-      
-      toast.success(`${filteredTransactions.length} transações exportadas em PDF!`);
-    } catch (error) {
-      console.error('Erro ao exportar transações:', error);
-      toast.error("Erro ao exportar transações");
-    }
-  };
-
-  const handleApplyPeriodFilter = () => {
-    // Validação: ambas as datas devem ser selecionadas
-    if (!tempStartDate || !tempEndDate) {
-      toast.error("Selecione a data inicial e final do período");
-      return;
-    }
-
-    // Validação: data inicial não pode ser maior que data final
-    if (tempStartDate > tempEndDate) {
-      toast.error("A data inicial não pode ser maior que a data final");
-      return;
-    }
-
-    // Aplicar as datas no filtro
-    setAppliedStartDate(tempStartDate);
-    setAppliedEndDate(tempEndDate);
-
-    toast.success(
-      `Período aplicado: ${format(tempStartDate, "dd/MM/yyyy", { locale: ptBR })} até ${format(tempEndDate, "dd/MM/yyyy", { locale: ptBR })}`
-    );
-  };
-
-  const handleClearPeriodFilter = () => {
-    setTempStartDate(undefined);
-    setTempEndDate(undefined);
-    setAppliedStartDate(undefined);
-    setAppliedEndDate(undefined);
-    toast.info("Filtro de período removido");
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedAccount("all");
+    setCurrentPeriod(new Date());
+    toast.info("Filtros limpos");
   };
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = typeFilter === "all" || t.type === typeFilter;
-    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-    const matchesCategory = categoryFilter === "all" || t.category_id === categoryFilter;
-    const matchesCentroCusto = centroCustoFilter === "all" || t.centro_custo_id === centroCustoFilter;
-    
-    // Filtro de período
-    let matchesPeriod = true;
-    if (appliedStartDate || appliedEndDate) {
-      const transactionDate = new Date(t.due_date);
-      
-      if (appliedStartDate && appliedEndDate) {
-        // Normalizar as datas para meia-noite para comparação correta
-        const startOfDay = new Date(appliedStartDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const endOfDay = new Date(appliedEndDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        const txDate = new Date(transactionDate);
-        txDate.setHours(0, 0, 0, 0);
-        
-        matchesPeriod = txDate >= startOfDay && txDate <= endOfDay;
-      } else if (appliedStartDate) {
-        const startOfDay = new Date(appliedStartDate);
-        startOfDay.setHours(0, 0, 0, 0);
-        
-        const txDate = new Date(transactionDate);
-        txDate.setHours(0, 0, 0, 0);
-        
-        matchesPeriod = txDate >= startOfDay;
-      } else if (appliedEndDate) {
-        const endOfDay = new Date(appliedEndDate);
-        endOfDay.setHours(23, 59, 59, 999);
-        
-        const txDate = new Date(transactionDate);
-        txDate.setHours(0, 0, 0, 0);
-        
-        matchesPeriod = txDate <= endOfDay;
-      }
-    }
-    
-    return matchesSearch && matchesType && matchesStatus && matchesCategory && matchesCentroCusto && matchesPeriod;
+    return matchesSearch;
   });
 
+  // Calcular saldo acumulado
+  const transactionsWithBalance = filteredTransactions.map((transaction, index) => {
+    const previousTransactions = filteredTransactions.slice(index + 1);
+    const balance = previousTransactions.reduce((acc, t) => {
+      if (t.type === "revenue") return acc + Number(t.amount);
+      if (t.type === "expense") return acc - Number(t.amount);
+      return acc;
+    }, 0) + (transaction.type === "revenue" ? Number(transaction.amount) : -Number(transaction.amount));
+    
+    return { ...transaction, balance };
+  });
+
+  // Calcular resumos
+  const receitasAbertas = filteredTransactions
+    .filter((t) => t.type === "revenue" && (t.status === "overdue"))
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const receitasRealizadas = filteredTransactions
+    .filter((t) => t.type === "revenue" && t.status === "paid")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const despesasAbertas = filteredTransactions
+    .filter((t) => t.type === "expense" && (t.status === "overdue"))
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const despesasRealizadas = filteredTransactions
+    .filter((t) => t.type === "expense" && t.status === "paid")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const totalPeriodo = receitasRealizadas - despesasRealizadas;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "paid":
+        return <Badge className="bg-accent text-accent-foreground">Pago</Badge>;
+      case "overdue":
+        return <Badge variant="destructive">Vencido</Badge>;
+      case "cancelled":
+        return <Badge variant="outline">Cancelado</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
   if (loading) {
     return (
@@ -332,245 +256,280 @@ const Transactions = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6 animate-fade-in">
-      {/* Header */}
+      {/* Header com ações */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Transações</h1>
-          <p className="text-muted-foreground">Gerencie todas as transações financeiras</p>
+          <p className="text-muted-foreground">Controle financeiro detalhado</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => setRevenueDialogOpen(true)} size="lg" variant="default" className="bg-accent hover:bg-accent/90">
-            <TrendingUp className="w-4 h-4 mr-2" />
-            Receita
-          </Button>
-          <Button onClick={() => setExpenseDialogOpen(true)} size="lg" variant="destructive">
-            <TrendingDown className="w-4 h-4 mr-2" />
-            Despesa
-          </Button>
-          <Button onClick={() => setTransferDialogOpen(true)} size="lg" variant="outline">
-            <ArrowRightLeft className="w-4 h-4 mr-2" />
-            Transferência
-          </Button>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="lg" className="bg-accent hover:bg-accent/90">
+              Nova <ChevronDown className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setRevenueDialogOpen(true)}>
+              Receita
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setExpenseDialogOpen(true)}>
+              Despesa
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setTransferDialogOpen(true)}>
+              Transferência
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
-      {/* Stats Cards - somente com 3 cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Total Receitas</p>
-          <p className="text-2xl font-bold text-accent">
-            R${" "}
-            {filteredTransactions
-              .filter((t) => t.type === "revenue" && t.status === "paid")
-              .reduce((acc, t) => acc + Number(t.amount), 0)
-              .toLocaleString("pt-BR")}
-          </p>
-        </Card>
-        <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Total Despesas</p>
-          <p className="text-2xl font-bold text-destructive">
-            R${" "}
-            {filteredTransactions
-              .filter((t) => t.type === "expense" && t.status === "paid")
-              .reduce((acc, t) => acc + Number(t.amount), 0)
-              .toLocaleString("pt-BR")}
-          </p>
-        </Card>
-        <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Vencidas</p>
-          <p className="text-2xl font-bold text-warning">
-            {filteredTransactions.filter((t) => t.status === "overdue").length}
-          </p>
-        </Card>
-      </div>
+      {/* Filtros */}
+      <Card className="p-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          {/* Filtro de Período */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Período</label>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPeriod(subMonths(currentPeriod, 1))}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex-1 text-center font-medium text-primary">
+                {format(currentPeriod, "MMMM 'de' yyyy", { locale: ptBR })}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPeriod(addMonths(currentPeriod, 1))}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-      {/* Filters and Search */}
-      <Card className="p-4 glass">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          {/* Pesquisar */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Pesquisar no período selecionado</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar transações..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                placeholder="Pesquisar"
+                className="pl-9"
               />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filtros
-            </Button>
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="w-4 h-4 mr-2" />
-              Exportar PDF
-            </Button>
-            <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importar Extrato
-            </Button>
           </div>
 
-          {/* Filtro de Período */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <span className="text-sm font-medium whitespace-nowrap">Filtrar por período:</span>
-            <div className="flex flex-wrap gap-2 items-center">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !tempStartDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {tempStartDate ? format(tempStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={tempStartDate}
-                    onSelect={setTempStartDate}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              <span className="text-muted-foreground">até</span>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !tempEndDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {tempEndDate ? format(tempEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Data final"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={tempEndDate}
-                    onSelect={setTempEndDate}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              {/* Botões de ação do período */}
-              {(tempStartDate || tempEndDate) && (
-                <>
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={handleApplyPeriodFilter}
-                    disabled={!tempStartDate || !tempEndDate}
-                  >
-                    Calcular
-                  </Button>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearPeriodFilter}
-                  >
-                    <X className="h-4 w-4 mr-1" />
-                    Limpar
-                  </Button>
-                </>
-              )}
-
-              {/* Indicador de período ativo */}
-              {(appliedStartDate && appliedEndDate) && (
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 text-primary rounded-md text-sm">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span className="font-medium">
-                    Período: {format(appliedStartDate, "dd/MM/yyyy", { locale: ptBR })} até {format(appliedEndDate, "dd/MM/yyyy", { locale: ptBR })}
-                  </span>
-                </div>
-              )}
-            </div>
+          {/* Conta */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Conta</label>
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Selecionar todas</SelectItem>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.bank_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {showFilters && (
-            <TransactionFilters
-              typeFilter={typeFilter}
-              statusFilter={statusFilter}
-              categoryFilter={categoryFilter}
-              centroCustoFilter={centroCustoFilter}
-              onTypeChange={setTypeFilter}
-              onStatusChange={setStatusFilter}
-              onCategoryChange={setCategoryFilter}
-              onCentroCustoChange={setCentroCustoFilter}
-            />
-          )}
+          {/* Limpar filtros */}
+          <div className="flex items-end">
+            <Button variant="link" onClick={handleClearFilters} className="text-primary">
+              Limpar filtros
+            </Button>
+          </div>
         </div>
       </Card>
 
-      {/* Table */}
-      <Card className="glass">
-        <TransactionTable
-          transactions={filteredTransactions}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+      {/* Cards de resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-2">Receitas em aberto (R$)</p>
+          <p className="text-2xl font-bold text-orange-500">
+            {formatCurrency(receitasAbertas)}
+          </p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-2">Receitas realizadas (R$)</p>
+          <p className="text-2xl font-bold text-accent">
+            {formatCurrency(receitasRealizadas)}
+          </p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-2">Despesas em aberto (R$)</p>
+          <p className="text-2xl font-bold text-orange-500">
+            {formatCurrency(despesasAbertas)}
+          </p>
+        </Card>
+        <Card className="p-4">
+          <p className="text-sm text-muted-foreground mb-2">Despesas realizadas (R$)</p>
+          <p className="text-2xl font-bold text-destructive">
+            {formatCurrency(despesasRealizadas)}
+          </p>
+        </Card>
+        <Card className="p-4 border-primary/50">
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-sm text-muted-foreground">Total do período (R$)</p>
+            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+          </div>
+          <p className={cn(
+            "text-2xl font-bold",
+            totalPeriodo >= 0 ? "text-accent" : "text-destructive"
+          )}>
+            {formatCurrency(totalPeriodo)}
+          </p>
+        </Card>
+      </div>
+
+      {/* Ações em lote */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-4 p-3 bg-muted rounded-lg">
+          <span className="text-sm">{selectedIds.length} registro(s) selecionado(s)</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                Ações em lote <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem>Marcar como pago</DropdownMenuItem>
+              <DropdownMenuItem>Excluir selecionados</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
+      {/* Tabela de transações */}
+      <Card className="overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-muted/50">
+              <tr className="border-b">
+                <th className="p-3 text-left">
+                  <Checkbox
+                    checked={selectedIds.length === filteredTransactions.length}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedIds(filteredTransactions.map(t => t.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                  />
+                </th>
+                <th className="p-3 text-left text-sm font-medium">Data</th>
+                <th className="p-3 text-left text-sm font-medium">Descrição</th>
+                <th className="p-3 text-left text-sm font-medium">Situação</th>
+                <th className="p-3 text-right text-sm font-medium">Valor (R$)</th>
+                <th className="p-3 text-right text-sm font-medium flex items-center justify-end gap-1">
+                  Saldo (R$)
+                  <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                </th>
+                <th className="p-3 text-center text-sm font-medium">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactionsWithBalance.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                    Nenhuma transação encontrada neste período
+                  </td>
+                </tr>
+              ) : (
+                transactionsWithBalance.map((transaction) => (
+                  <tr key={transaction.id} className="border-b hover:bg-muted/30 transition-colors">
+                    <td className="p-3">
+                      <Checkbox
+                        checked={selectedIds.includes(transaction.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedIds([...selectedIds, transaction.id]);
+                          } else {
+                            setSelectedIds(selectedIds.filter(id => id !== transaction.id));
+                          }
+                        }}
+                      />
+                    </td>
+                    <td className="p-3 text-sm">
+                      {format(new Date(transaction.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                    </td>
+                    <td className="p-3">
+                      <div>
+                        <p className="font-medium text-sm">{transaction.description}</p>
+                        {transaction.categories && (
+                          <p className="text-xs text-muted-foreground">
+                            {transaction.categories.icon} {transaction.categories.name}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      {getStatusBadge(transaction.status)}
+                    </td>
+                    <td className="p-3 text-right">
+                      <span className={cn(
+                        "font-semibold",
+                        transaction.type === "revenue" ? "text-accent" : "text-destructive"
+                      )}>
+                        {transaction.type === "revenue" ? "+" : "-"}{formatCurrency(Number(transaction.amount))}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right font-medium">
+                      <span className={cn(
+                        transaction.balance >= 0 ? "text-accent" : "text-destructive"
+                      )}>
+                        {formatCurrency(transaction.balance)}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            Ações <ChevronDown className="ml-1 h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(transaction)}>
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(transaction.id)} className="text-destructive">
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       {/* Dialogs */}
-      <TransactionDialog
-        open={dialogOpen}
+      <RevenueDialog
+        open={revenueDialogOpen}
         onClose={handleDialogClose}
         transaction={selectedTransaction}
       />
-      
-      <RevenueDialog
-        open={revenueDialogOpen}
-        onClose={(refresh) => {
-          setRevenueDialogOpen(false);
-          setSelectedTransaction(null);
-          if (refresh) loadTransactions();
-        }}
-        transaction={selectedTransaction}
-      />
-      
       <ExpenseDialog
         open={expenseDialogOpen}
-        onClose={(refresh) => {
-          setExpenseDialogOpen(false);
-          setSelectedTransaction(null);
-          if (refresh) loadTransactions();
-        }}
+        onClose={handleDialogClose}
         transaction={selectedTransaction}
       />
-      
       <TransferDialog
         open={transferDialogOpen}
-        onClose={(refresh) => {
-          setTransferDialogOpen(false);
-          setSelectedTransaction(null);
-          if (refresh) loadTransactions();
-        }}
+        onClose={handleDialogClose}
         transaction={selectedTransaction}
-      />
-
-      <ImportBankStatementDialog
-        open={importDialogOpen}
-        onClose={() => setImportDialogOpen(false)}
-        onImportComplete={() => {
-          loadTransactions();
-          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
-        }}
       />
     </div>
   );
