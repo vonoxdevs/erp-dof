@@ -67,13 +67,17 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
 
     try {
       setLoading(true);
+      console.log('🔄 Iniciando criação de cliente...');
 
       // Validação
       const validation = clientSchema.safeParse(formData);
       if (!validation.success) {
+        console.error('❌ Validação falhou:', validation.error.errors);
         toast.error(validation.error.errors[0].message);
         return;
       }
+
+      console.log('✅ Validação passou');
 
       // Buscar company_id do usuário
       const { data: profile } = await supabase
@@ -83,8 +87,11 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
         .single();
 
       if (!profile?.company_id) {
+        console.error('❌ Empresa não encontrada');
         throw new Error("Empresa não encontrada");
       }
+
+      console.log('✅ Company ID:', profile.company_id);
 
       // Criar cliente
       const { data, error } = await supabase
@@ -102,14 +109,22 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao inserir cliente:', error);
+        throw error;
+      }
 
+      console.log('✅ Cliente criado com ID:', data.id);
       toast.success("Cliente criado com sucesso!");
 
+      // Chamar callback com o ID do cliente
+      console.log('🔄 Chamando onClientCreated...');
       onClientCreated(data.id);
+      
+      console.log('🔄 Fechando dialog...');
       handleClose();
     } catch (error: any) {
-      console.error("Erro ao criar cliente:", error);
+      console.error("❌ Erro completo ao criar cliente:", error);
       toast.error(error.message || "Erro ao criar cliente");
     } finally {
       setLoading(false);

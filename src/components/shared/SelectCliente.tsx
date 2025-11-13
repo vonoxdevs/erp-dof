@@ -65,8 +65,12 @@ export function SelectCliente({
   }
 
   const handleClientCreated = async (clientId: string) => {
+    console.log('🔄 SelectCliente: Cliente criado com ID:', clientId);
+    console.log('🔄 SelectCliente: Atualizando lista...');
     await fetchContacts();
+    console.log('🔄 SelectCliente: Lista atualizada, selecionando cliente...');
     onChange(clientId);
+    console.log('✅ SelectCliente: Cliente selecionado');
   };
 
   return (
