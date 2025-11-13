@@ -33,7 +33,7 @@ interface Transaction {
   description: string;
   due_date: string;
   payment_date: string | null;
-  status: "paid" | "overdue" | "cancelled";
+  status: "pending" | "paid" | "overdue" | "cancelled";
   category_id: string | null;
   bank_account_id: string | null;
   contact_id: string | null;
@@ -209,7 +209,7 @@ const Transactions = () => {
 
   // Calcular resumos
   const receitasAbertas = filteredTransactions
-    .filter((t) => t.type === "revenue" && (t.status === "overdue"))
+    .filter((t) => t.type === "revenue" && (t.status === "pending" || t.status === "overdue"))
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const receitasRealizadas = filteredTransactions
@@ -217,7 +217,7 @@ const Transactions = () => {
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const despesasAbertas = filteredTransactions
-    .filter((t) => t.type === "expense" && (t.status === "overdue"))
+    .filter((t) => t.type === "expense" && (t.status === "pending" || t.status === "overdue"))
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const despesasRealizadas = filteredTransactions
