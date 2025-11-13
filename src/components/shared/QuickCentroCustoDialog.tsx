@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -14,7 +13,6 @@ const centroCustoSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   descricao: z.string().optional(),
   cor: z.string().optional(),
-  icon: z.string().optional(),
 });
 
 interface Props {
@@ -24,15 +22,12 @@ interface Props {
   contaBancariaId?: string;
 }
 
-const commonIcons = ["💼", "📊", "🏢", "🎯", "💡", "🔧", "📈", "🌟", "⚡", "🎨", "📱", "💻"];
-
 export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, contaBancariaId }: Props) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
     cor: "#3b82f6",
-    icon: "💼",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,7 +67,6 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
           descricao: formData.descricao || null,
           tipo: "centro_custo",
           cor: formData.cor,
-          icon: formData.icon,
           ativo: true,
         })
         .select()
@@ -104,7 +98,6 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
       nome: "",
       descricao: "",
       cor: "#3b82f6",
-      icon: "💼",
     });
     onClose();
   };
@@ -138,33 +131,12 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Cor</Label>
-              <ColorPicker
-                value={formData.cor}
-                onChange={(cor) => setFormData({ ...formData, cor })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="icon">Ícone</Label>
-              <Select
-                value={formData.icon}
-                onValueChange={(value) => setFormData({ ...formData, icon: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {commonIcons.map((icon) => (
-                    <SelectItem key={icon} value={icon}>
-                      <span className="text-xl">{icon}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Cor</Label>
+            <ColorPicker
+              value={formData.cor}
+              onChange={(cor) => setFormData({ ...formData, cor })}
+            />
           </div>
 
           <DialogFooter>

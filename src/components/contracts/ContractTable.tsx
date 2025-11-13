@@ -18,7 +18,6 @@ interface Contract {
   };
   centro_custo?: {
     nome: string;
-    icon?: string;
   };
 }
 
@@ -66,10 +65,7 @@ export function ContractTable({ contracts, onEdit, onDelete, onGenerateInvoice, 
             </TableCell>
             <TableCell>
               {contract.centro_custo ? (
-                <div className="flex items-center gap-2">
-                  {contract.centro_custo.icon && <span>{contract.centro_custo.icon}</span>}
-                  <span>{contract.centro_custo.nome}</span>
-                </div>
+                <span>{contract.centro_custo.nome}</span>
               ) : (
                 <span className="text-muted-foreground">-</span>
               )}

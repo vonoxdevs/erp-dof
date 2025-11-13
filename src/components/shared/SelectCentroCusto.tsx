@@ -14,7 +14,6 @@ import { QuickCentroCustoDialog } from './QuickCentroCustoDialog';
 interface CentroCusto {
   id: string;
   nome: string;
-  icon?: string;
   cor?: string;
 }
 
@@ -52,7 +51,7 @@ export function SelectCentroCusto({
 
       const { data, error } = await supabase
         .from('categorias')
-        .select('id, nome, icon, cor')
+        .select('id, nome, cor')
         .eq('tipo', 'centro_custo')
         .eq('ativo', true)
         .eq('company_id', profile.company_id)
@@ -95,10 +94,7 @@ export function SelectCentroCusto({
             ) : (
               centrosCusto.map(centro => (
                 <SelectItem key={centro.id} value={centro.id}>
-                  <div className="flex items-center gap-2">
-                    {centro.icon && <span>{centro.icon}</span>}
-                    <span>{centro.nome}</span>
-                  </div>
+                  <span>{centro.nome}</span>
                 </SelectItem>
               ))
             )}
