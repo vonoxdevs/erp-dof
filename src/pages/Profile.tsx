@@ -216,21 +216,21 @@ const Profile = () => {
         <TabsContent value="company">
           <Card className="p-6 glass space-y-6">
             {/* Logo Upload */}
-            <div className="space-y-2">
-              <Label>Logo da Empresa</Label>
-              <div className="flex items-center gap-4">
-                <div className="w-20 h-20 rounded-lg border-2 border-dashed border-muted flex items-center justify-center overflow-hidden bg-muted/30">
+            <div className="space-y-4">
+              <Label className="text-base font-semibold">Logo da Empresa</Label>
+              <div className="flex flex-col sm:flex-row items-center gap-6">
+                <div className="w-32 h-32 rounded-xl border-2 border-dashed border-primary/30 flex items-center justify-center overflow-hidden bg-primary/5 hover:border-primary/50 transition-all">
                   {companyData.logo_url ? (
                     <img
                       src={companyData.logo_url}
                       alt="Logo da empresa"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain p-2"
                     />
                   ) : (
-                    <Building2 className="w-10 h-10 text-muted-foreground" />
+                    <Building2 className="w-16 h-16 text-muted-foreground" />
                   )}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 space-y-3">
                   <input
                     type="file"
                     id="logo"
@@ -238,22 +238,28 @@ const Profile = () => {
                     onChange={handleLogoUpload}
                     className="hidden"
                   />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => document.getElementById("logo")?.click()}
-                    disabled={uploading}
-                  >
-                    {uploading ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Upload className="w-4 h-4 mr-2" />
-                    )}
-                    {companyData.logo_url ? "Alterar Logo" : "Upload Logo"}
-                  </Button>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Formatos: JPG, PNG. Tamanho máximo: 2MB
-                  </p>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      onClick={() => document.getElementById("logo")?.click()}
+                      disabled={uploading}
+                      className="w-full sm:w-auto"
+                    >
+                      {uploading ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4 mr-2" />
+                      )}
+                      {companyData.logo_url ? "Alterar Logo" : "Upload Logo"}
+                    </Button>
+                    <p className="text-sm text-muted-foreground">
+                      Formatos aceitos: JPG, PNG, GIF<br/>
+                      Tamanho máximo: 2MB<br/>
+                      Recomendado: 400x400px com fundo transparente
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>

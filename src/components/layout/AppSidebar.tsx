@@ -21,6 +21,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,7 +44,7 @@ const supportItems = [
 export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
-  const { hasRole } = useAuth();
+  const { hasRole, company } = useAuth();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -54,6 +55,33 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className={open ? "w-64" : "w-16"}>
+      {/* Header com Logo e Nome da Empresa */}
+      <SidebarHeader className="border-b border-border/50 p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className={`rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden transition-all ${open ? "w-24 h-24" : "w-10 h-10"}`}>
+            {company?.logo_url ? (
+              <img 
+                src={company.logo_url} 
+                alt={company.name || "Logo"} 
+                className="w-full h-full object-contain p-2"
+              />
+            ) : (
+              <Building2 className={`text-primary ${open ? "w-12 h-12" : "w-6 h-6"}`} />
+            )}
+          </div>
+          {open && (
+            <div className="text-center space-y-1">
+              <h2 className="font-bold text-base leading-tight">
+                {company?.name || "ERP Financeiro"}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Sistema de Gestão
+              </p>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
       <SidebarContent>
         {/* Main Navigation */}
         <SidebarGroup>
