@@ -43,6 +43,7 @@ interface Transaction {
   account_to_id?: string | null;
   is_recurring?: boolean;
   reference_number?: string | null;
+  contract_id?: string | null;
   centro_custo_id?: string | null;
   categoria_receita_id?: string | null;
   categoria_despesa_id?: string | null;
@@ -795,8 +796,8 @@ const Transactions = () => {
         onDeleteOne={handleDeleteOne}
         onDeleteAll={handleDeleteAll}
         onDeleteFromThis={handleDeleteFromThis}
-        isRecurring={transactionToDelete?.is_recurring || false}
-        hasRecurrences={!!transactionToDelete?.reference_number || transactionToDelete?.is_recurring || false}
+        isRecurring={transactionToDelete?.is_recurring || !!transactionToDelete?.contract_id}
+        hasRecurrences={!!transactionToDelete?.reference_number || transactionToDelete?.is_recurring || !!transactionToDelete?.contract_id}
       />
     </div>
   );

@@ -263,6 +263,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         }
         
         // Atualizar transações pendentes do contrato
+        const today = new Date().toISOString().split('T')[0];
         const { error: updateTxError } = await supabase
           .from('transactions')
           .update({
@@ -270,12 +271,14 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             centro_custo_id: contractData.centro_custo_id,
             categoria_receita_id: contractData.categoria_receita_id,
             bank_account_id: contractData.bank_account_id,
-            account_to_id: contractData.bank_account_id,
+            account_to_id: contractData.type === 'income' ? contractData.bank_account_id : null,
+            account_from_id: contractData.type === 'expense' ? contractData.bank_account_id : null,
             contact_id: contractData.contact_id,
             description: `${contractData.contract_name} - Parcela`,
           })
           .eq('contract_id', contract.id)
-          .eq('status', 'pending');
+          .eq('status', 'pending')
+          .gte('due_date', today);
 
         if (updateTxError) {
           console.error("Erro ao atualizar transações:", updateTxError);

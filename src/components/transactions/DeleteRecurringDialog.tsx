@@ -63,9 +63,7 @@ export function DeleteRecurringDialog({
             <AlertDialogTitle className="text-xl">Excluir transação recorrente</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="text-base pt-2">
-            {isRecurring
-              ? "Esta é a transação original que gera as recorrências. Escolha como deseja proceder com a exclusão:"
-              : "Esta transação faz parte de uma série de recorrências. Escolha como deseja proceder com a exclusão:"}
+            Esta transação faz parte de uma série recorrente (contrato ou recorrência). Escolha como deseja proceder com a exclusão:
           </AlertDialogDescription>
         </AlertDialogHeader>
 
