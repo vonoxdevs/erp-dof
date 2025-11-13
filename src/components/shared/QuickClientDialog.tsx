@@ -101,7 +101,7 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
           name: formData.name,
           document: formData.document,
           document_type: formData.document_type,
-          type: "customer",
+          type: "client",
           email: formData.email || null,
           phone: formData.phone || null,
           is_active: true,
