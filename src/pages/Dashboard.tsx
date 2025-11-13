@@ -246,65 +246,103 @@ const Dashboard = () => {
 
       if (recentTransactions) {
         // ==========================================
-        // NOVA LÓGICA: Tudo baseado no período filtrado
+        // LÓGICA REFATORADA: Baseada nos filtros do dashboard
         // ==========================================
         
         const today = new Date().toISOString().split('T')[0];
         
-        // 1. RECEITAS REALIZADAS (pagas no período)
+        // 1. RECEITAS REALIZADAS (receitas pagas com payment_date no período filtrado)
         const receitasRealizadas = recentTransactions
-          .filter(t => t.type === "revenue" && t.status === "paid")
+          .filter(t => 
+            t.type === "revenue" && 
+            t.status === "paid" &&
+            t.due_date >= startDate.toISOString().split('T')[0] &&
+            t.due_date <= endDate.toISOString().split('T')[0]
+          )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
-        // 2. DESPESAS REALIZADAS (pagas no período)
+        // 2. DESPESAS REALIZADAS (despesas pagas com payment_date no período filtrado)
         const despesasRealizadas = recentTransactions
-          .filter(t => t.type === "expense" && t.status === "paid")
+          .filter(t => 
+            t.type === "expense" && 
+            t.status === "paid" &&
+            t.due_date >= startDate.toISOString().split('T')[0] &&
+            t.due_date <= endDate.toISOString().split('T')[0]
+          )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
-        // 3. CONTAS A RECEBER (todas receitas pendentes no período filtrado)
+        // 3. CONTAS A RECEBER (receitas pendentes/overdue com due_date no período filtrado)
         const contasAReceber = recentTransactions
-          .filter(t => t.type === "revenue" && (t.status === "pending" || t.status === "overdue"))
+          .filter(t => 
+            t.type === "revenue" && 
+            (t.status === "pending" || t.status === "overdue") &&
+            t.due_date >= startDate.toISOString().split('T')[0] &&
+            t.due_date <= endDate.toISOString().split('T')[0]
+          )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
-        // 4. CONTAS A PAGAR (todas despesas pendentes no período filtrado)
+        // 4. CONTAS A PAGAR (despesas pendentes/overdue com due_date no período filtrado)
         const contasAPagar = recentTransactions
-          .filter(t => t.type === "expense" && (t.status === "pending" || t.status === "overdue"))
+          .filter(t => 
+            t.type === "expense" && 
+            (t.status === "pending" || t.status === "overdue") &&
+            t.due_date >= startDate.toISOString().split('T')[0] &&
+            t.due_date <= endDate.toISOString().split('T')[0]
+          )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
-        // 5. Contadores
+        // 5. Contadores (dentro do período filtrado)
         const pending = recentTransactions
-          .filter(t => t.status === "pending" || t.status === "overdue")
+          .filter(t => 
+            (t.status === "pending" || t.status === "overdue") &&
+            t.due_date >= startDate.toISOString().split('T')[0] &&
+            t.due_date <= endDate.toISOString().split('T')[0]
+          )
           .length;
         
         const overdue = recentTransactions
-          .filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today)
+          .filter(t => 
+            (t.status === "pending" || t.status === "overdue") && 
+            t.due_date < today &&
+            t.due_date >= startDate.toISOString().split('T')[0] &&
+            t.due_date <= endDate.toISOString().split('T')[0]
+          )
           .length;
 
-        // 6. Separar transações vencidas por tipo
+        // 6. Separar transações vencidas por tipo (dentro do período filtrado)
         const overdueRevenues = recentTransactions.filter(t => 
           t.type === "revenue" && 
           (t.status === "pending" || t.status === "overdue") && 
-          t.due_date < today
+          t.due_date < today &&
+          t.due_date >= startDate.toISOString().split('T')[0] &&
+          t.due_date <= endDate.toISOString().split('T')[0]
         );
         
         const overdueExpenses = recentTransactions.filter(t => 
           t.type === "expense" && 
           (t.status === "pending" || t.status === "overdue") && 
-          t.due_date < today
+          t.due_date < today &&
+          t.due_date >= startDate.toISOString().split('T')[0] &&
+          t.due_date <= endDate.toISOString().split('T')[0]
         );
 
         setOverdueTransactions({ revenues: overdueRevenues, expenses: overdueExpenses });
 
-        // 7. Buscar saldo atual das contas
-        const { data: accounts } = await supabase
+        // 7. Buscar saldo atual das contas (filtrado por conta selecionada)
+        let accountsQuery = supabase
           .from("bank_accounts")
           .select("current_balance")
           .eq("company_id", profile.company_id)
           .eq("is_active", true);
         
+        if (selectedAccount !== "all") {
+          accountsQuery = accountsQuery.eq("id", selectedAccount);
+        }
+        
+        const { data: accounts } = await accountsQuery;
         const saldoAtual = accounts?.reduce((sum, acc) => sum + Number(acc.current_balance), 0) || 0;
 
-        // 8. SALDO PREVISTO = saldo atual + contas a receber - contas a pagar
+        // 8. SALDO PREVISTO = saldo atual + contas a receber - contas a pagar (do período filtrado)
         const saldoPrevisto = saldoAtual + contasAReceber - contasAPagar;
 
         // Atualizar estados
