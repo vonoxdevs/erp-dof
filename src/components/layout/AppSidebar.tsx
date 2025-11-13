@@ -31,7 +31,7 @@ const mainItems = [
   { title: "Transações", url: "/transactions", icon: Receipt },
   { title: "Contratos", url: "/contracts", icon: FileText },
   { title: "Contas Bancárias", url: "/bank-accounts", icon: Building2 },
-  { title: "Categorias", url: "/categories", icon: Tags },
+  { title: "Centro de Custo/Categorias", url: "/categories", icon: Tags },
   { title: "Clientes", url: "/contacts", icon: UserCircle },
 ];
 
