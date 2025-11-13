@@ -118,8 +118,8 @@ const Transactions = () => {
         return;
       }
 
-      const startDate = startOfMonth(currentPeriod);
-      const endDate = endOfMonth(currentPeriod);
+      const startDate = format(startOfMonth(currentPeriod), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(currentPeriod), 'yyyy-MM-dd');
 
       let query = supabase
         .from("transactions")
@@ -131,8 +131,8 @@ const Transactions = () => {
           account_to:bank_accounts!account_to_id(id, bank_name, account_number)
         `)
         .eq("company_id", profile.company_id)
-        .gte("due_date", startDate.toISOString())
-        .lte("due_date", endDate.toISOString())
+        .gte("due_date", startDate)
+        .lte("due_date", endDate)
         .order("due_date", { ascending: false });
 
       if (selectedAccount !== "all") {
