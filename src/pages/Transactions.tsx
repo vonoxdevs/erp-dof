@@ -18,6 +18,8 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import type { DateRange } from "react-day-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,6 +97,10 @@ const Transactions = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
   const [currentPeriod, setCurrentPeriod] = useState(new Date());
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
   const [revenueDialogOpen, setRevenueDialogOpen] = useState(false);
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -112,7 +118,7 @@ const Transactions = () => {
   useEffect(() => {
     loadTransactions();
     generateRecurringTransactions();
-  }, [currentPeriod, selectedAccount]);
+  }, [currentPeriod, selectedAccount, dateRange]);
 
   const generateRecurringTransactions = async () => {
     try {
@@ -150,8 +156,8 @@ const Transactions = () => {
         return;
       }
 
-      const startDate = format(startOfMonth(currentPeriod), 'yyyy-MM-dd');
-      const endDate = format(endOfMonth(currentPeriod), 'yyyy-MM-dd');
+      const startDate = format(dateRange?.from || startOfMonth(currentPeriod), 'yyyy-MM-dd');
+      const endDate = format(dateRange?.to || endOfMonth(currentPeriod), 'yyyy-MM-dd');
 
       let query = supabase
         .from("transactions")
@@ -364,6 +370,10 @@ const Transactions = () => {
     setSearchTerm("");
     setSelectedAccount("all");
     setCurrentPeriod(new Date());
+    setDateRange({
+      from: startOfMonth(new Date()),
+      to: endOfMonth(new Date()),
+    });
     toast.info("Filtros limpos");
   };
 
@@ -484,29 +494,58 @@ const Transactions = () => {
 
       {/* Filtros */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-          {/* Filtro de Período */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          {/* Filtro de Mês/Ano */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Período</label>
+            <label className="text-sm font-medium">Mês/Ano</label>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setCurrentPeriod(subMonths(currentPeriod, 1))}
+                onClick={() => {
+                  const newPeriod = subMonths(currentPeriod, 1);
+                  setCurrentPeriod(newPeriod);
+                  setDateRange({
+                    from: startOfMonth(newPeriod),
+                    to: endOfMonth(newPeriod),
+                  });
+                }}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex-1 text-center font-medium text-primary">
-                {format(currentPeriod, "MMMM 'de' yyyy", { locale: ptBR })}
+              <div className="flex-1 text-center font-medium text-primary text-sm">
+                {format(currentPeriod, "MMM/yy", { locale: ptBR })}
               </div>
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setCurrentPeriod(addMonths(currentPeriod, 1))}
+                onClick={() => {
+                  const newPeriod = addMonths(currentPeriod, 1);
+                  setCurrentPeriod(newPeriod);
+                  setDateRange({
+                    from: startOfMonth(newPeriod),
+                    to: endOfMonth(newPeriod),
+                  });
+                }}
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
+          </div>
+
+          {/* Filtro de Período Personalizado */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Período Personalizado</label>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={(range) => {
+                setDateRange(range);
+                // Atualiza o currentPeriod baseado na data inicial do range
+                if (range?.from) {
+                  setCurrentPeriod(range.from);
+                }
+              }}
+            />
           </div>
 
           {/* Pesquisar */}
