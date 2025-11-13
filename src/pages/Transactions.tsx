@@ -228,6 +228,84 @@ const Transactions = () => {
     }
   };
 
+  const handleDeleteFromThis = async () => {
+    if (!transactionToDelete) return;
+
+    try {
+      const referenceId = transactionToDelete.is_recurring 
+        ? transactionToDelete.id 
+        : transactionToDelete.reference_number;
+
+      if (!referenceId) {
+        handleDeleteOne();
+        return;
+      }
+
+      // Excluir esta e todas as futuras (com due_date >= data desta)
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .or(`id.eq.${referenceId},reference_number.eq.${referenceId}`)
+        .gte("due_date", transactionToDelete.due_date);
+        
+      if (error) throw error;
+      
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+      ]);
+      
+      toast.success("Transações futuras excluídas com sucesso!");
+      loadTransactions();
+    } catch (error: any) {
+      toast.error(sanitizeError(error));
+    }
+  };
+
+  const handleBulkMarkAsPaid = async () => {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: 'paid', payment_date: new Date().toISOString().split('T')[0] })
+        .in('id', selectedIds);
+        
+      if (error) throw error;
+      
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+      ]);
+      
+      toast.success(`${selectedIds.length} transação(ões) marcada(s) como paga(s)!`);
+      setSelectedIds([]);
+      loadTransactions();
+    } catch (error: any) {
+      toast.error(sanitizeError(error));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .in('id', selectedIds);
+        
+      if (error) throw error;
+      
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+      ]);
+      
+      toast.success(`${selectedIds.length} transação(ões) excluída(s)!`);
+      setSelectedIds([]);
+      loadTransactions();
+    } catch (error: any) {
+      toast.error(sanitizeError(error));
+    }
+  };
+
   const handleDialogClose = (refresh?: boolean) => {
     setRevenueDialogOpen(false);
     setExpenseDialogOpen(false);
@@ -451,8 +529,10 @@ const Transactions = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
-              <DropdownMenuItem>Marcar como pago</DropdownMenuItem>
-              <DropdownMenuItem>Excluir selecionados</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleBulkMarkAsPaid}>Marcar como pago</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleBulkDelete} className="text-destructive">
+                Excluir selecionados
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -589,6 +669,7 @@ const Transactions = () => {
         }}
         onDeleteOne={handleDeleteOne}
         onDeleteAll={handleDeleteAll}
+        onDeleteFromThis={handleDeleteFromThis}
         isRecurring={transactionToDelete?.is_recurring || false}
         hasRecurrences={!!transactionToDelete?.reference_number || transactionToDelete?.is_recurring || false}
       />

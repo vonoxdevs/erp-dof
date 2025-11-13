@@ -15,6 +15,7 @@ interface DeleteRecurringDialogProps {
   onClose: () => void;
   onDeleteOne: () => void;
   onDeleteAll: () => void;
+  onDeleteFromThis: () => void;
   isRecurring: boolean;
   hasRecurrences: boolean;
 }
@@ -24,6 +25,7 @@ export function DeleteRecurringDialog({
   onClose,
   onDeleteOne,
   onDeleteAll,
+  onDeleteFromThis,
   isRecurring,
   hasRecurrences,
 }: DeleteRecurringDialogProps) {
@@ -72,6 +74,16 @@ export function DeleteRecurringDialog({
             className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
           >
             Excluir apenas esta
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              onDeleteFromThis();
+              onClose();
+            }}
+            className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white"
+          >
+            Excluir desta em diante
           </Button>
           <Button
             onClick={() => {
