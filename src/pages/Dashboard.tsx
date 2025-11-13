@@ -458,13 +458,57 @@ const Dashboard = () => {
 
         {/* Filtros */}
         <Card className="p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-            {/* Filtro de Período por Data */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            {/* Filtro de Mês/Ano */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Período</label>
+              <label className="text-sm font-medium">Mês/Ano</label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const newPeriod = subMonths(currentPeriod, 1);
+                    setCurrentPeriod(newPeriod);
+                    setDateRange({
+                      from: startOfMonth(newPeriod),
+                      to: endOfMonth(newPeriod),
+                    });
+                  }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 text-center font-medium text-primary text-sm">
+                  {format(currentPeriod, "MMM/yy", { locale: ptBR })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const newPeriod = addMonths(currentPeriod, 1);
+                    setCurrentPeriod(newPeriod);
+                    setDateRange({
+                      from: startOfMonth(newPeriod),
+                      to: endOfMonth(newPeriod),
+                    });
+                  }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Filtro de Período Personalizado */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Período Personalizado</label>
               <DateRangePicker
                 dateRange={dateRange}
-                onDateRangeChange={setDateRange}
+                onDateRangeChange={(range) => {
+                  setDateRange(range);
+                  // Atualiza o currentPeriod baseado na data inicial do range
+                  if (range?.from) {
+                    setCurrentPeriod(range.from);
+                  }
+                }}
               />
             </div>
 
