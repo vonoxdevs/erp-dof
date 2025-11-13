@@ -46,6 +46,12 @@ serve(async (req) => {
 
     for (const contract of contracts || []) {
       try {
+        // Validar se o contrato tem conta bancária
+        if (!contract.bank_account_id) {
+          console.warn(`⚠️ Contrato ${contract.contract_name || contract.id} não tem conta bancária definida. Pulando...`);
+          continue;
+        }
+
         // Data inicial de geração
         let startDate = contract.next_generation_date 
           ? new Date(contract.next_generation_date) 
@@ -173,6 +179,8 @@ serve(async (req) => {
           let transactionType = contract.type;
           if (contract.type === 'income') transactionType = 'revenue';
           
+          console.log(`📝 Criando transação: tipo=${transactionType}, conta=${contract.bank_account_id}`);
+          
           // Criar transação
           const newTransaction = {
             company_id: contract.company_id,
@@ -192,6 +200,13 @@ serve(async (req) => {
             payment_method: contract.payment_method,
             is_recurring: false,
           };
+          
+          console.log(`📝 Transação preparada:`, JSON.stringify({
+            type: newTransaction.type,
+            account_from_id: newTransaction.account_from_id,
+            account_to_id: newTransaction.account_to_id,
+            bank_account_id: newTransaction.bank_account_id
+          }));
 
           const { error: insertError } = await supabaseClient
             .from('transactions')

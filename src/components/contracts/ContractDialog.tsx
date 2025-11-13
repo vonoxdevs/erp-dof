@@ -197,6 +197,11 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       return;
     }
     
+    if (!formData.bank_account_id) {
+      toast.error("Conta bancária é obrigatória");
+      return;
+    }
+    
     if (!formData.start_date) {
       toast.error("Data de início é obrigatória");
       return;
@@ -238,7 +243,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         auto_generate: true,
         generation_day: 1,
         next_generation_date: formData.start_date,
-        bank_account_id: null,
+        bank_account_id: formData.bank_account_id || null,
         centro_custo_id: formData.centro_custo_id,
         categoria_receita_id: formData.categoria_receita_id || null,
         attachments: attachments,
@@ -306,7 +311,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       // Gera automaticamente as transações recorrentes
       toast.info("Gerando transações recorrentes...");
       const { error: generateError } = await supabase.functions.invoke(
-        "generate-recurring-transactions"
+        "generate-contract-transactions"
       );
 
       if (generateError) {
@@ -410,7 +415,46 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             />
           </div>
 
-          {/* 7. Frequência */}
+          {/* 6.5. Conta Bancária */}
+          <div className="space-y-2">
+            <Label>Conta Bancária *</Label>
+            <Select
+              value={formData.bank_account_id}
+              onValueChange={(value) => setFormData({ ...formData, bank_account_id: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a conta bancária" />
+              </SelectTrigger>
+              <SelectContent>
+                {loadingAccounts ? (
+                  <div className="p-2 text-sm text-muted-foreground">Carregando...</div>
+                ) : accounts.length === 0 ? (
+                  <div className="p-2 text-sm text-muted-foreground">Nenhuma conta cadastrada</div>
+                ) : (
+                  accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.bank_name} - {account.account_number}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 7. Categoria de Receita */}
+          <div className="space-y-2">
+            <Label>Categoria de Receita</Label>
+            <SelectCategoria
+              tipo="receita"
+              contaBancariaId={formData.bank_account_id}
+              centroCustoId={formData.centro_custo_id}
+              value={formData.categoria_receita_id}
+              onChange={(value) => setFormData({ ...formData, categoria_receita_id: value })}
+              placeholder="Selecione a categoria"
+            />
+          </div>
+
+          {/* 8. Frequência */}
           <div className="space-y-2">
             <Label htmlFor="frequency">Frequência *</Label>
             <Select
