@@ -220,10 +220,8 @@ const Dashboard = () => {
       const startDate = dateRange?.from || startOfMonth(currentPeriod);
       const endDate = dateRange?.to || endOfMonth(currentPeriod);
       const dateFilter = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
       const today = new Date().toISOString().split('T')[0];
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      const futureDate = thirtyDaysFromNow.toISOString().split('T')[0];
 
       // Load transactions do período selecionado
       let transactionsQuery = supabase
@@ -239,11 +237,6 @@ const Dashboard = () => {
 
       const { data: recentTransactions } = await transactionsQuery;
 
-      // Load transações futuras (próximos 30 dias)
-      const {
-        data: futureTransactions
-      } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id).gt("due_date", today).lte("due_date", futureDate).in("status", ["pending"]);
-
       if (recentTransactions) {
         // Todas as estatísticas baseadas no período selecionado
         const paidRevenue = recentTransactions.filter(t => t.type === "revenue" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
@@ -252,9 +245,9 @@ const Dashboard = () => {
         const pending = recentTransactions.filter(t => t.status === "pending" || t.status === "overdue").length;
         const overdue = recentTransactions.filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today).length;
 
-        // Calcular receitas e despesas futuras (próximos 30 dias do período)
-        const futureRevenue = futureTransactions?.filter(t => t.type === "revenue").reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-        const futureExpenses = futureTransactions?.filter(t => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+        // Calcular receitas e despesas futuras (pendentes no período selecionado)
+        const futureRevenue = recentTransactions.filter(t => t.type === "revenue" && t.status === "pending" && t.due_date >= today).reduce((sum, t) => sum + Number(t.amount), 0);
+        const futureExpenses = recentTransactions.filter(t => t.type === "expense" && t.status === "pending" && t.due_date >= today).reduce((sum, t) => sum + Number(t.amount), 0);
 
         // Separar transações vencidas por tipo (do período)
         const overdueRevenues = recentTransactions.filter(t => 
