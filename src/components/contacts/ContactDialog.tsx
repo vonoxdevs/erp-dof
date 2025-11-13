@@ -241,7 +241,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         name: formData.name.trim(),
         document: formData.document.replace(/\D/g, ''),
         document_type: formData.document_type,
-        type: "customer",
+        type: "client",
         email: formData.email?.trim() || null,
         phone: formData.phone?.trim() || null,
         address: hasAddress ? formData.address : null,
