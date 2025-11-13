@@ -11,9 +11,7 @@ interface CurrencyInputProps {
 
 export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
   ({ value, onChange, disabled, placeholder = "R$ 0,00", required }, ref) => {
-    const formatToBRL = (val: string | number) => {
-      const numbers = String(val).replace(/\D/g, "");
-      const amount = Number(numbers) / 100;
+    const formatToBRL = (amount: number) => {
       return new Intl.NumberFormat("pt-BR", {
         style: "currency",
         currency: "BRL",
@@ -22,11 +20,12 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const rawValue = e.target.value.replace(/\D/g, "");
-      onChange(Number(rawValue) / 100);
+      const numericValue = Number(rawValue) / 100;
+      onChange(numericValue);
     };
 
     const displayValue = value !== undefined && value !== null && value !== "" 
-      ? formatToBRL(Number(value) * 100)
+      ? formatToBRL(Number(value))
       : "";
 
     return (
