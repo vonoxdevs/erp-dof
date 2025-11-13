@@ -12,39 +12,52 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { TipoCategoria } from '@/types/categoria';
+import { z } from 'zod';
+
+const categorySchema = z.object({
+  nome: z.string().min(1, "Nome é obrigatório"),
+  descricao: z.string().optional(),
+});
 
 interface QuickCategoryDialogProps {
   tipo: TipoCategoria;
   centroCustoId?: string | null;
   open: boolean;
-  onClose: (newCategoryId?: string) => void;
+  onClose: () => void;
+  onCategoryCreated: (categoryId: string) => void;
 }
 
-export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose }: QuickCategoryDialogProps) {
-  const [nome, setNome] = useState('');
-  const [descricao, setDescricao] = useState('');
+export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose, onCategoryCreated }: QuickCategoryDialogProps) {
   const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const [formData, setFormData] = useState({
+    nome: '',
+    descricao: '',
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!nome.trim()) {
-      toast({
-        title: 'Nome obrigatório',
-        description: 'Por favor, informe o nome da categoria',
-        variant: 'destructive'
-      });
-      return;
-    }
 
     try {
       setLoading(true);
+      console.log('🔄 Iniciando criação de categoria...');
+
+      // Validação
+      const validation = categorySchema.safeParse(formData);
+      if (!validation.success) {
+        console.error('❌ Validação falhou:', validation.error.errors);
+        toast.error(validation.error.errors[0].message);
+        return;
+      }
+
+      console.log('✅ Validação passou');
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
+      if (!user) {
+        console.error('❌ Usuário não autenticado');
+        throw new Error('Usuário não autenticado');
+      }
 
       const { data: profile } = await supabase
         .from('user_profiles')
@@ -52,14 +65,19 @@ export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose }: Quic
         .eq('id', user.id)
         .single();
 
-      if (!profile?.company_id) throw new Error('Empresa não encontrada');
+      if (!profile?.company_id) {
+        console.error('❌ Empresa não encontrada');
+        throw new Error('Empresa não encontrada');
+      }
+
+      console.log('✅ Company ID:', profile.company_id);
 
       const cor = tipo === 'despesa' ? '#ef4444' : tipo === 'receita' ? '#10b981' : '#3b82f6';
 
       const insertData = {
         company_id: profile.company_id,
-        nome: nome.trim(),
-        descricao: descricao.trim() || null,
+        nome: formData.nome.trim(),
+        descricao: formData.descricao.trim() || null,
         cor,
         tipo,
         ativo: true,
@@ -72,30 +90,48 @@ export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose }: Quic
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao inserir categoria:', error);
+        throw error;
+      }
 
-      toast({
-        title: 'Categoria criada',
-        description: 'A nova categoria foi cadastrada com sucesso'
-      });
+      console.log('✅ Categoria criada com ID:', novaCategoria.id);
+      toast.success('Categoria criada com sucesso!');
 
-      setNome('');
-      setDescricao('');
-      onClose(novaCategoria.id);
+      console.log('🔄 Chamando onCategoryCreated...');
+      onCategoryCreated(novaCategoria.id);
+      
+      console.log('🔄 Fechando dialog...');
+      handleClose();
     } catch (error: any) {
-      toast({
-        title: 'Erro ao salvar',
-        description: error.message,
-        variant: 'destructive'
-      });
+      console.error('❌ Erro completo ao criar categoria:', error);
+      toast.error(error.message || 'Erro ao criar categoria');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleClose = () => {
+    setFormData({
+      nome: '',
+      descricao: '',
+    });
+    onClose();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[400px]">
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen && !loading) {
+        handleClose();
+      }
+    }} modal>
+      <DialogContent 
+        className="sm:max-w-[400px] z-[100]"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          if (loading) e.preventDefault();
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Nova Categoria Rápida</DialogTitle>
@@ -111,8 +147,8 @@ export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose }: Quic
               </Label>
               <Input
                 id="quick-nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Ex: Salários, Marketing..."
                 required
                 autoFocus
@@ -123,8 +159,8 @@ export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose }: Quic
               <Label htmlFor="quick-descricao">Descrição</Label>
               <Textarea
                 id="quick-descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
+                value={formData.descricao}
+                onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                 placeholder="Descrição opcional"
                 rows={2}
               />
@@ -132,7 +168,7 @@ export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose }: Quic
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onClose()}>
+            <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>

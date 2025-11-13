@@ -35,13 +35,17 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
 
     try {
       setLoading(true);
+      console.log('🔄 Iniciando criação de centro de custo...');
 
       // Validação
       const validation = centroCustoSchema.safeParse(formData);
       if (!validation.success) {
+        console.error('❌ Validação falhou:', validation.error.errors);
         toast.error(validation.error.errors[0].message);
         return;
       }
+
+      console.log('✅ Validação passou');
 
       // Buscar company_id do usuário
       const { data: profile } = await supabase
@@ -51,8 +55,11 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
         .single();
 
       if (!profile?.company_id) {
+        console.error('❌ Empresa não encontrada');
         throw new Error("Empresa não encontrada");
       }
+
+      console.log('✅ Company ID:', profile.company_id);
 
       // Criar centro de custo
       const { data, error } = await supabase
@@ -68,14 +75,21 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao inserir centro de custo:', error);
+        throw error;
+      }
 
+      console.log('✅ Centro de custo criado com ID:', data.id);
       toast.success("Centro de custo criado com sucesso!");
 
+      console.log('🔄 Chamando onCentroCustoCreated...');
       onCentroCustoCreated(data.id);
+      
+      console.log('🔄 Fechando dialog...');
       handleClose();
     } catch (error: any) {
-      console.error("Erro ao criar centro de custo:", error);
+      console.error("❌ Erro completo ao criar centro de custo:", error);
       toast.error(error.message || "Erro ao criar centro de custo");
     } finally {
       setLoading(false);

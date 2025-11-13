@@ -212,16 +212,10 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
     }
   };
 
-  const handleCategoriaCreated = (newCategoryId?: string) => {
-    setQuickCategoryDialogOpen(false);
-    if (newCategoryId) {
-      setCategoriaDespesaId(newCategoryId);
-      // Force immediate refresh
-      queryClient.invalidateQueries({ queryKey: ['categorias'] });
-      setTimeout(() => {
-        setCategoriaDespesaId(newCategoryId);
-      }, 100);
-    }
+  const handleCategoriaCreated = (newCategoryId: string) => {
+    console.log('🔄 ExpenseDialog: Categoria criada com ID:', newCategoryId);
+    setCategoriaDespesaId(newCategoryId);
+    queryClient.invalidateQueries({ queryKey: ['categorias'] });
   };
 
   return (
@@ -517,7 +511,8 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         tipo="despesa"
         centroCustoId={centroCustoId}
         open={quickCategoryDialogOpen}
-        onClose={handleCategoriaCreated}
+        onClose={() => setQuickCategoryDialogOpen(false)}
+        onCategoryCreated={handleCategoriaCreated}
       />
     </Dialog>
   );
