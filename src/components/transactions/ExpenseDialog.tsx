@@ -177,10 +177,10 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         status: formData.status,
         company_id: profile.company_id,
         created_by: user.id,
-        centro_custo_id: centroCustoId,
-        categoria_despesa_id: categoriaDespesaId,
+        centro_custo_id: centroCustoId || null,
+        categoria_despesa_id: categoriaDespesaId || null,
         supplier_name: formData.supplier_name || null,
-        account_from_id: formData.account_from_id,
+        account_from_id: formData.account_from_id || null,
         is_recurring: formData.is_recurring,
         recurrence_config: recurrenceConfig,
       };
