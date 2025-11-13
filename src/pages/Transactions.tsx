@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -65,39 +66,15 @@ const Transactions = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Sincronização em tempo real
+  useRealtimeSync(
+    ['transactions', 'bank_accounts', 'contracts'],
+    [['transactions'], ['bank-accounts']]
+  );
+
   useEffect(() => {
     loadTransactions();
     generateRecurringTransactions();
-
-    const channel = supabase
-      .channel('transactions-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'transactions'
-        },
-        () => {
-          loadTransactions();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bank_accounts'
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [currentPeriod, selectedAccount]);
 
   const generateRecurringTransactions = async () => {

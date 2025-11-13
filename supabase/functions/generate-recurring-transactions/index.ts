@@ -124,7 +124,14 @@ serve(async (req) => {
             .eq('due_date', dateStr)
             .maybeSingle();
 
-          if (existing) continue;
+          if (existing) {
+            console.log(`⏩ Transação já existe para ${dateStr}, pulando...`);
+            continue;
+          }
+
+          // Determinar status baseado na data
+          const transactionDate = new Date(dateStr);
+          const currentStatus = transactionDate < today ? 'overdue' : 'pending';
 
           // Criar nova transação
           const newTransaction = {
@@ -133,7 +140,7 @@ serve(async (req) => {
             amount: transaction.amount,
             description: transaction.description,
             due_date: dateStr,
-            status: 'pending',
+            status: currentStatus,
             category_id: transaction.category_id,
             contact_id: transaction.contact_id,
             bank_account_id: transaction.bank_account_id,
@@ -156,11 +163,12 @@ serve(async (req) => {
 
           if (insertError) {
             console.error(`❌ Erro ao criar transação para ${transaction.id}:`, insertError);
+            console.error('Detalhes do erro:', insertError);
             continue;
           }
 
           generatedCount++;
-          console.log(`✅ Transação gerada para ${transaction.description} - ${dateStr}`);
+          console.log(`✅ Transação gerada: ${transaction.description} - ${dateStr} [${currentStatus}]`);
         }
 
       } catch (error) {
