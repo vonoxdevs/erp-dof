@@ -508,6 +508,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         onCategoryCreated={(categoryId) => {
           setCategoriaReceitaId(categoryId);
           queryClient.invalidateQueries({ queryKey: ['categorias'] });
+          setQuickCategoryOpen(false);
         }}
       />
     </Dialog>

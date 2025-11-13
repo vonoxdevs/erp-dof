@@ -216,6 +216,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
     console.log('🔄 ExpenseDialog: Categoria criada com ID:', newCategoryId);
     setCategoriaDespesaId(newCategoryId);
     queryClient.invalidateQueries({ queryKey: ['categorias'] });
+    setQuickCategoryDialogOpen(false);
   };
 
   return (

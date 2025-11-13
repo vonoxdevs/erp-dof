@@ -27,7 +27,7 @@ export function SelectCategoria({
   placeholder,
   disabled = false
 }: SelectCategoriaProps) {
-  const { categorias, loading } = useCategoriasFiltradas({
+  const { categorias, loading, refetch } = useCategoriasFiltradas({
     contaBancariaId,
     centroCustoId,
     tipo
