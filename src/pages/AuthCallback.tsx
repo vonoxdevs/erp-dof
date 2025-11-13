@@ -15,6 +15,7 @@ const AuthCallback = () => {
   const handleCallback = async () => {
     try {
       const code = searchParams.get('code');
+      const type = searchParams.get('type');
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
 
@@ -32,6 +33,7 @@ const AuthCallback = () => {
       }
 
       console.log('🔄 Trocando código por sessão...');
+      console.log('🔍 Tipo de callback:', type);
 
       // Trocar o código por uma sessão
       const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
@@ -51,6 +53,14 @@ const AuthCallback = () => {
 
       console.log('✅ Email confirmado com sucesso:', data.user?.email);
       console.log('📧 Email confirmado em:', data.user?.email_confirmed_at);
+
+      // Se for recuperação de senha, redirecionar para a página de reset
+      if (type === 'recovery') {
+        console.log('🔑 Redirecionando para reset de senha');
+        toast.success('Link de recuperação validado!');
+        navigate('/reset-password#type=recovery');
+        return;
+      }
 
       toast.success('Email confirmado com sucesso!');
 
