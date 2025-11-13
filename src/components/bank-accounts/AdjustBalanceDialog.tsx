@@ -72,7 +72,7 @@ export function AdjustBalanceDialog({ open, onClose, account }: AdjustBalanceDia
 
       if (!profile) throw new Error("Perfil não encontrado");
 
-      // Criar transação de ajuste
+      // Criar transação de ajuste (sem categorias para evitar problemas de foreign key)
       const { error: transactionError } = await supabase
         .from("transactions")
         .insert({
@@ -87,7 +87,12 @@ export function AdjustBalanceDialog({ open, onClose, account }: AdjustBalanceDia
           account_to_id: adjustment >= 0 ? account.id : null,
           account_from_id: adjustment < 0 ? account.id : null,
           notes: `Ajuste manual: Saldo anterior R$ ${account.current_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} → Novo saldo R$ ${newBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
-          created_by: user.id
+          created_by: user.id,
+          category_id: null,
+          contact_id: null,
+          centro_custo_id: null,
+          categoria_receita_id: null,
+          categoria_despesa_id: null
         });
 
       if (transactionError) throw transactionError;
