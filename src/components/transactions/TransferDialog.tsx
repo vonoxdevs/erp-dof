@@ -166,8 +166,8 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
         status: formData.status,
         company_id: profile.company_id,
         created_by: user.id,
-        account_from_id: formData.account_from_id,
-        account_to_id: formData.account_to_id,
+        account_from_id: formData.account_from_id || null,
+        account_to_id: formData.account_to_id || null,
         is_recurring: formData.is_recurring,
         recurrence_config: recurrenceConfig,
       };
