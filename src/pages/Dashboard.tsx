@@ -233,34 +233,30 @@ const Dashboard = () => {
 
       const { data: recentTransactions } = await transactionsQuery;
 
-      // Load todas as transações para pendentes/vencidas
-      const {
-        data: allTransactions
-      } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id);
-
       // Load transações futuras (próximos 30 dias)
       const {
         data: futureTransactions
       } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id).gt("due_date", today).lte("due_date", futureDate).in("status", ["pending"]);
 
-      if (recentTransactions && allTransactions) {
+      if (recentTransactions) {
+        // Todas as estatísticas baseadas no período selecionado
         const paidRevenue = recentTransactions.filter(t => t.type === "revenue" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
-        const pendingRevenue = allTransactions.filter(t => t.type === "revenue" && (t.status === "pending" || t.status === "overdue")).reduce((sum, t) => sum + Number(t.amount), 0);
+        const pendingRevenue = recentTransactions.filter(t => t.type === "revenue" && (t.status === "pending" || t.status === "overdue")).reduce((sum, t) => sum + Number(t.amount), 0);
         const expenses = recentTransactions.filter(t => t.type === "expense" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
-        const pending = allTransactions.filter(t => t.status === "pending" || t.status === "overdue").length;
-        const overdue = allTransactions.filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today).length;
+        const pending = recentTransactions.filter(t => t.status === "pending" || t.status === "overdue").length;
+        const overdue = recentTransactions.filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today).length;
 
-        // Calcular receitas e despesas futuras
+        // Calcular receitas e despesas futuras (próximos 30 dias do período)
         const futureRevenue = futureTransactions?.filter(t => t.type === "revenue").reduce((sum, t) => sum + Number(t.amount), 0) || 0;
         const futureExpenses = futureTransactions?.filter(t => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
-        // Separar transações vencidas por tipo
-        const overdueRevenues = allTransactions.filter(t => 
+        // Separar transações vencidas por tipo (do período)
+        const overdueRevenues = recentTransactions.filter(t => 
           t.type === "revenue" && 
           (t.status === "pending" || t.status === "overdue") && 
           t.due_date < today
         );
-        const overdueExpenses = allTransactions.filter(t => 
+        const overdueExpenses = recentTransactions.filter(t => 
           t.type === "expense" && 
           (t.status === "pending" || t.status === "overdue") && 
           t.due_date < today
@@ -289,7 +285,7 @@ const Dashboard = () => {
         });
 
         // Preparar dados para gráficos
-        await prepareChartData(recentTransactions, allTransactions, totalBalance, startDate, endDate);
+        await prepareChartData(recentTransactions, recentTransactions, totalBalance, startDate, endDate);
         
         console.log('✅ Stats carregadas com sucesso');
       }
@@ -302,7 +298,7 @@ const Dashboard = () => {
     }
   };
 
-  const prepareChartData = async (recentTransactions: any[], allTransactions: any[], currentBalance: number, startDate: Date, endDate: Date) => {
+  const prepareChartData = async (recentTransactions: any[], periodTransactions: any[], currentBalance: number, startDate: Date, endDate: Date) => {
     try {
       // Gráfico de Receitas vs Despesas (período selecionado)
       const periodDays = eachDayOfInterval({
