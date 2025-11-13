@@ -83,11 +83,25 @@ serve(async (req) => {
             break;
         }
 
-        // Gerar todas as datas que deveriam existir entre nextDate e hoje
+        // Gerar todas as datas que deveriam existir (passadas, hoje e futuras)
         const datesToGenerate: Date[] = [];
         
-        while (nextDate <= today) {
-          datesToGenerate.push(new Date(nextDate));
+        // Definir quantas transações futuras gerar (além das passadas)
+        const futureOccurrences = 12; // Gera até 12 parcelas futuras
+        let count = 0;
+        const maxIterations = 100; // Limite de segurança
+        
+        while (count < maxIterations) {
+          // Adicionar a data se for passada, hoje ou uma das futuras
+          const isPastOrToday = nextDate <= today;
+          const isFuture = nextDate > today && datesToGenerate.filter(d => d > today).length < futureOccurrences;
+          
+          if (isPastOrToday || isFuture) {
+            datesToGenerate.push(new Date(nextDate));
+          } else if (!isPastOrToday && !isFuture) {
+            // Já gerou todas as passadas e as futuras necessárias
+            break;
+          }
           
           // Calcular próxima ocorrência
           switch (config.frequency) {
@@ -110,7 +124,11 @@ serve(async (req) => {
               nextDate.setFullYear(nextDate.getFullYear() + 1);
               break;
           }
+          
+          count++;
         }
+        
+        console.log(`📅 Datas a gerar para ${transaction.description}: ${datesToGenerate.length}`);
 
         // Verificar se atingiu o limite de parcelas
         if (config.total_installments) {
