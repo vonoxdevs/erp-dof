@@ -123,17 +123,19 @@ export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose, onCate
       if (!isOpen && !loading) {
         handleClose();
       }
-    }}>
+    }} modal>
       <DialogContent 
         className="sm:max-w-[400px]"
         onInteractOutside={(e) => {
-          // Permitir interação fora apenas se não estiver carregando
           if (loading) {
             e.preventDefault();
           }
         }}
         onEscapeKeyDown={(e) => {
           if (loading) e.preventDefault();
+        }}
+        onPointerDownOutside={(e) => {
+          e.stopPropagation();
         }}
       >
         <form onSubmit={handleSubmit}>

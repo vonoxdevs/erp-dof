@@ -95,12 +95,9 @@ export function SelectCentroCusto({
   const isDisabled = disabled || loading;
 
   const handleCentroCustoCreated = async (centroCustoId: string) => {
-    console.log('🔄 SelectCentroCusto: Centro de custo criado com ID:', centroCustoId);
-    console.log('🔄 SelectCentroCusto: Atualizando lista...');
     await fetchCentrosCusto();
-    console.log('🔄 SelectCentroCusto: Lista atualizada, selecionando...');
     onChange(centroCustoId);
-    console.log('✅ SelectCentroCusto: Centro de custo selecionado');
+    setDialogOpen(false);
   };
 
   return (

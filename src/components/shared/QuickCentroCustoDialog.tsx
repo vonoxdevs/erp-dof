@@ -118,17 +118,22 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
       if (!isOpen && !loading) {
         handleClose();
       }
-    }}>
+    }} modal>
       <DialogContent 
         className="sm:max-w-[500px]" 
         onInteractOutside={(e) => {
-          // Permitir interação fora apenas se não estiver carregando
+          // Prevenir fechamento ao clicar fora durante carregamento
           if (loading) {
             e.preventDefault();
           }
         }}
         onEscapeKeyDown={(e) => {
+          // Prevenir fechamento com ESC durante carregamento
           if (loading) e.preventDefault();
+        }}
+        onPointerDownOutside={(e) => {
+          // Prevenir que o clique se propague para o modal pai
+          e.stopPropagation();
         }}
       >
         <DialogHeader>
