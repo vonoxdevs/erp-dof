@@ -125,14 +125,18 @@ const Contracts = () => {
 
   const handleGenerateInvoice = async (contract: Contract) => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-contract-transactions');
+      toast.loading('Gerando parcelas...', { id: 'generating' });
+      
+      const { data, error } = await supabase.functions.invoke('generate-contract-transactions', {
+        body: { contractId: contract.id }
+      });
       
       if (error) throw error;
       
-      toast.success('Parcelas geradas com sucesso!');
+      toast.success('Parcelas geradas com sucesso!', { id: 'generating' });
       loadContracts();
     } catch (error: any) {
-      toast.error('Erro ao gerar parcelas: ' + error.message);
+      toast.error('Erro ao gerar parcelas: ' + error.message, { id: 'generating' });
     }
   };
 

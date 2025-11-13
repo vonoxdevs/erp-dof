@@ -26,11 +26,13 @@ serve(async (req) => {
     console.log('🔄 Iniciando geração de transações recorrentes...');
 
     // Buscar transações recorrentes que precisam gerar novas parcelas
+    // IMPORTANTE: Excluir transações de contratos (que têm contract_id)
     const { data: recurringTransactions, error: fetchError } = await supabaseClient
       .from('transactions')
       .select('*')
       .eq('is_recurring', true)
-      .not('recurrence_config', 'is', null);
+      .not('recurrence_config', 'is', null)
+      .is('contract_id', null); // NÃO processar transações de contratos
 
     if (fetchError) {
       console.error('❌ Erro ao buscar transações recorrentes:', fetchError);
