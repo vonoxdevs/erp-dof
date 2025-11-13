@@ -619,7 +619,7 @@ const Dashboard = () => {
         <AccountsBalance />
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-slide-up">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 animate-slide-up">
           <Card className="p-6 glass border-l-4 border-l-accent hover:shadow-xl transition-all">
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -659,6 +659,48 @@ const Dashboard = () => {
             <div className="flex items-center gap-1 text-muted-foreground text-sm">
               <ArrowDownRight className="w-4 h-4" />
               <span>Custos operacionais</span>
+            </div>
+          </Card>
+
+          <Card className="p-6 glass border-l-4 border-l-blue-500 hover:shadow-xl transition-all">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-blue-500" />
+              </div>
+              <span className="text-xs px-2 py-1 rounded-full bg-blue-500/10 text-blue-500 font-medium">
+                A Receber
+              </span>
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">Receitas Pendentes</h3>
+            <p className="text-3xl font-bold mb-2 text-blue-500">
+              R$ {stats.pendingRevenue.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2
+            })}
+            </p>
+            <div className="flex items-center gap-1 text-muted-foreground text-sm">
+              <Clock className="w-4 h-4" />
+              <span>Valores a receber</span>
+            </div>
+          </Card>
+
+          <Card className="p-6 glass border-l-4 border-l-orange-500 hover:shadow-xl transition-all">
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                <Clock className="w-6 h-6 text-orange-500" />
+              </div>
+              <span className="text-xs px-2 py-1 rounded-full bg-orange-500/10 text-orange-500 font-medium">
+                A Pagar
+              </span>
+            </div>
+            <h3 className="text-sm font-medium text-muted-foreground mb-1">Despesas Pendentes</h3>
+            <p className="text-3xl font-bold mb-2 text-orange-500">
+              R$ {stats.futureExpenses.toLocaleString("pt-BR", {
+              minimumFractionDigits: 2
+            })}
+            </p>
+            <div className="flex items-center gap-1 text-muted-foreground text-sm">
+              <Clock className="w-4 h-4" />
+              <span>Valores a pagar</span>
             </div>
           </Card>
 
