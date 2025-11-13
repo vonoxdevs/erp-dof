@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { z } from "zod";
 import { ColorPicker } from "./ColorPicker";
 
@@ -39,11 +39,7 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
       // Validação
       const validation = centroCustoSchema.safeParse(formData);
       if (!validation.success) {
-        toast({
-          title: "Erro de validação",
-          description: validation.error.errors[0].message,
-          variant: "destructive",
-        });
+        toast.error(validation.error.errors[0].message);
         return;
       }
 
@@ -74,20 +70,13 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
 
       if (error) throw error;
 
-      toast({
-        title: "Centro de custo criado",
-        description: "Centro de custo adicionado com sucesso!",
-      });
+      toast.success("Centro de custo criado com sucesso!");
 
       onCentroCustoCreated(data.id);
       handleClose();
     } catch (error: any) {
       console.error("Erro ao criar centro de custo:", error);
-      toast({
-        title: "Erro ao criar centro de custo",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(error.message || "Erro ao criar centro de custo");
     } finally {
       setLoading(false);
     }

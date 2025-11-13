@@ -46,16 +46,16 @@ serve(async (req) => {
         const config = transaction.recurrence_config;
         if (!config || !config.frequency) continue;
 
-        // Buscar a transação mais recente gerada para determinar a próxima data
-        const { data: lastGenerated } = await supabaseClient
+        // Buscar a transação mais recente para esta recorrência
+        const { data: allTransactions } = await supabaseClient
           .from('transactions')
           .select('due_date')
           .or(`id.eq.${transaction.id},reference_number.eq.${transaction.id}`)
-          .order('due_date', { ascending: false })
-          .limit(1)
-          .single();
+          .order('due_date', { ascending: false });
 
-        const lastDate = lastGenerated ? new Date(lastGenerated.due_date) : new Date(transaction.due_date);
+        const lastDate = allTransactions && allTransactions.length > 0 
+          ? new Date(allTransactions[0].due_date) 
+          : new Date(transaction.due_date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -114,16 +114,23 @@ serve(async (req) => {
 
         // Verificar se atingiu o limite de parcelas
         if (config.total_installments) {
-          const { count } = await supabaseClient
+          const { data: allExisting } = await supabaseClient
             .from('transactions')
-            .select('id', { count: 'exact', head: true })
+            .select('id')
             .or(`id.eq.${transaction.id},reference_number.eq.${transaction.id}`);
 
-          if (count && count >= config.total_installments) continue;
+          const currentCount = allExisting?.length || 0;
+          
+          if (currentCount >= config.total_installments) {
+            console.log(`⏩ Limite de ${config.total_installments} parcelas atingido`);
+            continue;
+          }
           
           // Limitar datas a gerar pelo total de parcelas
-          const remaining = config.total_installments - (count || 0);
-          datesToGenerate.splice(remaining);
+          const remaining = config.total_installments - currentCount;
+          if (datesToGenerate.length > remaining) {
+            datesToGenerate.splice(remaining);
+          }
         }
 
         // Verificar se passou da data final

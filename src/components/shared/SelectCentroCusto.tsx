@@ -94,8 +94,8 @@ export function SelectCentroCusto({
 
   const isDisabled = disabled || loading;
 
-  const handleCentroCustoCreated = (centroCustoId: string) => {
-    fetchCentrosCusto();
+  const handleCentroCustoCreated = async (centroCustoId: string) => {
+    await fetchCentrosCusto();
     onChange(centroCustoId);
   };
 
