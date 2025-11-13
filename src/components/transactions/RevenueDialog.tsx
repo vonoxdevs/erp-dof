@@ -31,6 +31,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
 import { SelectCliente } from '@/components/shared/SelectCliente';
+import { QuickCategoryDialog } from '@/components/categories/QuickCategoryDialog';
+import { Plus } from 'lucide-react';
 
 const revenueSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -71,6 +73,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
   const [loading, setLoading] = useState(false);
   const [centroCustoId, setCentroCustoId] = useState<string | null>(null);
   const [categoriaReceitaId, setCategoriaReceitaId] = useState<string | null>(null);
+  const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
@@ -361,14 +364,28 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
 
             <div className="space-y-2">
               <Label>Categoria de Receita</Label>
-              <SelectCategoria
-                centroCustoId={centroCustoId}
-                tipo="receita"
-                value={categoriaReceitaId || ""}
-                onChange={setCategoriaReceitaId}
-                placeholder="Selecione a categoria"
-                disabled={!centroCustoId}
-              />
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <SelectCategoria
+                    centroCustoId={centroCustoId}
+                    tipo="receita"
+                    value={categoriaReceitaId || ""}
+                    onChange={setCategoriaReceitaId}
+                    placeholder="Selecione a categoria"
+                    disabled={!centroCustoId}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setQuickCategoryOpen(true)}
+                  disabled={!centroCustoId}
+                  title="Criar nova categoria"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -482,6 +499,17 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           </DialogFooter>
         </form>
       </DialogContent>
+
+      <QuickCategoryDialog
+        tipo="receita"
+        centroCustoId={centroCustoId}
+        open={quickCategoryOpen}
+        onClose={() => setQuickCategoryOpen(false)}
+        onCategoryCreated={(categoryId) => {
+          setCategoriaReceitaId(categoryId);
+          queryClient.invalidateQueries({ queryKey: ['categorias'] });
+        }}
+      />
     </Dialog>
   );
 }
