@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { z } from "zod";
 import {
   validateCPF,
@@ -71,11 +71,7 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
       // Validação
       const validation = clientSchema.safeParse(formData);
       if (!validation.success) {
-        toast({
-          title: "Erro de validação",
-          description: validation.error.errors[0].message,
-          variant: "destructive",
-        });
+        toast.error(validation.error.errors[0].message);
         return;
       }
 
@@ -108,20 +104,13 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
 
       if (error) throw error;
 
-      toast({
-        title: "Cliente criado",
-        description: "Cliente adicionado com sucesso!",
-      });
+      toast.success("Cliente criado com sucesso!");
 
       onClientCreated(data.id);
       handleClose();
     } catch (error: any) {
       console.error("Erro ao criar cliente:", error);
-      toast({
-        title: "Erro ao criar cliente",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast.error(error.message || "Erro ao criar cliente");
     } finally {
       setLoading(false);
     }
