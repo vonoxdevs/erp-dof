@@ -1,8 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export function useBankAccounts() {
-  const { data: accounts, isLoading, error } = useQuery({
+  const queryClient = useQueryClient();
+
+  const { data: accounts, isLoading, error, refetch } = useQuery({
     queryKey: ['bank-accounts'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -27,13 +30,50 @@ export function useBankAccounts() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 30000, // Cache por 30s
+    staleTime: 0, // Sempre buscar dados frescos
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
   });
+
+  // Configurar realtime para atualizações automáticas
+  useEffect(() => {
+    const channel = supabase
+      .channel('bank-accounts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bank_accounts'
+        },
+        () => {
+          // Invalidar e refetch quando houver mudanças
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        () => {
+          // Invalidar contas quando transações mudarem (afetam saldos)
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const totalBalance = accounts?.reduce(
     (sum, acc) => sum + (acc.current_balance || 0), 
     0
   ) || 0;
 
-  return { accounts, isLoading, error, totalBalance };
+  return { accounts, isLoading, error, totalBalance, refetch };
 }

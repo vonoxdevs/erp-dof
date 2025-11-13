@@ -102,6 +102,37 @@ const Transactions = () => {
 
   useEffect(() => {
     loadTransactions();
+
+    // Configurar realtime para atualizações automáticas
+    const channel = supabase
+      .channel('transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        () => {
+          loadTransactions();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bank_accounts'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadTransactions = async () => {

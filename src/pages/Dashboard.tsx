@@ -73,8 +73,39 @@ const Dashboard = () => {
         setUser(session.user);
       }
     });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+
+    // Configurar realtime para atualizações automáticas
+    const realtimeChannel = supabase
+      .channel('dashboard-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions'
+        },
+        () => {
+          loadStats();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bank_accounts'
+        },
+        () => {
+          loadStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(realtimeChannel);
+    };
+  }, [navigate, selectedPeriod, dateRange]);
   const loadStats = async () => {
     try {
       const {
