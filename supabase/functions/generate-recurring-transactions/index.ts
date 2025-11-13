@@ -46,45 +46,69 @@ serve(async (req) => {
         const config = transaction.recurrence_config;
         if (!config || !config.frequency) continue;
 
-        // Calcular próxima data baseada na data de vencimento
-        const lastDate = new Date(transaction.due_date);
-        const today = new Date();
-        let nextDate = new Date(lastDate);
+        // Buscar a transação mais recente gerada para determinar a próxima data
+        const { data: lastGenerated } = await supabaseClient
+          .from('transactions')
+          .select('due_date')
+          .or(`id.eq.${transaction.id},reference_number.eq.${transaction.id}`)
+          .order('due_date', { ascending: false })
+          .limit(1)
+          .single();
 
-        // Gerar todas as datas que deveriam existir entre lastDate e hoje
+        const lastDate = lastGenerated ? new Date(lastGenerated.due_date) : new Date(transaction.due_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let nextDate = new Date(lastDate);
+        
+        // Calcular a primeira próxima data
+        switch (config.frequency) {
+          case 'daily':
+            nextDate.setDate(nextDate.getDate() + 1);
+            break;
+          case 'weekly':
+            nextDate.setDate(nextDate.getDate() + 7);
+            break;
+          case 'monthly':
+            nextDate.setMonth(nextDate.getMonth() + 1);
+            break;
+          case 'quarterly':
+            nextDate.setMonth(nextDate.getMonth() + 3);
+            break;
+          case 'semiannual':
+            nextDate.setMonth(nextDate.getMonth() + 6);
+            break;
+          case 'annual':
+            nextDate.setFullYear(nextDate.getFullYear() + 1);
+            break;
+        }
+
+        // Gerar todas as datas que deveriam existir entre nextDate e hoje
         const datesToGenerate: Date[] = [];
         
         while (nextDate <= today) {
-          // Calcular próxima ocorrência baseado na frequência
+          datesToGenerate.push(new Date(nextDate));
+          
+          // Calcular próxima ocorrência
           switch (config.frequency) {
             case 'daily':
-              nextDate = new Date(nextDate);
               nextDate.setDate(nextDate.getDate() + 1);
               break;
             case 'weekly':
-              nextDate = new Date(nextDate);
               nextDate.setDate(nextDate.getDate() + 7);
               break;
             case 'monthly':
-              nextDate = new Date(nextDate);
               nextDate.setMonth(nextDate.getMonth() + 1);
               break;
             case 'quarterly':
-              nextDate = new Date(nextDate);
               nextDate.setMonth(nextDate.getMonth() + 3);
               break;
             case 'semiannual':
-              nextDate = new Date(nextDate);
               nextDate.setMonth(nextDate.getMonth() + 6);
               break;
             case 'annual':
-              nextDate = new Date(nextDate);
               nextDate.setFullYear(nextDate.getFullYear() + 1);
               break;
-          }
-
-          if (nextDate <= today) {
-            datesToGenerate.push(new Date(nextDate));
           }
         }
 

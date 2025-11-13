@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
+import { SelectCliente } from '@/components/shared/SelectCliente';
 
 const revenueSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -47,6 +48,7 @@ interface Transaction {
   due_date: string;
   status: "pending" | "paid" | "overdue" | "cancelled";
   customer_name?: string | null;
+  contact_id?: string | null;
   centro_custo_id?: string | null;
   categoria_receita_id?: string | null;
   bank_account_id?: string | null;
@@ -75,6 +77,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
     due_date: new Date().toISOString().split("T")[0],
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     customer_name: "",
+    contact_id: "",
     account_to_id: null as string | null,
     is_recurring: false,
     frequency: "monthly",
@@ -106,6 +109,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           due_date: transaction.due_date,
           status: transaction.status,
           customer_name: transaction.customer_name || "",
+          contact_id: transaction.contact_id || "",
           account_to_id: transaction.bank_account_id || null,
           is_recurring: transaction.is_recurring || false,
           frequency: transaction.recurrence_config?.frequency || "monthly",
@@ -121,6 +125,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           due_date: new Date().toISOString().split("T")[0],
           status: "pending",
           customer_name: "",
+          contact_id: "",
           account_to_id: null,
           is_recurring: false,
           frequency: "monthly",
@@ -178,6 +183,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         centro_custo_id: centroCustoId,
         categoria_receita_id: categoriaReceitaId,
         customer_name: formData.customer_name || null,
+        contact_id: formData.contact_id || null,
         account_to_id: formData.account_to_id,
         bank_account_id: formData.account_to_id,
         is_recurring: formData.is_recurring,
@@ -280,13 +286,11 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label>Nome do Cliente</Label>
-            <Input
-              value={formData.customer_name}
-              onChange={(e) =>
-                setFormData({ ...formData, customer_name: e.target.value })
-              }
-              placeholder="Ex: João Silva"
+            <Label>Cliente</Label>
+            <SelectCliente
+              value={formData.contact_id}
+              onChange={(value) => setFormData({ ...formData, contact_id: value })}
+              placeholder="Selecione o cliente"
             />
           </div>
 
