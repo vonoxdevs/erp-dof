@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Star, CreditCard, Calendar } from "lucide-react";
+import { Edit, Trash2, Star, CreditCard, Calendar, Calculator } from "lucide-react";
 
 interface BankAccount {
   id: string;
@@ -22,9 +22,10 @@ interface Props {
   account: BankAccount;
   onEdit: (account: BankAccount) => void;
   onDelete: (id: string) => void;
+  onAdjustBalance?: (account: BankAccount) => void;
 }
 
-export function BankAccountCard({ account, onEdit, onDelete }: Props) {
+export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: Props) {
   const getAccountTypeLabel = (type: string) => {
     const types: Record<string, string> = {
       checking: "Conta Corrente",
@@ -138,6 +139,16 @@ export function BankAccountCard({ account, onEdit, onDelete }: Props) {
             <Edit className="w-4 h-4 mr-2" />
             Editar
           </Button>
+          {!isCreditCard && onAdjustBalance && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onAdjustBalance(account)}
+              title="Ajustar saldo manualmente"
+            >
+              <Calculator className="w-4 h-4" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

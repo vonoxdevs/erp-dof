@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { BankAccountDialog } from "@/components/bank-accounts/BankAccountDialog";
 import { BankAccountCard } from "@/components/bank-accounts/BankAccountCard";
 import { TransferTransactionsDialog } from "@/components/bank-accounts/TransferTransactionsDialog";
+import { AdjustBalanceDialog } from "@/components/bank-accounts/AdjustBalanceDialog";
 import { sanitizeError } from "@/lib/errorMapping";
 
 interface BankAccount {
@@ -33,6 +34,8 @@ const BankAccounts = () => {
   const [accountToDelete, setAccountToDelete] = useState<BankAccount | null>(null);
   const [transactionCount, setTransactionCount] = useState(0);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [adjustBalanceDialogOpen, setAdjustBalanceDialogOpen] = useState(false);
+  const [accountToAdjust, setAccountToAdjust] = useState<BankAccount | null>(null);
 
   useEffect(() => {
     loadAccounts();
@@ -198,6 +201,17 @@ const BankAccounts = () => {
     if (refresh) loadAccounts();
   };
 
+  const handleAdjustBalance = (account: BankAccount) => {
+    setAccountToAdjust(account);
+    setAdjustBalanceDialogOpen(true);
+  };
+
+  const handleAdjustBalanceClose = (refresh?: boolean) => {
+    setAdjustBalanceDialogOpen(false);
+    setAccountToAdjust(null);
+    if (refresh) loadAccounts();
+  };
+
   const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.current_balance), 0);
   const activeAccounts = accounts.filter(acc => acc.is_active).length;
 
@@ -269,6 +283,7 @@ const BankAccounts = () => {
             account={account}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onAdjustBalance={handleAdjustBalance}
           />
         ))}
       </div>
@@ -304,6 +319,12 @@ const BankAccounts = () => {
         transactionCount={transactionCount}
         availableAccounts={accounts.filter(acc => acc.id !== accountToDelete?.id)}
         loading={deleteLoading}
+      />
+
+      <AdjustBalanceDialog
+        open={adjustBalanceDialogOpen}
+        onClose={handleAdjustBalanceClose}
+        account={accountToAdjust}
       />
     </div>
   );
