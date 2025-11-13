@@ -46,11 +46,26 @@ serve(async (req) => {
 
     for (const contract of contracts || []) {
       try {
-        // Validar se o contrato tem conta bancária
-        if (!contract.bank_account_id) {
-          console.warn(`⚠️ Contrato ${contract.contract_name || contract.id} não tem conta bancária definida. Pulando...`);
+        // Validar se o contrato tem centro de custo
+        if (!contract.centro_custo_id) {
+          console.warn(`⚠️ Contrato ${contract.contract_name || contract.id} não tem centro de custo definido. Pulando...`);
           continue;
         }
+
+        // Buscar primeira conta vinculada ao centro de custo
+        const { data: linkedAccounts } = await supabaseClient
+          .from('categoria_conta_bancaria')
+          .select('conta_bancaria_id')
+          .eq('categoria_id', contract.centro_custo_id)
+          .eq('habilitado', true)
+          .limit(1);
+
+        if (!linkedAccounts || linkedAccounts.length === 0) {
+          console.warn(`⚠️ Centro de custo ${contract.centro_custo_id} não tem contas vinculadas. Pulando contrato ${contract.contract_name}...`);
+          continue;
+        }
+
+        const bankAccountId = linkedAccounts[0].conta_bancaria_id;
 
         // Data inicial de geração
         let startDate = contract.next_generation_date 
@@ -179,7 +194,7 @@ serve(async (req) => {
           let transactionType = contract.type;
           if (contract.type === 'income') transactionType = 'revenue';
           
-          console.log(`📝 Criando transação: tipo=${transactionType}, conta=${contract.bank_account_id}`);
+          console.log(`📝 Criando transação: tipo=${transactionType}, conta=${bankAccountId}`);
           
           // Criar transação
           const newTransaction = {
@@ -191,9 +206,9 @@ serve(async (req) => {
             status: transactionStatus,
             contract_id: contract.id,
             contact_id: contract.contact_id,
-            bank_account_id: contract.bank_account_id,
-            account_from_id: transactionType === 'expense' ? contract.bank_account_id : null,
-            account_to_id: transactionType === 'revenue' ? contract.bank_account_id : null,
+            bank_account_id: bankAccountId,
+            account_from_id: transactionType === 'expense' ? bankAccountId : null,
+            account_to_id: transactionType === 'revenue' ? bankAccountId : null,
             centro_custo_id: contract.centro_custo_id,
             categoria_receita_id: contract.categoria_receita_id,
             categoria_despesa_id: contract.categoria_despesa_id,

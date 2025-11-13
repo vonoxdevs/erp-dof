@@ -41,10 +41,8 @@ interface Props {
 
 export function ContractDialog({ open, onClose, contract }: Props) {
   const [loading, setLoading] = useState(false);
-  const { accounts, isLoading: loadingAccounts } = useBankAccounts();
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
-  const [linkedAccounts, setLinkedAccounts] = useState<any[]>([]);
   const queryClient = useQueryClient();
   
   const [formData, setFormData] = useState({
@@ -61,49 +59,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
     end_date: "",
     is_active: true,
   });
-
-  // Buscar contas vinculadas ao centro de custo
-  useEffect(() => {
-    async function fetchLinkedAccounts() {
-      if (!formData.centro_custo_id) {
-        setLinkedAccounts([]);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('categoria_conta_bancaria')
-          .select(`
-            conta_bancaria_id,
-            bank_accounts:conta_bancaria_id (
-              id,
-              bank_name,
-              account_number
-            )
-          `)
-          .eq('categoria_id', formData.centro_custo_id)
-          .eq('habilitado', true);
-
-        if (error) throw error;
-
-        const accounts = data
-          ?.map(item => item.bank_accounts)
-          .filter(Boolean) || [];
-
-        setLinkedAccounts(accounts);
-
-        // Se havia uma conta selecionada mas não está mais na lista, limpar
-        if (formData.bank_account_id && !accounts.find(acc => acc.id === formData.bank_account_id)) {
-          setFormData(prev => ({ ...prev, bank_account_id: "" }));
-        }
-      } catch (error) {
-        console.error('Erro ao buscar contas vinculadas:', error);
-        setLinkedAccounts([]);
-      }
-    }
-
-    fetchLinkedAccounts();
-  }, [formData.centro_custo_id]);
 
   useEffect(() => {
     if (contract) {
@@ -241,11 +196,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       return;
     }
     
-    if (!formData.bank_account_id) {
-      toast.error("Conta bancária é obrigatória");
-      return;
-    }
-    
     if (!formData.start_date) {
       toast.error("Data de início é obrigatória");
       return;
@@ -273,7 +223,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
 
       const contractData = {
         company_id: profile.company_id,
-        name: formData.contract_name.trim(), // Manter compatibilidade com schema antigo
+        name: formData.contract_name.trim(),
         contract_name: formData.contract_name.trim(),
         contact_id: formData.contact_id,
         description: formData.description?.trim() || null,
@@ -287,7 +237,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         auto_generate: true,
         generation_day: 1,
         next_generation_date: formData.start_date,
-        bank_account_id: formData.bank_account_id || null,
+        bank_account_id: null,
         centro_custo_id: formData.centro_custo_id,
         categoria_receita_id: formData.categoria_receita_id || null,
         attachments: attachments,
@@ -457,44 +407,6 @@ export function ContractDialog({ open, onClose, contract }: Props) {
               }}
               placeholder="Selecione o centro de custo"
             />
-          </div>
-
-          {/* 6.5. Conta Bancária (vinculada ao centro de custo) */}
-          <div className="space-y-2">
-            <Label>Conta Bancária *</Label>
-            <Select
-              value={formData.bank_account_id}
-              onValueChange={(value) => setFormData({ ...formData, bank_account_id: value })}
-              disabled={!formData.centro_custo_id}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={
-                  !formData.centro_custo_id 
-                    ? "Selecione um centro de custo primeiro" 
-                    : "Selecione a conta bancária"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {linkedAccounts.length === 0 ? (
-                  <div className="p-2 text-sm text-muted-foreground">
-                    {formData.centro_custo_id 
-                      ? "Nenhuma conta vinculada a este centro de custo" 
-                      : "Selecione um centro de custo"}
-                  </div>
-                ) : (
-                  linkedAccounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.bank_name} - {account.account_number}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
-            {formData.centro_custo_id && linkedAccounts.length === 0 && (
-              <p className="text-xs text-muted-foreground">
-                Este centro de custo não possui contas bancárias vinculadas. Configure em Categorias Financeiras.
-              </p>
-            )}
           </div>
 
           {/* 7. Categoria de Receita */}
