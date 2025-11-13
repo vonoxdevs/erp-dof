@@ -53,20 +53,44 @@ const Dashboard = () => {
     cashFlow: [],
   });
   useEffect(() => {
-    supabase.auth.getSession().then(({
-      data: {
-        session
-      }
-    }) => {
-      if (!session) {
-        navigate("/auth");
-      } else {
+    let mounted = true;
+    
+    const initDashboard = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!session) {
+          navigate("/auth");
+          return;
+        }
+        
+        if (!mounted) return;
+        
         setUser(session.user);
-        loadStats();
-        generateAutomaticTransactions();
+        console.log('📊 Iniciando carregamento do dashboard...');
+        
+        // Carregar stats primeiro (importante)
+        await loadStats();
+        
+        if (!mounted) return;
+        
+        // Gerar transações automáticas em background (não bloqueia)
+        generateAutomaticTransactions().catch(err => 
+          console.warn('⚠️ Erro background em transações automáticas:', err)
+        );
+        
         setLoading(false);
+        console.log('✅ Dashboard carregado');
+      } catch (error) {
+        console.error('❌ Erro ao inicializar dashboard:', error);
+        // Mesmo com erro, tenta mostrar o dashboard
+        setLoading(false);
+        toast.error('Erro ao carregar alguns dados');
       }
-    });
+    };
+    
+    initDashboard();
+    
     const {
       data: {
         subscription
@@ -74,7 +98,7 @@ const Dashboard = () => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
         navigate("/auth");
-      } else if (session) {
+      } else if (session && mounted) {
         setUser(session.user);
       }
     });
@@ -107,37 +131,84 @@ const Dashboard = () => {
       .subscribe();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
       supabase.removeChannel(realtimeChannel);
     };
-  }, [navigate, currentPeriod, selectedAccount]);
+  }, [navigate]);
 
   const generateAutomaticTransactions = async () => {
     try {
-      // Gerar parcelas de contratos
-      await supabase.functions.invoke('generate-contract-transactions');
-      // Gerar transações recorrentes
-      await supabase.functions.invoke('generate-recurring-transactions');
+      console.log('🔄 Iniciando geração automática de transações...');
+      
+      // Timeout de 5 segundos para cada função
+      const timeout = (ms: number) => new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), ms)
+      );
+
+      // Gerar parcelas de contratos com timeout
+      try {
+        await Promise.race([
+          supabase.functions.invoke('generate-contract-transactions'),
+          timeout(5000)
+        ]);
+        console.log('✅ Contratos processados');
+      } catch (error) {
+        console.warn('⚠️ Timeout ou erro ao gerar contratos:', error);
+        // Continua mesmo com erro
+      }
+
+      // Gerar transações recorrentes com timeout
+      try {
+        await Promise.race([
+          supabase.functions.invoke('generate-recurring-transactions'),
+          timeout(5000)
+        ]);
+        console.log('✅ Recorrências processadas');
+      } catch (error) {
+        console.warn('⚠️ Timeout ou erro ao gerar recorrências:', error);
+        // Continua mesmo com erro
+      }
+      
+      console.log('✅ Geração automática concluída');
     } catch (error) {
-      console.error('Erro ao gerar transações automáticas:', error);
+      console.error('❌ Erro ao gerar transações automáticas:', error);
+      // Não bloqueia o carregamento do dashboard
     }
   };
   const loadStats = async () => {
     try {
-      const {
-        data: {
-          user
+      console.log('📊 Carregando estatísticas...');
+      
+      // Timeout de 10 segundos
+      const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao carregar stats')), 10000)
+      );
+      
+      const loadData = async () => {
+        const {
+          data: {
+            user
+          }
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const {
+          data: profile
+        } = await supabase.from("user_profiles").select("company_id").eq("id", user.id).single();
+        if (!profile || !profile.company_id) {
+          console.error('❌ Usuário sem empresa associada');
+          toast.error('Complete o cadastro da empresa primeiro');
+          return;
         }
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const {
-        data: profile
-      } = await supabase.from("user_profiles").select("company_id").eq("id", user.id).single();
-      if (!profile || !profile.company_id) {
-        console.error('❌ Usuário sem empresa associada');
-        toast.error('Complete o cadastro da empresa primeiro');
-        return;
-      }
+        
+        return { user, profile };
+      };
+      
+      const result = await Promise.race([loadData(), timeout]) as any;
+      if (!result) return;
+      
+      const { user, profile } = result;
 
       // Calcular datas baseado no período selecionado
       const startDate = startOfMonth(currentPeriod);
@@ -218,10 +289,16 @@ const Dashboard = () => {
         });
 
         // Preparar dados para gráficos
-        prepareChartData(recentTransactions, allTransactions, totalBalance);
+        await prepareChartData(recentTransactions, allTransactions, totalBalance);
+        
+        console.log('✅ Stats carregadas com sucesso');
       }
     } catch (error: any) {
-      console.error("Error loading stats:", error);
+      console.error("❌ Erro ao carregar stats:", error);
+      toast.error('Erro ao carregar estatísticas. Tentando novamente...');
+      
+      // Retry após 2 segundos
+      setTimeout(() => loadStats(), 2000);
     }
   };
 
