@@ -30,11 +30,12 @@ import {
   formatCPF,
   formatCNPJ,
   formatPhone,
+  formatCEP,
 } from "@/lib/brazilian-validations";
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
-  document: z.string().trim().min(1, "Documento é obrigatório").max(20, "Documento inválido"),
+  document: z.string().min(1, "Documento é obrigatório"),
   document_type: z.enum(["cpf", "cnpj"]),
   email: z
     .string()
@@ -76,19 +77,28 @@ const contactSchema = z.object({
     .transform((val) => (val === "" ? undefined : val))
     .optional()
     .refine((val) => !val || validateEmail(val), { message: "Email do gestor inválido" }),
+  address: z.object({
+    street: z.string().max(200, "Rua muito longa").optional(),
+    number: z.string().max(20, "Número muito longo").optional(),
+    complement: z.string().max(100, "Complemento muito longo").optional(),
+    neighborhood: z.string().max(100, "Bairro muito longo").optional(),
+    city: z.string().max(100, "Cidade muito longa").optional(),
+    state: z.string().length(2, "Use a sigla do estado (ex: SP)").optional().or(z.literal("")),
+    zip_code: z.string().max(10, "CEP muito longo").optional(),
+  }).optional(),
 }).refine(
   (data) => {
-    if (!data.document || data.document.trim() === "") {
-      return false;
-    }
+    // Remover todos os caracteres não numéricos antes de validar
+    const cleanDoc = data.document.replace(/\D/g, '');
+    
     if (data.document_type === "cpf") {
-      return validateCPF(data.document);
+      return validateCPF(cleanDoc);
     } else {
-      return validateCNPJ(data.document);
+      return validateCNPJ(cleanDoc);
     }
   },
   {
-    message: "CPF/CNPJ inválido",
+    message: "CPF/CNPJ inválido. Verifique os dígitos digitados.",
     path: ["document"],
   }
 );
@@ -207,7 +217,10 @@ export function ContactDialog({ open, onClose, contact }: Props) {
 
       if (!profile) throw new Error("Perfil não encontrado");
 
-      const validationResult = contactSchema.safeParse(formData);
+      const validationResult = contactSchema.safeParse({
+        ...formData,
+        document: formData.document,
+      });
       if (!validationResult.success) {
         const errorMessages = validationResult.error.errors
           .map((err) => err.message)
@@ -311,7 +324,34 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                     placeholder={formData.document_type === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
                     maxLength={formData.document_type === "cpf" ? 14 : 18}
                     required
+                    className={
+                      formData.document && formData.document.replace(/\D/g, '').length > 0
+                        ? (formData.document_type === "cpf" 
+                            ? validateCPF(formData.document.replace(/\D/g, ''))
+                            : validateCNPJ(formData.document.replace(/\D/g, ''))
+                          )
+                          ? "border-green-500"
+                          : "border-red-500"
+                        : ""
+                    }
                   />
+                  {formData.document && formData.document.replace(/\D/g, '').length > 0 && (
+                    <p className={
+                      (formData.document_type === "cpf" 
+                        ? validateCPF(formData.document.replace(/\D/g, ''))
+                        : validateCNPJ(formData.document.replace(/\D/g, ''))
+                      )
+                        ? "text-xs text-green-600"
+                        : "text-xs text-red-600"
+                    }>
+                      {(formData.document_type === "cpf" 
+                        ? validateCPF(formData.document.replace(/\D/g, ''))
+                        : validateCNPJ(formData.document.replace(/\D/g, ''))
+                      )
+                        ? "✓ Documento válido"
+                        : "✗ Documento inválido"}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2 col-span-2">
@@ -323,7 +363,19 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     placeholder="email@exemplo.com"
+                    className={
+                      formData.email && formData.email.length > 0
+                        ? validateEmail(formData.email)
+                          ? "border-green-500"
+                          : "border-red-500"
+                        : ""
+                    }
                   />
+                  {formData.email && formData.email.length > 0 && !validateEmail(formData.email) && (
+                    <p className="text-xs text-red-600">
+                      ✗ Email inválido
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2 col-span-2">
@@ -336,7 +388,19 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                     }}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
+                    className={
+                      formData.phone && formData.phone.replace(/\D/g, '').length > 0
+                        ? validatePhone(formData.phone)
+                          ? "border-green-500"
+                          : "border-red-500"
+                        : ""
+                    }
                   />
+                  {formData.phone && formData.phone.replace(/\D/g, '').length > 0 && !validatePhone(formData.phone) && (
+                    <p className="text-xs text-red-600">
+                      ✗ Telefone deve ter 10 ou 11 dígitos
+                    </p>
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -347,13 +411,15 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                   <Label>CEP</Label>
                   <Input
                     value={formData.address.zip_code}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const formatted = formatCEP(e.target.value);
                       setFormData({ 
                         ...formData, 
-                        address: { ...formData.address, zip_code: e.target.value }
-                      })
-                    }
+                        address: { ...formData.address, zip_code: formatted }
+                      });
+                    }}
                     placeholder="00000-000"
+                    maxLength={9}
                   />
                 </div>
 
@@ -478,7 +544,19 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                     }}
                     placeholder="(00) 00000-0000"
                     maxLength={15}
+                    className={
+                      formData.manager_phone && formData.manager_phone.replace(/\D/g, '').length > 0
+                        ? validatePhone(formData.manager_phone)
+                          ? "border-green-500"
+                          : "border-red-500"
+                        : ""
+                    }
                   />
+                  {formData.manager_phone && formData.manager_phone.replace(/\D/g, '').length > 0 && !validatePhone(formData.manager_phone) && (
+                    <p className="text-xs text-red-600">
+                      ✗ Telefone deve ter 10 ou 11 dígitos
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2 col-span-2">
@@ -490,7 +568,19 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                       setFormData({ ...formData, manager_email: e.target.value })
                     }
                     placeholder="gestor@exemplo.com"
+                    className={
+                      formData.manager_email && formData.manager_email.length > 0
+                        ? validateEmail(formData.manager_email)
+                          ? "border-green-500"
+                          : "border-red-500"
+                        : ""
+                    }
                   />
+                  {formData.manager_email && formData.manager_email.length > 0 && !validateEmail(formData.manager_email) && (
+                    <p className="text-xs text-red-600">
+                      ✗ Email inválido
+                    </p>
+                  )}
                 </div>
               </div>
             </TabsContent>
