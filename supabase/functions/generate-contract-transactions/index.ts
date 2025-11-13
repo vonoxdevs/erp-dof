@@ -58,26 +58,13 @@ serve(async (req) => {
 
     for (const contract of contracts || []) {
       try {
-        // Validar se o contrato tem centro de custo
-        if (!contract.centro_custo_id) {
-          console.warn(`⚠️ Contrato ${contract.contract_name || contract.id} não tem centro de custo definido. Pulando...`);
+        // Validar conta bancária
+        if (!contract.bank_account_id) {
+          console.warn(`⚠️ Contrato ${contract.contract_name || contract.id} não tem conta bancária definida. Pulando...`);
           continue;
         }
 
-        // Buscar primeira conta vinculada ao centro de custo
-        const { data: linkedAccounts } = await supabaseClient
-          .from('categoria_conta_bancaria')
-          .select('conta_bancaria_id')
-          .eq('categoria_id', contract.centro_custo_id)
-          .eq('habilitado', true)
-          .limit(1);
-
-        if (!linkedAccounts || linkedAccounts.length === 0) {
-          console.warn(`⚠️ Centro de custo ${contract.centro_custo_id} não tem contas vinculadas. Pulando contrato ${contract.contract_name}...`);
-          continue;
-        }
-
-        const bankAccountId = linkedAccounts[0].conta_bancaria_id;
+        const bankAccountId = contract.bank_account_id;
 
         // Data de início do contrato
         const contractStartDate = new Date(contract.start_date);

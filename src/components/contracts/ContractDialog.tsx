@@ -44,6 +44,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
   const [uploading, setUploading] = useState(false);
   const [attachments, setAttachments] = useState<any[]>([]);
   const queryClient = useQueryClient();
+  const { accounts: bankAccounts } = useBankAccounts();
   
   const [formData, setFormData] = useState({
     contract_name: "",
@@ -191,6 +192,11 @@ export function ContractDialog({ open, onClose, contract }: Props) {
       return;
     }
     
+    if (!formData.bank_account_id) {
+      toast.error("Conta bancária é obrigatória");
+      return;
+    }
+    
     if (!formData.centro_custo_id) {
       toast.error("Centro de custo é obrigatório");
       return;
@@ -237,7 +243,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         auto_generate: true,
         generation_day: 1,
         next_generation_date: formData.start_date,
-        bank_account_id: null,
+        bank_account_id: formData.bank_account_id,
         centro_custo_id: formData.centro_custo_id,
         categoria_receita_id: formData.categoria_receita_id || null,
         attachments: attachments,
@@ -416,7 +422,28 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             />
           </div>
 
-          {/* 6. Centro de Custo */}
+          {/* 6. Conta Bancária */}
+          <div className="space-y-2">
+            <Label>Conta Bancária *</Label>
+            <Select
+              value={formData.bank_account_id}
+              onValueChange={(value) => setFormData({ ...formData, bank_account_id: value })}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a conta bancária" />
+              </SelectTrigger>
+              <SelectContent>
+                {bankAccounts?.map((account: any) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.bank_name} - {account.account_number}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 7. Centro de Custo */}
           <div className="space-y-2">
             <Label>Centro de Custo *</Label>
             <SelectCentroCusto
@@ -431,7 +458,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             />
           </div>
 
-          {/* 7. Categoria de Receita */}
+          {/* 8. Categoria de Receita */}
           <div className="space-y-2">
             <Label>Categoria de Receita</Label>
             <SelectCategoria
@@ -444,7 +471,7 @@ export function ContractDialog({ open, onClose, contract }: Props) {
             />
           </div>
 
-          {/* 8. Frequência */}
+          {/* 9. Frequência */}
           <div className="space-y-2">
             <Label htmlFor="frequency">Frequência *</Label>
             <Select
