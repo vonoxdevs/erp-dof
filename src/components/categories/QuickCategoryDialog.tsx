@@ -80,8 +80,7 @@ export function QuickCategoryDialog({ tipo, centroCustoId, open, onClose, onCate
         descricao: formData.descricao.trim() || null,
         cor,
         tipo,
-        ativo: true,
-        centro_custo_id: tipo !== 'centro_custo' ? centroCustoId : null
+        ativo: true
       };
 
       const { data: novaCategoria, error } = await supabase
