@@ -28,21 +28,6 @@ interface Props {
 }
 
 export function ContactTable({ contacts, onEdit, onDelete }: Props) {
-  const getTypeLabel = (type: string) => {
-    const types: Record<string, string> = {
-      customer: "Cliente",
-      supplier: "Fornecedor",
-      both: "Ambos",
-    };
-    return types[type] || type;
-  };
-
-  const getTypeBadgeVariant = (type: string) => {
-    if (type === "customer") return "default";
-    if (type === "supplier") return "secondary";
-    return "outline";
-  };
-
   return (
     <div className="rounded-md border">
       <Table>
@@ -50,7 +35,6 @@ export function ContactTable({ contacts, onEdit, onDelete }: Props) {
           <TableRow>
             <TableHead>Nome</TableHead>
             <TableHead>Documento</TableHead>
-            <TableHead>Tipo</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Telefone</TableHead>
             <TableHead className="text-right">Ações</TableHead>
@@ -59,7 +43,7 @@ export function ContactTable({ contacts, onEdit, onDelete }: Props) {
         <TableBody>
           {contacts.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
                 Nenhum contato encontrado
               </TableCell>
             </TableRow>
@@ -74,11 +58,6 @@ export function ContactTable({ contacts, onEdit, onDelete }: Props) {
                       {contact.document_type.toUpperCase()}
                     </Badge>
                   </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getTypeBadgeVariant(contact.type)}>
-                    {getTypeLabel(contact.type)}
-                  </Badge>
                 </TableCell>
                 <TableCell>{contact.email || "-"}</TableCell>
                 <TableCell>{contact.phone || "-"}</TableCell>

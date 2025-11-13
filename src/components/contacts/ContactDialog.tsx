@@ -36,7 +36,6 @@ const contactSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
   document: z.string().trim().min(1, "Documento é obrigatório").max(20, "Documento inválido"),
   document_type: z.enum(["cpf", "cnpj"]),
-  type: z.enum(["client", "supplier", "both"]),
   email: z
     .string()
     .trim()
@@ -110,7 +109,6 @@ export function ContactDialog({ open, onClose, contact }: Props) {
     name: "",
     document: "",
     document_type: "cpf" as "cpf" | "cnpj",
-    type: "client" as "client" | "supplier" | "both",
     email: "",
     phone: "",
     address: {
@@ -134,7 +132,6 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         name: contact.name,
         document: contact.document,
         document_type: contact.document_type as "cpf" | "cnpj",
-        type: contact.type as "client" | "supplier" | "both",
         email: contact.email || "",
         phone: contact.phone || "",
         address: contact.address || {
@@ -156,7 +153,6 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         name: "",
         document: "",
         document_type: "cpf",
-        type: "client",
         email: "",
         phone: "",
         address: {
@@ -204,7 +200,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         name: formData.name,
         document: formData.document,
         document_type: formData.document_type,
-        type: formData.type,
+        type: "customer",
         email: formData.email || null,
         phone: formData.phone || null,
         address: formData.address,
@@ -299,26 +295,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Tipo *</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value: "client" | "supplier" | "both") =>
-                      setFormData({ ...formData, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="client">Cliente</SelectItem>
-                      <SelectItem value="supplier">Fornecedor</SelectItem>
-                      <SelectItem value="both">Ambos</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
+                <div className="space-y-2 col-span-2">
                   <Label>Email</Label>
                   <Input
                     type="email"
@@ -330,7 +307,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
                   />
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 col-span-2">
                   <Label>Telefone</Label>
                   <Input
                     value={formData.phone}
