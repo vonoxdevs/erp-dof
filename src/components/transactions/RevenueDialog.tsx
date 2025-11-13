@@ -188,7 +188,6 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         customer_name: formData.customer_name || null,
         contact_id: formData.contact_id || null,
         account_to_id: formData.account_to_id,
-        bank_account_id: formData.account_to_id,
         is_recurring: formData.is_recurring,
         recurrence_config: recurrenceConfig,
       };
