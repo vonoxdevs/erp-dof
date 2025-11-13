@@ -290,10 +290,7 @@ const Dashboard = () => {
       }
     } catch (error: any) {
       console.error("❌ Erro ao carregar stats:", error);
-      toast.error('Erro ao carregar estatísticas. Tentando novamente...');
-      
-      // Retry após 2 segundos
-      setTimeout(() => loadStats(), 2000);
+      toast.error('Erro ao carregar estatísticas');
     }
   };
 
