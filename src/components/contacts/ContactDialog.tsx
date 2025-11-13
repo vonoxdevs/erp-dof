@@ -237,7 +237,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {contact ? "Editar Contato" : "Novo Contato"}
+            {contact ? "Editar Cliente" : "Novo Cliente"}
           </DialogTitle>
         </DialogHeader>
 
