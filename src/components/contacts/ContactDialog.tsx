@@ -78,13 +78,15 @@ const contactSchema = z.object({
     .optional()
     .refine((val) => !val || validateEmail(val), { message: "Email do gestor inválido" }),
   address: z.object({
-    street: z.string().max(200, "Rua muito longa").optional(),
-    number: z.string().max(20, "Número muito longo").optional(),
-    complement: z.string().max(100, "Complemento muito longo").optional(),
-    neighborhood: z.string().max(100, "Bairro muito longo").optional(),
-    city: z.string().max(100, "Cidade muito longa").optional(),
-    state: z.string().length(2, "Use a sigla do estado (ex: SP)").optional().or(z.literal("")),
-    zip_code: z.string().max(10, "CEP muito longo").optional(),
+    street: z.string().max(200, "Rua muito longa").optional().or(z.literal("")),
+    number: z.string().max(20, "Número muito longo").optional().or(z.literal("")),
+    complement: z.string().max(100, "Complemento muito longo").optional().or(z.literal("")),
+    neighborhood: z.string().max(100, "Bairro muito longo").optional().or(z.literal("")),
+    city: z.string().max(100, "Cidade muito longa").optional().or(z.literal("")),
+    state: z.string().optional().refine((val) => !val || val === "" || val.length === 2, {
+      message: "Use a sigla do estado (ex: SP)",
+    }),
+    zip_code: z.string().max(10, "CEP muito longo").optional().or(z.literal("")),
   }).optional(),
 }).refine(
   (data) => {
@@ -148,6 +150,14 @@ export function ContactDialog({ open, onClose, contact }: Props) {
       city: "",
       state: "",
       zip_code: "",
+    } as {
+      street?: string;
+      number?: string;
+      complement?: string;
+      neighborhood?: string;
+      city?: string;
+      state?: string;
+      zip_code?: string;
     },
     manager_name: "",
     manager_position: "",
@@ -171,7 +181,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
           city: "",
           state: "",
           zip_code: "",
-        } as any,
+        },
         manager_name: contact.manager_name || "",
         manager_position: contact.manager_position || "",
         manager_phone: contact.manager_phone || "",
@@ -217,10 +227,7 @@ export function ContactDialog({ open, onClose, contact }: Props) {
 
       if (!profile) throw new Error("Perfil não encontrado");
 
-      const validationResult = contactSchema.safeParse({
-        ...formData,
-        document: formData.document,
-      });
+      const validationResult = contactSchema.safeParse(formData);
       if (!validationResult.success) {
         const errorMessages = validationResult.error.errors
           .map((err) => err.message)
@@ -228,14 +235,16 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         throw new Error(errorMessages);
       }
 
+      const hasAddress = formData.address && Object.values(formData.address).some(v => v && v.trim() !== "");
+      
       const dataToSave = {
-        name: formData.name,
-        document: formData.document,
+        name: formData.name.trim(),
+        document: formData.document.replace(/\D/g, ''),
         document_type: formData.document_type,
         type: "customer",
         email: formData.email?.trim() || null,
         phone: formData.phone?.trim() || null,
-        address: formData.address,
+        address: hasAddress ? formData.address : null,
         manager_name: formData.manager_name?.trim() || null,
         manager_position: formData.manager_position?.trim() || null,
         manager_phone: formData.manager_phone?.trim() || null,
