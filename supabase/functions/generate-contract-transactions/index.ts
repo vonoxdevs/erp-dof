@@ -23,15 +23,27 @@ serve(async (req) => {
       }
     );
 
-    console.log('🔄 Iniciando geração de parcelas de contratos...');
+    // Verificar se foi passado um contractId específico
+    const { contractId } = await req.json().catch(() => ({}));
 
-    // Buscar contratos ativos
-    const { data: contracts, error: fetchError } = await supabaseClient
+    console.log('🔄 Iniciando geração de parcelas de contratos...');
+    if (contractId) {
+      console.log(`📍 Gerando transações para o contrato: ${contractId}`);
+    }
+
+    // Buscar contratos ativos (filtrado por ID se fornecido)
+    let query = supabaseClient
       .from('contracts')
       .select('*')
       .eq('is_active', true)
       .eq('auto_generate', true)
       .is('deleted_at', null);
+    
+    if (contractId) {
+      query = query.eq('id', contractId);
+    }
+    
+    const { data: contracts, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('❌ Erro ao buscar contratos:', fetchError);

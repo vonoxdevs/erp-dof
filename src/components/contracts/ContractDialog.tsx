@@ -299,20 +299,39 @@ export function ContractDialog({ open, onClose, contract }: Props) {
           return;
         }
         
+        const newContractId = data[0].id;
         toast.success("Contrato criado!");
+        
+        // Gera automaticamente as transações recorrentes para o novo contrato
+        toast.info("Gerando transações recorrentes...");
+        const { error: generateError } = await supabase.functions.invoke(
+          "generate-contract-transactions",
+          {
+            body: { contractId: newContractId }
+          }
+        );
+
+        if (generateError) {
+          console.error("Erro ao gerar transações:", generateError);
+          toast.warning("Contrato salvo, mas houve erro ao gerar transações");
+        } else {
+          toast.success("Transações geradas!");
+        }
       }
 
-      // Gera automaticamente as transações recorrentes
-      toast.info("Gerando transações recorrentes...");
-      const { error: generateError } = await supabase.functions.invoke(
-        "generate-contract-transactions"
-      );
+      // Se for edição, regenerar transações pendentes
+      if (contract) {
+        toast.info("Atualizando transações recorrentes...");
+        const { error: regenerateError } = await supabase.functions.invoke(
+          "generate-contract-transactions",
+          {
+            body: { contractId: contract.id }
+          }
+        );
 
-      if (generateError) {
-        console.error("Erro ao gerar transações:", generateError);
-        toast.warning("Contrato salvo, mas houve erro ao gerar transações");
-      } else {
-        toast.success("Transações geradas!");
+        if (regenerateError) {
+          console.error("Erro ao atualizar transações:", regenerateError);
+        }
       }
 
       await Promise.all([
