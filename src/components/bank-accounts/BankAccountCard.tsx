@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, Star, CreditCard, Calendar, Calculator } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface BankAccount {
   id: string;
@@ -26,6 +27,8 @@ interface Props {
 }
 
 export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: Props) {
+  const { isAdmin } = useUserRole();
+  
   const getAccountTypeLabel = (type: string) => {
     const types: Record<string, string> = {
       checking: "Conta Corrente",
@@ -139,12 +142,12 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: 
             <Edit className="w-4 h-4 mr-2" />
             Editar
           </Button>
-          {!isCreditCard && onAdjustBalance && (
+          {!isCreditCard && onAdjustBalance && isAdmin && (
             <Button
               variant="outline"
               size="sm"
               onClick={() => onAdjustBalance(account)}
-              title="Ajustar saldo manualmente"
+              title="Ajustar saldo manualmente (apenas admins)"
             >
               <Calculator className="w-4 h-4" />
             </Button>
