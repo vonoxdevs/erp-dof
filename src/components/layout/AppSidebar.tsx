@@ -9,7 +9,6 @@ import {
   MessageSquare,
   User,
   Users,
-  Repeat,
   Shield,
   UserCircle,
 } from "lucide-react";
@@ -29,7 +28,6 @@ import { useAuth } from "@/hooks/useAuth";
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Transações", url: "/transactions", icon: Receipt },
-  { title: "Recorrentes", url: "/recurring-transactions", icon: Repeat },
   { title: "Contratos", url: "/contracts", icon: FileText },
   { title: "Contas Bancárias", url: "/bank-accounts", icon: Building2 },
   { title: "Categorias", url: "/categories", icon: Tags },

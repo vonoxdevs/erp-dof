@@ -19,7 +19,6 @@ import ForcedPasswordChangePage from "./pages/ForcedPasswordChangePage";
 // Páginas protegidas
 import Dashboard from "./pages/Dashboard";
 import Transactions from "./pages/Transactions";
-import RecurringTransactions from "./pages/RecurringTransactions";
 import BankAccounts from "./pages/BankAccounts";
 import Contracts from "./pages/Contracts";
 import FinancialCategories from "./pages/FinancialCategories";
@@ -89,7 +88,6 @@ const App = () => {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/overdue" element={<OverduePage />} />
             <Route path="/transactions" element={<Transactions />} />
-            <Route path="/recurring-transactions" element={<RecurringTransactions />} />
             <Route path="/bank-accounts" element={<BankAccounts />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/categories" element={<FinancialCategories />} />

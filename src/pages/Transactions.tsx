@@ -10,7 +10,6 @@ import { TransactionDialog } from "@/components/transactions/TransactionDialog";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
 import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
 import { TransferDialog } from "@/components/transactions/TransferDialog";
-import { RecurringTransactionDialog } from "@/components/transactions/RecurringTransactionDialog";
 import { TransactionTable } from "@/components/transactions/TransactionTable";
 import { TransactionFilters } from "@/components/transactions/TransactionFilters";
 import { ImportBankStatementDialog } from "@/components/bank-accounts/ImportBankStatementDialog";

@@ -7,7 +7,6 @@ import { Plus, Search, FileText, Send } from "lucide-react";
 import { toast } from "sonner";
 import { ContractDialog } from "@/components/contracts/ContractDialog";
 import { ContractTable } from "@/components/contracts/ContractTable";
-import { calculateMRR } from "@/lib/recurringCalculations";
 
 interface Contract {
   id: string;
@@ -117,7 +116,6 @@ const Contracts = () => {
   );
 
   const activeContracts = filteredContracts.filter((c) => c.is_active);
-  const totalMonthlyRevenue = calculateMRR(contracts);
 
   if (loading) {
     return (
@@ -142,16 +140,10 @@ const Contracts = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-4 glass">
           <p className="text-sm text-muted-foreground">Contratos Ativos</p>
           <p className="text-2xl font-bold text-primary">{activeContracts.length}</p>
-        </Card>
-        <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Receita Mensal Recorrente</p>
-          <p className="text-2xl font-bold text-accent">
-            R$ {totalMonthlyRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-          </p>
         </Card>
         <Card className="p-4 glass">
           <p className="text-sm text-muted-foreground">Total de Contratos</p>
