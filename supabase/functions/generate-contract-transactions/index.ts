@@ -103,36 +103,57 @@ serve(async (req) => {
         
         if (lastTransaction) {
           // Se já existe transação, começar da próxima data após a última
-          startGenerationDate = new Date(lastTransaction.due_date);
+          const lastDueDate = new Date(lastTransaction.due_date);
+          lastDueDate.setHours(0, 0, 0, 0);
           
-          // Avançar para a próxima ocorrência
-          switch (contract.frequency) {
-            case 'daily':
-              startGenerationDate.setDate(startGenerationDate.getDate() + 1);
-              break;
-            case 'weekly':
-              startGenerationDate.setDate(startGenerationDate.getDate() + 7);
-              break;
-            case 'monthly':
-              startGenerationDate.setMonth(startGenerationDate.getMonth() + 1);
-              break;
-            case 'quarterly':
-              startGenerationDate.setMonth(startGenerationDate.getMonth() + 3);
-              break;
-            case 'semiannual':
-              startGenerationDate.setMonth(startGenerationDate.getMonth() + 6);
-              break;
-            case 'annual':
-              startGenerationDate.setFullYear(startGenerationDate.getFullYear() + 1);
-              break;
+          // Validação: se a última data for muito futura (mais de 1 ano), ignorar e começar do início
+          const oneYearFromNow = new Date(today);
+          oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+          
+          if (lastDueDate > oneYearFromNow) {
+            console.warn(`   ⚠️ Última transação tem data muito futura (${lastDueDate.toISOString().split('T')[0]}). Recomeçando do início.`);
+            startGenerationDate = new Date(contractStartDate);
+          } else {
+            startGenerationDate = new Date(lastDueDate);
+            
+            // Avançar para a próxima ocorrência
+            switch (contract.frequency) {
+              case 'daily':
+                startGenerationDate.setDate(startGenerationDate.getDate() + 1);
+                break;
+              case 'weekly':
+                startGenerationDate.setDate(startGenerationDate.getDate() + 7);
+                break;
+              case 'monthly':
+                startGenerationDate.setMonth(startGenerationDate.getMonth() + 1);
+                break;
+              case 'quarterly':
+                startGenerationDate.setMonth(startGenerationDate.getMonth() + 3);
+                break;
+              case 'semiannual':
+                startGenerationDate.setMonth(startGenerationDate.getMonth() + 6);
+                break;
+              case 'annual':
+                startGenerationDate.setFullYear(startGenerationDate.getFullYear() + 1);
+                break;
+            }
+            
+            console.log(`   ⏭️  Última transação: ${lastDueDate.toISOString().split('T')[0]}`);
+            console.log(`   🎯 Próxima geração: ${startGenerationDate.toISOString().split('T')[0]}`);
           }
-          
-          console.log(`   ⏭️  Última transação: ${lastTransaction.due_date}`);
-          console.log(`   🎯 Próxima geração: ${startGenerationDate.toISOString().split('T')[0]}`);
         } else {
           // Se nunca gerou, começar da data de início
           startGenerationDate = new Date(contractStartDate);
           console.log(`   🆕 Primeira geração a partir de: ${startGenerationDate.toISOString().split('T')[0]}`);
+        }
+
+        // Validação final: garantir que não estamos começando muito no futuro
+        if (startGenerationDate > today) {
+          const daysDiff = Math.floor((startGenerationDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysDiff > 365) {
+            console.warn(`   ⚠️ Data de início muito futura (${startGenerationDate.toISOString().split('T')[0]}). Resetando para hoje.`);
+            startGenerationDate = new Date(today);
+          }
         }
 
         // Garantir que não comece antes da data de início
