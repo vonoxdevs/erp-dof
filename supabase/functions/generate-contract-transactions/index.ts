@@ -46,18 +46,12 @@ serve(async (req) => {
 
     for (const contract of contracts || []) {
       try {
-        // Verificar se deve gerar
-        let nextGenDate = contract.next_generation_date 
+        // Data inicial de geração
+        let startDate = contract.next_generation_date 
           ? new Date(contract.next_generation_date) 
           : new Date(contract.start_date);
         
-        nextGenDate.setHours(0, 0, 0, 0);
-
-        // Se ainda não chegou a data de geração, pular
-        if (nextGenDate > today) {
-          console.log(`⏳ Contrato ${contract.contract_name} - próxima geração em ${nextGenDate.toISOString().split('T')[0]}`);
-          continue;
-        }
+        startDate.setHours(0, 0, 0, 0);
 
         // Se tem data final e já passou, desativar contrato
         if (contract.end_date) {
@@ -74,14 +68,17 @@ serve(async (req) => {
           }
         }
 
-        // Se tem total de parcelas, verificar se já gerou todas
+        // Se tem total de parcelas, verificar quantas já foram geradas
+        let existingCount = 0;
         if (contract.total_installments) {
           const { count } = await supabaseClient
             .from('transactions')
             .select('id', { count: 'exact', head: true })
             .eq('contract_id', contract.id);
 
-          if (count && count >= contract.total_installments) {
+          existingCount = count || 0;
+          
+          if (existingCount >= contract.total_installments) {
             console.log(`✅ Contrato ${contract.contract_name} completou todas as ${contract.total_installments} parcelas`);
             await supabaseClient
               .from('contracts')
@@ -91,25 +88,131 @@ serve(async (req) => {
           }
         }
 
-        // Gerar transação do mês atual
-        const dueDate = new Date(nextGenDate);
-        dueDate.setDate(contract.generation_day || 1);
-        const dueDateStr = dueDate.toISOString().split('T')[0];
-
-        // Verificar se já existe
-        const { data: existing } = await supabaseClient
-          .from('transactions')
-          .select('id')
-          .eq('contract_id', contract.id)
-          .eq('due_date', dueDateStr)
-          .maybeSingle();
-
-        if (existing) {
-          console.log(`⏩ Parcela já existe para ${contract.contract_name} - ${dueDateStr}`);
+        // Gerar múltiplas transações futuras
+        const datesToGenerate: Date[] = [];
+        const futureOccurrences = 12; // Gera até 12 parcelas futuras
+        let currentDate = new Date(startDate);
+        let count = 0;
+        const maxIterations = 100;
+        
+        while (count < maxIterations) {
+          const dueDate = new Date(currentDate);
+          dueDate.setDate(contract.generation_day || 1);
           
-          // Atualizar próxima data de geração
-          const nextDate = new Date(nextGenDate);
+          // Adicionar se for passada, hoje ou futura (até o limite)
+          const isPastOrToday = dueDate <= today;
+          const isFuture = dueDate > today && datesToGenerate.filter(d => d > today).length < futureOccurrences;
+          
+          if (isPastOrToday || isFuture) {
+            // Verificar se não passou da data final
+            if (contract.end_date) {
+              const endDate = new Date(contract.end_date);
+              endDate.setHours(0, 0, 0, 0);
+              if (dueDate > endDate) break;
+            }
+            
+            // Verificar se não atingiu o total de parcelas
+            if (contract.total_installments && (existingCount + datesToGenerate.length) >= contract.total_installments) {
+              break;
+            }
+            
+            datesToGenerate.push(new Date(dueDate));
+          } else if (!isPastOrToday && !isFuture) {
+            break;
+          }
+          
+          // Avançar para próxima ocorrência
           switch (contract.frequency) {
+            case 'daily':
+              currentDate.setDate(currentDate.getDate() + 1);
+              break;
+            case 'weekly':
+              currentDate.setDate(currentDate.getDate() + 7);
+              break;
+            case 'monthly':
+              currentDate.setMonth(currentDate.getMonth() + 1);
+              break;
+            case 'quarterly':
+              currentDate.setMonth(currentDate.getMonth() + 3);
+              break;
+            case 'semiannual':
+              currentDate.setMonth(currentDate.getMonth() + 6);
+              break;
+            case 'annual':
+              currentDate.setFullYear(currentDate.getFullYear() + 1);
+              break;
+          }
+          
+          count++;
+        }
+
+        console.log(`📅 ${contract.contract_name}: ${datesToGenerate.length} parcelas a gerar`);
+
+        // Gerar transações
+        for (const dueDate of datesToGenerate) {
+          const dueDateStr = dueDate.toISOString().split('T')[0];
+          
+          // Verificar se já existe
+          const { data: existing } = await supabaseClient
+            .from('transactions')
+            .select('id')
+            .eq('contract_id', contract.id)
+            .eq('due_date', dueDateStr)
+            .maybeSingle();
+
+          if (existing) {
+            console.log(`⏩ Parcela já existe: ${dueDateStr}`);
+            continue;
+          }
+
+          // Determinar status
+          const transactionStatus = dueDate < today ? 'overdue' : 'pending';
+
+          // Criar transação
+          const newTransaction = {
+            company_id: contract.company_id,
+            type: contract.type,
+            amount: contract.amount,
+            description: `${contract.contract_name || contract.description || 'Contrato'} - Parcela`,
+            due_date: dueDateStr,
+            status: transactionStatus,
+            contract_id: contract.id,
+            contact_id: contract.contact_id,
+            bank_account_id: contract.bank_account_id,
+            account_from_id: contract.type === 'expense' ? contract.bank_account_id : null,
+            account_to_id: contract.type === 'revenue' ? contract.bank_account_id : null,
+            centro_custo_id: contract.centro_custo_id,
+            categoria_receita_id: contract.categoria_receita_id,
+            categoria_despesa_id: contract.categoria_despesa_id,
+            payment_method: contract.payment_method,
+            is_recurring: false,
+          };
+
+          const { error: insertError } = await supabaseClient
+            .from('transactions')
+            .insert(newTransaction);
+
+          if (insertError) {
+            console.error(`❌ Erro ao criar transação ${dueDateStr}:`, insertError);
+            continue;
+          }
+
+          totalGerado++;
+          console.log(`✅ Parcela gerada: ${dueDateStr} [${transactionStatus}]`);
+        }
+
+        // Atualizar contrato com a última data gerada
+        if (datesToGenerate.length > 0) {
+          const lastDate = datesToGenerate[datesToGenerate.length - 1];
+          const nextDate = new Date(lastDate);
+          
+          switch (contract.frequency) {
+            case 'daily':
+              nextDate.setDate(nextDate.getDate() + 1);
+              break;
+            case 'weekly':
+              nextDate.setDate(nextDate.getDate() + 7);
+              break;
             case 'monthly':
               nextDate.setMonth(nextDate.getMonth() + 1);
               break;
@@ -128,71 +231,10 @@ serve(async (req) => {
             .from('contracts')
             .update({ 
               next_generation_date: nextDate.toISOString().split('T')[0],
-              last_generated_date: dueDateStr
+              last_generated_date: lastDate.toISOString().split('T')[0]
             })
             .eq('id', contract.id);
-
-          continue;
         }
-
-        // Determinar status
-        const transactionStatus = dueDate < today ? 'overdue' : 'pending';
-
-        // Criar transação
-        const newTransaction = {
-          company_id: contract.company_id,
-          type: contract.type,
-          amount: contract.amount,
-          description: `${contract.contract_name || contract.description || 'Contrato'} - Parcela`,
-          due_date: dueDateStr,
-          status: transactionStatus,
-          contract_id: contract.id,
-          contact_id: contract.contact_id,
-          bank_account_id: contract.bank_account_id,
-          centro_custo_id: contract.centro_custo_id,
-          categoria_receita_id: contract.categoria_receita_id,
-          categoria_despesa_id: contract.categoria_despesa_id,
-          payment_method: contract.payment_method,
-          is_recurring: false,
-        };
-
-        const { error: insertError } = await supabaseClient
-          .from('transactions')
-          .insert(newTransaction);
-
-        if (insertError) {
-          console.error(`❌ Erro ao criar transação para ${contract.contract_name}:`, insertError);
-          continue;
-        }
-
-        // Calcular próxima data de geração
-        const nextDate = new Date(nextGenDate);
-        switch (contract.frequency) {
-          case 'monthly':
-            nextDate.setMonth(nextDate.getMonth() + 1);
-            break;
-          case 'quarterly':
-            nextDate.setMonth(nextDate.getMonth() + 3);
-            break;
-          case 'semiannual':
-            nextDate.setMonth(nextDate.getMonth() + 6);
-            break;
-          case 'annual':
-            nextDate.setFullYear(nextDate.getFullYear() + 1);
-            break;
-        }
-
-        // Atualizar contrato
-        await supabaseClient
-          .from('contracts')
-          .update({ 
-            next_generation_date: nextDate.toISOString().split('T')[0],
-            last_generated_date: dueDateStr
-          })
-          .eq('id', contract.id);
-
-        totalGerado++;
-        console.log(`✅ Parcela gerada: ${contract.contract_name} - ${dueDateStr} [${transactionStatus}]`);
 
       } catch (error) {
         console.error(`❌ Erro ao processar contrato ${contract.id}:`, error);
