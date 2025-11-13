@@ -238,23 +238,48 @@ const Dashboard = () => {
       const { data: recentTransactions } = await transactionsQuery;
 
       if (recentTransactions) {
-        // Todas as estatísticas baseadas no período selecionado
-        const paidRevenue = recentTransactions.filter(t => t.type === "revenue" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
-        const pendingRevenue = recentTransactions.filter(t => t.type === "revenue" && (t.status === "pending" || t.status === "overdue")).reduce((sum, t) => sum + Number(t.amount), 0);
-        const expenses = recentTransactions.filter(t => t.type === "expense" && t.status === "paid").reduce((sum, t) => sum + Number(t.amount), 0);
-        const pending = recentTransactions.filter(t => t.status === "pending" || t.status === "overdue").length;
-        const overdue = recentTransactions.filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today).length;
+        // ==========================================
+        // NOVA LÓGICA: Tudo baseado no período filtrado
+        // ==========================================
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        // 1. RECEITAS REALIZADAS (pagas no período)
+        const receitasRealizadas = recentTransactions
+          .filter(t => t.type === "revenue" && t.status === "paid")
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        // 2. DESPESAS REALIZADAS (pagas no período)
+        const despesasRealizadas = recentTransactions
+          .filter(t => t.type === "expense" && t.status === "paid")
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        // 3. CONTAS A RECEBER (todas receitas pendentes no período filtrado)
+        const contasAReceber = recentTransactions
+          .filter(t => t.type === "revenue" && (t.status === "pending" || t.status === "overdue"))
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        // 4. CONTAS A PAGAR (todas despesas pendentes no período filtrado)
+        const contasAPagar = recentTransactions
+          .filter(t => t.type === "expense" && (t.status === "pending" || t.status === "overdue"))
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+        
+        // 5. Contadores
+        const pending = recentTransactions
+          .filter(t => t.status === "pending" || t.status === "overdue")
+          .length;
+        
+        const overdue = recentTransactions
+          .filter(t => (t.status === "pending" || t.status === "overdue") && t.due_date < today)
+          .length;
 
-        // Calcular receitas e despesas futuras (pendentes no período selecionado)
-        const futureRevenue = recentTransactions.filter(t => t.type === "revenue" && t.status === "pending" && t.due_date >= today).reduce((sum, t) => sum + Number(t.amount), 0);
-        const futureExpenses = recentTransactions.filter(t => t.type === "expense" && t.status === "pending" && t.due_date >= today).reduce((sum, t) => sum + Number(t.amount), 0);
-
-        // Separar transações vencidas por tipo (do período)
+        // 6. Separar transações vencidas por tipo
         const overdueRevenues = recentTransactions.filter(t => 
           t.type === "revenue" && 
           (t.status === "pending" || t.status === "overdue") && 
           t.due_date < today
         );
+        
         const overdueExpenses = recentTransactions.filter(t => 
           t.type === "expense" && 
           (t.status === "pending" || t.status === "overdue") && 
@@ -263,28 +288,33 @@ const Dashboard = () => {
 
         setOverdueTransactions({ revenues: overdueRevenues, expenses: overdueExpenses });
 
-        // Load bank accounts
-        const {
-          data: accounts
-        } = await supabase.from("bank_accounts").select("current_balance").eq("company_id", profile.company_id).eq("is_active", true);
-        const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.current_balance), 0) || 0;
+        // 7. Buscar saldo atual das contas
+        const { data: accounts } = await supabase
+          .from("bank_accounts")
+          .select("current_balance")
+          .eq("company_id", profile.company_id)
+          .eq("is_active", true);
+        
+        const saldoAtual = accounts?.reduce((sum, acc) => sum + Number(acc.current_balance), 0) || 0;
 
-        const projectedBalance = totalBalance + futureRevenue - futureExpenses;
+        // 8. SALDO PREVISTO = saldo atual + contas a receber - contas a pagar
+        const saldoPrevisto = saldoAtual + contasAReceber - contasAPagar;
 
+        // Atualizar estados
         setStats({
-          totalBalance,
-          monthlyRevenue: paidRevenue,
-          monthlyExpenses: expenses,
+          totalBalance: saldoAtual,
+          monthlyRevenue: receitasRealizadas,
+          monthlyExpenses: despesasRealizadas,
           pendingCount: pending,
           overdueCount: overdue,
-          pendingRevenue,
-          futureRevenue,
-          futureExpenses,
-          projectedBalance
+          pendingRevenue: contasAReceber,  // CONTAS A RECEBER
+          futureRevenue: contasAReceber,    // Mantido para compatibilidade
+          futureExpenses: contasAPagar,     // CONTAS A PAGAR
+          projectedBalance: saldoPrevisto   // SALDO PREVISTO
         });
 
         // Preparar dados para gráficos
-        await prepareChartData(recentTransactions, recentTransactions, totalBalance, startDate, endDate);
+        await prepareChartData(recentTransactions, recentTransactions, saldoAtual, startDate, endDate);
         
         console.log('✅ Stats carregadas com sucesso');
       }
