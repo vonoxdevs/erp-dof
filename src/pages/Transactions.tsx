@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
 import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
 import { TransferDialog } from "@/components/transactions/TransferDialog";
+import { DeleteRecurringDialog } from "@/components/transactions/DeleteRecurringDialog";
 import { sanitizeError } from "@/lib/errorMapping";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,6 +41,8 @@ interface Transaction {
   created_at: string;
   account_from_id?: string | null;
   account_to_id?: string | null;
+  is_recurring?: boolean;
+  reference_number?: string | null;
   categories?: {
     name: string;
     icon?: string;
@@ -65,6 +68,8 @@ const Transactions = () => {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
 
   // Sincronização em tempo real
   useRealtimeSync(
@@ -157,10 +162,22 @@ const Transactions = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta transação?")) return;
+    const transaction = transactions.find(t => t.id === id);
+    if (!transaction) return;
+    
+    setTransactionToDelete(transaction);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteOne = async () => {
+    if (!transactionToDelete) return;
 
     try {
-      const { error } = await supabase.from("transactions").delete().eq("id", id);
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .eq("id", transactionToDelete.id);
+        
       if (error) throw error;
       
       await Promise.all([
@@ -169,6 +186,42 @@ const Transactions = () => {
       ]);
       
       toast.success("Transação excluída com sucesso!");
+      loadTransactions();
+    } catch (error: any) {
+      toast.error(sanitizeError(error));
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!transactionToDelete) return;
+
+    try {
+      // Se é a transação original (is_recurring = true), excluir por reference_number
+      // Se é uma gerada (reference_number não null), excluir por reference_number
+      const referenceId = transactionToDelete.is_recurring 
+        ? transactionToDelete.id 
+        : transactionToDelete.reference_number;
+
+      if (!referenceId) {
+        // Se não tem reference, é uma transação única
+        handleDeleteOne();
+        return;
+      }
+
+      // Excluir a original e todas as geradas
+      const { error } = await supabase
+        .from("transactions")
+        .delete()
+        .or(`id.eq.${referenceId},reference_number.eq.${referenceId}`);
+        
+      if (error) throw error;
+      
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+      ]);
+      
+      toast.success("Todas as recorrências foram excluídas!");
       loadTransactions();
     } catch (error: any) {
       toast.error(sanitizeError(error));
@@ -527,6 +580,17 @@ const Transactions = () => {
         open={transferDialogOpen}
         onClose={handleDialogClose}
         transaction={selectedTransaction}
+      />
+      <DeleteRecurringDialog
+        open={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setTransactionToDelete(null);
+        }}
+        onDeleteOne={handleDeleteOne}
+        onDeleteAll={handleDeleteAll}
+        isRecurring={transactionToDelete?.is_recurring || false}
+        hasRecurrences={!!transactionToDelete?.reference_number || transactionToDelete?.is_recurring || false}
       />
     </div>
   );

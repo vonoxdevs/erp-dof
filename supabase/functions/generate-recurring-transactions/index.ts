@@ -86,20 +86,18 @@ serve(async (req) => {
         // Gerar todas as datas que deveriam existir (passadas, hoje e futuras)
         const datesToGenerate: Date[] = [];
         
-        // Definir quantas transações futuras gerar (além das passadas)
-        const futureOccurrences = 12; // Gera até 12 parcelas futuras
+        // Definir quantas transações futuras gerar
+        const futureOccurrences = 12;
         let count = 0;
-        const maxIterations = 100; // Limite de segurança
+        const maxIterations = 100;
         
         while (count < maxIterations) {
-          // Adicionar a data se for passada, hoje ou uma das futuras
           const isPastOrToday = nextDate <= today;
           const isFuture = nextDate > today && datesToGenerate.filter(d => d > today).length < futureOccurrences;
           
           if (isPastOrToday || isFuture) {
             datesToGenerate.push(new Date(nextDate));
           } else if (!isPastOrToday && !isFuture) {
-            // Já gerou todas as passadas e as futuras necessárias
             break;
           }
           
