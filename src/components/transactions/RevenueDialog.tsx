@@ -317,8 +317,6 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                   value={formData.account_to_id || ""}
                   onValueChange={(value) => {
                     setFormData({ ...formData, account_to_id: value || null });
-                    setCentroCustoId(null);
-                    setCategoriaReceitaId(null);
                   }}
                   disabled={accountsLoading || !bankAccounts?.length}
                 >

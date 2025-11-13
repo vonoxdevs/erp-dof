@@ -185,7 +185,18 @@ const Transactions = () => {
   };
 
   const handleEdit = (transaction: Transaction) => {
-    setSelectedTransaction(transaction);
+    const transactionToEdit = {
+      ...transaction,
+      // Mapear os campos corretamente para os diálogos
+      bank_account_id: transaction.type === 'revenue' 
+        ? transaction.account_to_id 
+        : transaction.account_from_id,
+      centro_custo_id: transaction.centro_custo_id || null,
+      categoria_receita_id: transaction.categoria_receita_id || null,
+      categoria_despesa_id: transaction.categoria_despesa_id || null,
+    };
+    
+    setSelectedTransaction(transactionToEdit as any);
     if (transaction.type === "revenue") {
       setRevenueDialogOpen(true);
     } else if (transaction.type === "expense") {

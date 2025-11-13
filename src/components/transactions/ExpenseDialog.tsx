@@ -319,8 +319,6 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
                   value={formData.account_from_id || ""}
                   onValueChange={(value) => {
                     setFormData({ ...formData, account_from_id: value || null });
-                    setCentroCustoId(null);
-                    setCategoriaDespesaId(null);
                   }}
                   disabled={accountsLoading || !bankAccounts?.length}
                 >
