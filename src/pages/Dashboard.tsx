@@ -63,6 +63,7 @@ const Dashboard = () => {
       } else {
         setUser(session.user);
         loadStats();
+        generateAutomaticTransactions();
         setLoading(false);
       }
     });
@@ -110,6 +111,17 @@ const Dashboard = () => {
       supabase.removeChannel(realtimeChannel);
     };
   }, [navigate, currentPeriod, selectedAccount]);
+
+  const generateAutomaticTransactions = async () => {
+    try {
+      // Gerar parcelas de contratos
+      await supabase.functions.invoke('generate-contract-transactions');
+      // Gerar transações recorrentes
+      await supabase.functions.invoke('generate-recurring-transactions');
+    } catch (error) {
+      console.error('Erro ao gerar transações automáticas:', error);
+    }
+  };
   const loadStats = async () => {
     try {
       const {

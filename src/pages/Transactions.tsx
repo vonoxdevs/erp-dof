@@ -67,6 +67,7 @@ const Transactions = () => {
 
   useEffect(() => {
     loadTransactions();
+    generateRecurringTransactions();
 
     const channel = supabase
       .channel('transactions-changes')
@@ -98,6 +99,25 @@ const Transactions = () => {
       supabase.removeChannel(channel);
     };
   }, [currentPeriod, selectedAccount]);
+
+  const generateRecurringTransactions = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-recurring-transactions');
+      
+      if (error) {
+        console.error('Erro ao gerar transações recorrentes:', error);
+        return;
+      }
+      
+      if (data?.count > 0) {
+        console.log('Transações recorrentes geradas:', data);
+        // Recarregar transações
+        loadTransactions();
+      }
+    } catch (error) {
+      console.error('Erro ao chamar função de geração:', error);
+    }
+  };
 
   const loadTransactions = async () => {
     try {

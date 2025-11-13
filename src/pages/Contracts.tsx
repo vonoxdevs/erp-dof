@@ -43,7 +43,27 @@ const Contracts = () => {
 
   useEffect(() => {
     loadContracts();
+    generatePendingInstallments();
   }, []);
+
+  const generatePendingInstallments = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-contract-transactions');
+      
+      if (error) {
+        console.error('Erro ao gerar parcelas:', error);
+        return;
+      }
+      
+      if (data?.contracts?.length > 0) {
+        console.log('Parcelas geradas automaticamente:', data);
+        // Recarregar contratos para atualizar as datas
+        loadContracts();
+      }
+    } catch (error) {
+      console.error('Erro ao chamar função de geração:', error);
+    }
+  };
 
   const loadContracts = async () => {
     try {
@@ -97,7 +117,16 @@ const Contracts = () => {
   };
 
   const handleGenerateInvoice = async (contract: Contract) => {
-    toast.info("Funcionalidade de geração de recibo em desenvolvimento");
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-contract-transactions');
+      
+      if (error) throw error;
+      
+      toast.success('Parcelas geradas com sucesso!');
+      loadContracts();
+    } catch (error: any) {
+      toast.error('Erro ao gerar parcelas: ' + error.message);
+    }
   };
 
   const handleSendInvoice = async (contract: Contract) => {
