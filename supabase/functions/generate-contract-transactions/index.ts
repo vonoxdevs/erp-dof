@@ -168,10 +168,15 @@ serve(async (req) => {
           // Determinar status
           const transactionStatus = dueDate < today ? 'overdue' : 'pending';
 
+          // Mapear tipo do contrato para tipo da transação
+          // Contratos usam 'income' mas transações usam 'revenue'
+          let transactionType = contract.type;
+          if (contract.type === 'income') transactionType = 'revenue';
+          
           // Criar transação
           const newTransaction = {
             company_id: contract.company_id,
-            type: contract.type,
+            type: transactionType,
             amount: contract.amount,
             description: `${contract.contract_name || contract.description || 'Contrato'} - Parcela`,
             due_date: dueDateStr,
@@ -179,8 +184,8 @@ serve(async (req) => {
             contract_id: contract.id,
             contact_id: contract.contact_id,
             bank_account_id: contract.bank_account_id,
-            account_from_id: contract.type === 'expense' ? contract.bank_account_id : null,
-            account_to_id: contract.type === 'revenue' ? contract.bank_account_id : null,
+            account_from_id: transactionType === 'expense' ? contract.bank_account_id : null,
+            account_to_id: transactionType === 'revenue' ? contract.bank_account_id : null,
             centro_custo_id: contract.centro_custo_id,
             categoria_receita_id: contract.categoria_receita_id,
             categoria_despesa_id: contract.categoria_despesa_id,
