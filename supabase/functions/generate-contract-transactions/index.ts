@@ -211,7 +211,7 @@ serve(async (req) => {
           
           console.log(`📝 Criando transação: tipo=${transactionType}, conta=${bankAccountId}`);
           
-          // Criar transação
+          // Criar transação (marcada como recorrente pois vem de contrato)
           const newTransaction = {
             company_id: contract.company_id,
             type: transactionType,
@@ -228,7 +228,8 @@ serve(async (req) => {
             categoria_receita_id: contract.categoria_receita_id,
             categoria_despesa_id: contract.categoria_despesa_id,
             payment_method: contract.payment_method,
-            is_recurring: false,
+            is_recurring: true,
+            reference_number: contract.id, // Usa o contract_id como referência para agrupar
           };
           
           console.log(`📝 Transação preparada:`, JSON.stringify({
