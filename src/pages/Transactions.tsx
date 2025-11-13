@@ -74,6 +74,16 @@ interface Transaction {
     bank_name: string;
     account_number: string;
   } | null;
+  account_from?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
+  account_to?: {
+    id: string;
+    bank_name: string;
+    account_number: string;
+  } | null;
 }
 
 const Transactions = () => {
@@ -653,6 +663,29 @@ const Transactions = () => {
                       <div>
                         <p className="font-medium text-sm">{transaction.description}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
+                          {/* Conta Bancária */}
+                          {transaction.type === 'transfer' ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              🏦 {transaction.account_from?.bank_name || 'Conta origem'} → {transaction.account_to?.bank_name || 'Conta destino'}
+                            </span>
+                          ) : transaction.type === 'revenue' ? (
+                            transaction.account_to && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                🏦 {transaction.account_to.bank_name}
+                              </span>
+                            )
+                          ) : transaction.type === 'expense' ? (
+                            transaction.account_from && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                                🏦 {transaction.account_from.bank_name}
+                              </span>
+                            )
+                          ) : transaction.bank_account && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                              🏦 {transaction.bank_account.bank_name}
+                            </span>
+                          )}
+                          
                           {/* Centro de Custo */}
                           {transaction.centro_custo && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary">
