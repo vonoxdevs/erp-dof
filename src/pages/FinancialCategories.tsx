@@ -32,7 +32,9 @@ export default function FinancialCategories() {
         </div>
         <Button onClick={handleNovaCategoriaClick}>
           <Plus className="mr-2 h-4 w-4" />
-          Nova Categoria
+          {tipoAtivo === 'centro_custo' ? 'Novo Centro de Custo' : 
+           tipoAtivo === 'receita' ? 'Nova Categoria de Receita' : 
+           'Nova Categoria de Despesa'}
         </Button>
       </div>
 
