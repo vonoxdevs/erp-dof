@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, Search, HelpCircle, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, HelpCircle, ChevronDown, ArrowUpRight, ArrowDownRight, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
 import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
@@ -374,6 +374,32 @@ const Transactions = () => {
     return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "revenue":
+        return <ArrowUpRight className="w-4 h-4 text-accent" />;
+      case "expense":
+        return <ArrowDownRight className="w-4 h-4 text-destructive" />;
+      case "transfer":
+        return <ArrowRightLeft className="w-4 h-4 text-primary" />;
+      default:
+        return null;
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case "revenue":
+        return "Receita";
+      case "expense":
+        return "Despesa";
+      case "transfer":
+        return "Transferência";
+      default:
+        return type;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -557,6 +583,7 @@ const Transactions = () => {
                   />
                 </th>
                 <th className="p-3 text-left text-sm font-medium">Data</th>
+                <th className="p-3 text-left text-sm font-medium">Tipo</th>
                 <th className="p-3 text-left text-sm font-medium">Descrição</th>
                 <th className="p-3 text-left text-sm font-medium">Situação</th>
                 <th className="p-3 text-right text-sm font-medium">Valor (R$)</th>
@@ -570,7 +597,7 @@ const Transactions = () => {
             <tbody>
               {transactionsWithBalance.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="p-12 text-center text-muted-foreground">
                     Nenhuma transação encontrada neste período
                   </td>
                 </tr>
@@ -591,6 +618,12 @@ const Transactions = () => {
                     </td>
                     <td className="p-3 text-sm">
                       {format(new Date(transaction.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        {getTypeIcon(transaction.type)}
+                        <span className="text-sm font-medium">{getTypeLabel(transaction.type)}</span>
+                      </div>
                     </td>
                     <td className="p-3">
                       <div>
