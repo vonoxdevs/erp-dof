@@ -9,6 +9,9 @@ verify_jwt = true
 [functions.generate-recurring-transactions]
 verify_jwt = true
 
+[functions.generate-contract-transactions]
+verify_jwt = true
+
 [functions.onboarding]
 verify_jwt = true
 
@@ -17,3 +20,7 @@ verify_jwt = true
 
 [functions.super-admin-users]
 verify_jwt = true
+
+[functions.reset-company-data]
+verify_jwt = true
+

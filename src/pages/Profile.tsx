@@ -8,12 +8,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Upload, User, Building2 } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Loader2, Upload, User, Building2, AlertTriangle } from "lucide-react";
+import { ResetCompanyDataDialog } from "@/components/profile/ResetCompanyDataDialog";
 
 const Profile = () => {
   const { profile, company, refreshProfile } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   
   const [userData, setUserData] = useState({
     full_name: "",
@@ -188,7 +192,7 @@ const Profile = () => {
       </div>
 
       <Tabs defaultValue="user" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
           <TabsTrigger value="user">
             <User className="w-4 h-4 mr-2" />
             Dados Pessoais
@@ -197,6 +201,12 @@ const Profile = () => {
             <Building2 className="w-4 h-4 mr-2" />
             Dados da Empresa
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="advanced">
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Avançado
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="user">
@@ -367,7 +377,50 @@ const Profile = () => {
             </form>
           </Card>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="advanced">
+            <Card className="p-6 glass">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-semibold text-destructive flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5" />
+                    Zona de Perigo
+                  </h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Ações irreversíveis que afetam todos os dados da empresa
+                  </p>
+                </div>
+
+                <div className="border border-destructive/30 rounded-lg p-6 bg-destructive/5 space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-base mb-1">Resetar Todos os Dados da Empresa</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Esta ação irá deletar permanentemente todas as transações, contas bancárias, 
+                      contratos, contatos e demais dados operacionais. A empresa e os usuários serão mantidos.
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => setResetDialogOpen(true)}
+                    className="w-full sm:w-auto"
+                  >
+                    <AlertTriangle className="w-4 h-4 mr-2" />
+                    Resetar Dados da Empresa
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
+
+      <ResetCompanyDataDialog 
+        open={resetDialogOpen}
+        onClose={() => setResetDialogOpen(false)}
+        companyName={companyData.name}
+      />
     </div>
   );
 };
