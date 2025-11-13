@@ -40,28 +40,47 @@ const contactSchema = z.object({
     .string()
     .trim()
     .max(255, "Email muito longo")
+    .transform((val) => (val === "" ? undefined : val))
+    .optional()
     .refine((val) => !val || validateEmail(val), { message: "Email inválido" }),
   phone: z
     .string()
     .trim()
     .max(20, "Telefone muito longo")
+    .transform((val) => (val === "" ? undefined : val))
+    .optional()
     .refine((val) => !val || validatePhone(val), { message: "Telefone inválido" }),
-  manager_name: z.string().trim().max(100, "Nome muito longo").optional(),
-  manager_position: z.string().trim().max(100, "Cargo muito longo").optional(),
+  manager_name: z
+    .string()
+    .trim()
+    .max(100, "Nome do gestor muito longo")
+    .transform((val) => (val === "" ? undefined : val))
+    .optional(),
+  manager_position: z
+    .string()
+    .trim()
+    .max(100, "Cargo muito longo")
+    .transform((val) => (val === "" ? undefined : val))
+    .optional(),
   manager_phone: z
     .string()
     .trim()
-    .max(20, "Telefone muito longo")
-    .refine((val) => !val || validatePhone(val), { message: "Telefone inválido" })
-    .optional(),
+    .max(20, "Telefone do gestor muito longo")
+    .transform((val) => (val === "" ? undefined : val))
+    .optional()
+    .refine((val) => !val || validatePhone(val), { message: "Telefone do gestor inválido" }),
   manager_email: z
     .string()
     .trim()
-    .max(255, "Email muito longo")
-    .refine((val) => !val || validateEmail(val), { message: "Email inválido" })
-    .optional(),
+    .max(255, "Email do gestor muito longo")
+    .transform((val) => (val === "" ? undefined : val))
+    .optional()
+    .refine((val) => !val || validateEmail(val), { message: "Email do gestor inválido" }),
 }).refine(
   (data) => {
+    if (!data.document || data.document.trim() === "") {
+      return false;
+    }
     if (data.document_type === "cpf") {
       return validateCPF(data.document);
     } else {
@@ -201,13 +220,13 @@ export function ContactDialog({ open, onClose, contact }: Props) {
         document: formData.document,
         document_type: formData.document_type,
         type: "customer",
-        email: formData.email || null,
-        phone: formData.phone || null,
+        email: formData.email?.trim() || null,
+        phone: formData.phone?.trim() || null,
         address: formData.address,
-        manager_name: formData.manager_name || null,
-        manager_position: formData.manager_position || null,
-        manager_phone: formData.manager_phone || null,
-        manager_email: formData.manager_email || null,
+        manager_name: formData.manager_name?.trim() || null,
+        manager_position: formData.manager_position?.trim() || null,
+        manager_phone: formData.manager_phone?.trim() || null,
+        manager_email: formData.manager_email?.trim() || null,
         company_id: profile.company_id,
       };
 
