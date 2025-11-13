@@ -125,7 +125,6 @@ export function TransactionFilters({
           <SelectContent>
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="paid">Pago</SelectItem>
-            <SelectItem value="pending">Pendente</SelectItem>
             <SelectItem value="overdue">Vencido</SelectItem>
             <SelectItem value="cancelled">Cancelado</SelectItem>
           </SelectContent>

@@ -91,13 +91,19 @@ const Transactions = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [centroCustoFilter, setCentroCustoFilter] = useState<string>("all");
+  
+  // Calcular últimos 30 dias como padrão
+  const defaultEndDate = new Date();
+  const defaultStartDate = new Date();
+  defaultStartDate.setDate(defaultStartDate.getDate() - 30);
+  
   // Estados para datas selecionadas (temporárias)
-  const [tempStartDate, setTempStartDate] = useState<Date | undefined>(undefined);
-  const [tempEndDate, setTempEndDate] = useState<Date | undefined>(undefined);
+  const [tempStartDate, setTempStartDate] = useState<Date | undefined>(defaultStartDate);
+  const [tempEndDate, setTempEndDate] = useState<Date | undefined>(defaultEndDate);
 
-  // Estados para datas aplicadas (usadas no filtro)
-  const [appliedStartDate, setAppliedStartDate] = useState<Date | undefined>(undefined);
-  const [appliedEndDate, setAppliedEndDate] = useState<Date | undefined>(undefined);
+  // Estados para datas aplicadas (usadas no filtro) - já com os últimos 30 dias
+  const [appliedStartDate, setAppliedStartDate] = useState<Date | undefined>(defaultStartDate);
+  const [appliedEndDate, setAppliedEndDate] = useState<Date | undefined>(defaultEndDate);
 
   useEffect(() => {
     loadTransactions();
@@ -348,8 +354,8 @@ const Transactions = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Stats Cards - somente com 3 cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4 glass">
           <p className="text-sm text-muted-foreground">Total Receitas</p>
           <p className="text-2xl font-bold text-accent">
@@ -368,12 +374,6 @@ const Transactions = () => {
               .filter((t) => t.type === "expense" && t.status === "paid")
               .reduce((acc, t) => acc + Number(t.amount), 0)
               .toLocaleString("pt-BR")}
-          </p>
-        </Card>
-        <Card className="p-4 glass">
-          <p className="text-sm text-muted-foreground">Pendentes</p>
-          <p className="text-2xl font-bold">
-            {filteredTransactions.filter((t) => t.status === "pending").length}
           </p>
         </Card>
         <Card className="p-4 glass">
