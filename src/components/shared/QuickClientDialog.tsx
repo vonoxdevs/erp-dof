@@ -15,7 +15,10 @@ import {
   formatCPF,
   formatCNPJ,
   formatPhone,
+  formatCEP,
 } from "@/lib/brazilian-validations";
+import { buscarCNPJ } from "@/services/externalApiService";
+import { Loader2 } from "lucide-react";
 
 const clientSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
@@ -32,6 +35,13 @@ const clientSchema = z.object({
     .max(20, "Telefone muito longo")
     .refine((val) => !val || validatePhone(val), { message: "Telefone inválido" })
     .optional(),
+  cep: z.string().optional(),
+  street: z.string().optional(),
+  number: z.string().optional(),
+  complement: z.string().optional(),
+  neighborhood: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
 }).refine(
   (data) => {
     if (data.document_type === "cpf") {
@@ -54,12 +64,20 @@ interface Props {
 
 export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
   const [loading, setLoading] = useState(false);
+  const [loadingCNPJ, setLoadingCNPJ] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     document: "",
     document_type: "cpf",
     email: "",
     phone: "",
+    cep: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,6 +122,13 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
           type: "client",
           email: formData.email || null,
           phone: formData.phone || null,
+          cep: formData.cep || null,
+          street: formData.street || null,
+          number: formData.number || null,
+          complement: formData.complement || null,
+          neighborhood: formData.neighborhood || null,
+          city: formData.city || null,
+          state: formData.state || null,
           is_active: true,
         })
         .select()
@@ -138,8 +163,48 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
       document_type: "cpf",
       email: "",
       phone: "",
+      cep: "",
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: "",
     });
     onClose();
+  };
+
+  const handleCNPJBlur = async () => {
+    if (formData.document_type !== "cnpj") return;
+    
+    const cleanCNPJ = formData.document.replace(/\D/g, "");
+    if (cleanCNPJ.length !== 14) return;
+
+    try {
+      setLoadingCNPJ(true);
+      const data = await buscarCNPJ(cleanCNPJ);
+      
+      if (data) {
+        setFormData(prev => ({
+          ...prev,
+          name: data.razao_social || prev.name,
+          email: data.email || prev.email,
+          phone: data.telefone || prev.phone,
+          cep: data.cep || prev.cep,
+          street: data.logradouro || prev.street,
+          number: data.numero || prev.number,
+          complement: data.complemento || prev.complement,
+          neighborhood: data.bairro || prev.neighborhood,
+          city: data.municipio || prev.city,
+          state: data.uf || prev.state,
+        }));
+        toast.success("Dados da empresa carregados!");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao buscar CNPJ");
+    } finally {
+      setLoadingCNPJ(false);
+    }
   };
 
   return (
@@ -196,19 +261,26 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="document">CPF/CNPJ *</Label>
-              <Input
-                id="document"
-                value={formData.document}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  const formatted =
-                    formData.document_type === "cpf" ? formatCPF(value) : formatCNPJ(value);
-                  setFormData({ ...formData, document: formatted });
-                }}
-                placeholder={formData.document_type === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
-                maxLength={formData.document_type === "cpf" ? 14 : 18}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="document"
+                  value={formData.document}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const formatted =
+                      formData.document_type === "cpf" ? formatCPF(value) : formatCNPJ(value);
+                    setFormData({ ...formData, document: formatted });
+                  }}
+                  onBlur={handleCNPJBlur}
+                  placeholder={formData.document_type === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+                  maxLength={formData.document_type === "cpf" ? 14 : 18}
+                  required
+                  disabled={loadingCNPJ}
+                />
+                {loadingCNPJ && (
+                  <Loader2 className="absolute right-3 top-3 h-4 w-4 animate-spin text-muted-foreground" />
+                )}
+              </div>
             </div>
           </div>
 
@@ -236,6 +308,99 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
               maxLength={15}
             />
           </div>
+
+          {formData.document_type === "cnpj" && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cep">CEP</Label>
+                  <Input
+                    id="cep"
+                    value={formData.cep}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cep: formatCEP(e.target.value) })
+                    }
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">Estado</Label>
+                  <Input
+                    id="state"
+                    value={formData.state}
+                    onChange={(e) =>
+                      setFormData({ ...formData, state: e.target.value.toUpperCase() })
+                    }
+                    placeholder="SP"
+                    maxLength={2}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="city">Cidade</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) =>
+                    setFormData({ ...formData, city: e.target.value })
+                  }
+                  placeholder="São Paulo"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="street">Logradouro</Label>
+                  <Input
+                    id="street"
+                    value={formData.street}
+                    onChange={(e) =>
+                      setFormData({ ...formData, street: e.target.value })
+                    }
+                    placeholder="Rua, Avenida, etc."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="number">Número</Label>
+                  <Input
+                    id="number"
+                    value={formData.number}
+                    onChange={(e) =>
+                      setFormData({ ...formData, number: e.target.value })
+                    }
+                    placeholder="123"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="neighborhood">Bairro</Label>
+                  <Input
+                    id="neighborhood"
+                    value={formData.neighborhood}
+                    onChange={(e) =>
+                      setFormData({ ...formData, neighborhood: e.target.value })
+                    }
+                    placeholder="Centro"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="complement">Complemento</Label>
+                  <Input
+                    id="complement"
+                    value={formData.complement}
+                    onChange={(e) =>
+                      setFormData({ ...formData, complement: e.target.value })
+                    }
+                    placeholder="Apto, Sala, etc."
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose} disabled={loading}>
