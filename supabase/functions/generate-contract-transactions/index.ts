@@ -79,6 +79,10 @@ serve(async (req) => {
 
         const bankAccountId = linkedAccounts[0].conta_bancaria_id;
 
+        // Data de início do contrato (nunca gerar antes disso)
+        const contractStartDate = new Date(contract.start_date);
+        contractStartDate.setHours(0, 0, 0, 0);
+
         // Data inicial de geração
         let startDate = contract.next_generation_date 
           ? new Date(contract.next_generation_date) 
@@ -86,8 +90,13 @@ serve(async (req) => {
         
         startDate.setHours(0, 0, 0, 0);
 
+        // Garantir que startDate nunca seja anterior à data de início do contrato
+        if (startDate < contractStartDate) {
+          startDate = new Date(contractStartDate);
+        }
+
         // Extrair o dia do start_date para usar nas transações
-        const contractDay = new Date(contract.start_date).getDate();
+        const contractDay = contractStartDate.getDate();
 
         // Se tem data final e já passou, desativar contrato
         if (contract.end_date) {
@@ -134,6 +143,33 @@ serve(async (req) => {
         while (count < maxIterations) {
           const dueDate = new Date(currentDate);
           dueDate.setDate(contractDay);
+          
+          // CRÍTICO: Nunca gerar transação anterior à data de início do contrato
+          if (dueDate < contractStartDate) {
+            // Avançar para próxima ocorrência sem adicionar
+            switch (contract.frequency) {
+              case 'daily':
+                currentDate.setDate(currentDate.getDate() + 1);
+                break;
+              case 'weekly':
+                currentDate.setDate(currentDate.getDate() + 7);
+                break;
+              case 'monthly':
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                break;
+              case 'quarterly':
+                currentDate.setMonth(currentDate.getMonth() + 3);
+                break;
+              case 'semiannual':
+                currentDate.setMonth(currentDate.getMonth() + 6);
+                break;
+              case 'annual':
+                currentDate.setFullYear(currentDate.getFullYear() + 1);
+                break;
+            }
+            count++;
+            continue;
+          }
           
           // Adicionar se for passada, hoje ou futura (até o limite)
           const isPastOrToday = dueDate <= today;
