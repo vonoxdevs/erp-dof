@@ -128,8 +128,18 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()} modal={true}>
-      <DialogContent className="sm:max-w-[500px]" onInteractOutside={(e) => e.preventDefault()}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen && !loading) {
+        handleClose();
+      }
+    }} modal>
+      <DialogContent 
+        className="sm:max-w-[500px] z-[100]" 
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          if (loading) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Novo Cliente</DialogTitle>
         </DialogHeader>
