@@ -117,7 +117,8 @@ const Profile = () => {
     }
 
     const fileExt = file.name.split(".").pop();
-    const fileName = `${company.id}/logo.${fileExt}`;
+    const timestamp = Date.now();
+    const fileName = `${company.id}/logo-${timestamp}.${fileExt}`;
 
     setUploading(true);
     try {
@@ -125,9 +126,11 @@ const Profile = () => {
       if (companyData.logo_url) {
         const oldPath = companyData.logo_url.split('/company-logos/')[1];
         if (oldPath) {
+          // Remover timestamp da URL antiga se existir
+          const cleanPath = oldPath.split('?')[0];
           await supabase.storage
             .from('company-logos')
-            .remove([oldPath]);
+            .remove([cleanPath]);
         }
       }
 
@@ -136,15 +139,18 @@ const Profile = () => {
         .from('company-logos')
         .upload(fileName, file, {
           cacheControl: '3600',
-          upsert: true
+          upsert: false
         });
 
       if (uploadError) throw uploadError;
 
-      // Obter URL pública
+      // Obter URL pública com timestamp para evitar cache
       const { data: { publicUrl } } = supabase.storage
         .from('company-logos')
         .getPublicUrl(fileName);
+
+      // Adicionar timestamp à URL para quebrar cache
+      const urlWithTimestamp = `${publicUrl}?t=${timestamp}`;
 
       // Atualizar banco de dados
       const { error: updateError } = await supabase
@@ -154,7 +160,8 @@ const Profile = () => {
 
       if (updateError) throw updateError;
 
-      setCompanyData({ ...companyData, logo_url: publicUrl });
+      // Forçar atualização da imagem no estado com timestamp
+      setCompanyData({ ...companyData, logo_url: urlWithTimestamp });
       toast.success("Logo atualizada com sucesso!");
       await refreshProfile();
     } catch (error: any) {
@@ -225,6 +232,7 @@ const Profile = () => {
                       src={companyData.logo_url}
                       alt="Logo da empresa"
                       className="w-full h-full object-contain p-2"
+                      key={companyData.logo_url}
                     />
                   ) : (
                     <Building2 className="w-16 h-16 text-muted-foreground" />
