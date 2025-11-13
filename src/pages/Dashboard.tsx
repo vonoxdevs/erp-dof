@@ -15,7 +15,7 @@ import { PendingAlerts } from "@/components/dashboard/PendingAlerts";
 import { RevenueExpenseChart } from "@/components/dashboard/RevenueExpenseChart";
 import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
-import { format, subDays, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { format, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 const Dashboard = () => {
@@ -289,7 +289,7 @@ const Dashboard = () => {
         });
 
         // Preparar dados para gráficos
-        await prepareChartData(recentTransactions, allTransactions, totalBalance);
+        await prepareChartData(recentTransactions, allTransactions, totalBalance, startDate, endDate);
         
         console.log('✅ Stats carregadas com sucesso');
       }
@@ -302,15 +302,15 @@ const Dashboard = () => {
     }
   };
 
-  const prepareChartData = async (recentTransactions: any[], allTransactions: any[], currentBalance: number) => {
+  const prepareChartData = async (recentTransactions: any[], allTransactions: any[], currentBalance: number, startDate: Date, endDate: Date) => {
     try {
-      // Gráfico de Receitas vs Despesas (últimos 7 dias)
-      const last7Days = eachDayOfInterval({
-        start: subDays(new Date(), 6),
-        end: new Date()
+      // Gráfico de Receitas vs Despesas (período selecionado)
+      const periodDays = eachDayOfInterval({
+        start: startDate,
+        end: endDate
       });
 
-      const revenueExpenseData = last7Days.map(date => {
+      const revenueExpenseData = periodDays.map(date => {
         const dateStr = format(date, 'yyyy-MM-dd');
         const dayTransactions = recentTransactions.filter(t => 
           t.due_date === dateStr && t.status === 'paid'
@@ -367,11 +367,11 @@ const Dashboard = () => {
         .sort((a, b) => b.value - a.value)
         .slice(0, 6) || [];
 
-      // Fluxo de Caixa (últimos 7 dias)
+      // Fluxo de Caixa (período selecionado)
       let runningBalance = currentBalance;
-      const cashFlowData = [...last7Days].reverse().map(date => {
+      const cashFlowData = [...periodDays].reverse().map(date => {
         const dateStr = format(date, 'yyyy-MM-dd');
-        const dayTransactions = allTransactions.filter(t => 
+        const dayTransactions = recentTransactions.filter(t => 
           t.due_date === dateStr && t.status === 'paid'
         );
         
@@ -394,8 +394,8 @@ const Dashboard = () => {
       // Recalcular o saldo corretamente para frente
       let balance = currentBalance;
       for (let i = cashFlowData.length - 1; i >= 0; i--) {
-        const dateStr = format(last7Days[i], 'yyyy-MM-dd');
-        const dayTransactions = allTransactions.filter(t => 
+        const dateStr = format(periodDays[i], 'yyyy-MM-dd');
+        const dayTransactions = recentTransactions.filter(t => 
           t.due_date === dateStr && t.status === 'paid'
         );
         
