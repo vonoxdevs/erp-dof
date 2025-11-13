@@ -21,7 +21,6 @@ const clientSchema = z.object({
   name: z.string().trim().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
   document: z.string().trim().min(1, "CPF/CNPJ é obrigatório").max(20, "Documento inválido"),
   document_type: z.enum(["cpf", "cnpj"]),
-  type: z.enum(["customer", "supplier", "both"], { required_error: "Tipo é obrigatório" }),
   email: z
     .string()
     .trim()
@@ -59,7 +58,6 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
     name: "",
     document: "",
     document_type: "cpf",
-    type: "customer" as "customer" | "supplier" | "both",
     email: "",
     phone: "",
   });
@@ -100,7 +98,7 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
           name: formData.name,
           document: formData.document,
           document_type: formData.document_type,
-          type: formData.type,
+          type: "customer",
           email: formData.email || null,
           phone: formData.phone || null,
           is_active: true,
@@ -134,7 +132,6 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
       name: "",
       document: "",
       document_type: "cpf",
-      type: "customer",
       email: "",
       phone: "",
     });
@@ -192,23 +189,6 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
                 required
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="type">Tipo *</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(value: any) => setFormData({ ...formData, type: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="customer">Cliente</SelectItem>
-                <SelectItem value="supplier">Fornecedor</SelectItem>
-                <SelectItem value="both">Ambos</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
