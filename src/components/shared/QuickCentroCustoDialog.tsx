@@ -3,8 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -23,53 +22,13 @@ interface Props {
   contaBancariaId?: string;
 }
 
-interface BankAccount {
-  id: string;
-  bank_name: string;
-  account_number: string;
-}
-
 export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, contaBancariaId }: Props) {
   const [loading, setLoading] = useState(false);
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     nome: "",
     descricao: "",
     cor: "#3b82f6",
   });
-
-  useEffect(() => {
-    if (open) {
-      fetchBankAccounts();
-      if (contaBancariaId) {
-        setSelectedAccounts([contaBancariaId]);
-      }
-    }
-  }, [open, contaBancariaId]);
-
-  const fetchBankAccounts = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('bank_accounts')
-        .select('id, bank_name, account_number')
-        .eq('is_active', true)
-        .order('bank_name');
-
-      if (error) throw error;
-      setBankAccounts(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar contas bancárias:', error);
-    }
-  };
-
-  const handleToggleAccount = (accountId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedAccounts(prev => [...prev, accountId]);
-    } else {
-      setSelectedAccounts(prev => prev.filter(id => id !== accountId));
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,12 +40,6 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
       const validation = centroCustoSchema.safeParse(formData);
       if (!validation.success) {
         toast.error(validation.error.errors[0].message);
-        return;
-      }
-
-      // Validar seleção de contas
-      if (selectedAccounts.length === 0) {
-        toast.error("Selecione pelo menos uma conta bancária");
         return;
       }
 
@@ -120,18 +73,25 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
 
       if (insertError) throw insertError;
 
-      // Criar vínculos com contas bancárias
-      const vinculos = selectedAccounts.map(accountId => ({
-        categoria_id: centroCusto.id,
-        conta_bancaria_id: accountId,
-        habilitado: true
-      }));
+      // Buscar todas as contas ativas para vincular automaticamente
+      const { data: allAccounts } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('is_active', true);
 
-      const { error: vinculoError } = await supabase
-        .from('categoria_conta_bancaria')
-        .insert(vinculos);
+      if (allAccounts && allAccounts.length > 0) {
+        const vinculos = allAccounts.map(account => ({
+          categoria_id: centroCusto.id,
+          conta_bancaria_id: account.id,
+          habilitado: true
+        }));
 
-      if (vinculoError) throw vinculoError;
+        const { error: vinculoError } = await supabase
+          .from('categoria_conta_bancaria')
+          .insert(vinculos);
+
+        if (vinculoError) throw vinculoError;
+      }
 
       toast.success("Centro de custo criado com sucesso!");
       onCentroCustoCreated(centroCusto.id);
@@ -150,7 +110,6 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
       descricao: "",
       cor: "#3b82f6",
     });
-    setSelectedAccounts([]);
     onClose();
   };
 
@@ -204,39 +163,8 @@ export function QuickCentroCustoDialog({ open, onClose, onCentroCustoCreated, co
               value={formData.cor}
               onChange={(cor) => setFormData({ ...formData, cor })}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Contas Bancárias <span className="text-destructive">*</span>
-            </Label>
-            <div className="border rounded-md p-4 space-y-3 max-h-[200px] overflow-y-auto">
-              {bankAccounts.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhuma conta bancária cadastrada
-                </p>
-              ) : (
-                bankAccounts.map(account => (
-                  <div key={account.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`account-${account.id}`}
-                      checked={selectedAccounts.includes(account.id)}
-                      onCheckedChange={(checked) =>
-                        handleToggleAccount(account.id, checked as boolean)
-                      }
-                    />
-                    <Label
-                      htmlFor={`account-${account.id}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {account.bank_name} - {account.account_number}
-                    </Label>
-                  </div>
-                ))
-              )}
-            </div>
             <p className="text-xs text-muted-foreground">
-              Selecione em quais contas este centro de custo estará disponível
+              Este centro de custo será automaticamente vinculado a todas as contas bancárias ativas.
             </p>
           </div>
 

@@ -28,8 +28,6 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
   const [nome, setNome] = useState('');
   const [descricao, setDescricao] = useState('');
   const [cor, setCor] = useState('#3b82f6');
-  const [contasSelecionadas, setContasSelecionadas] = useState<string[]>([]);
-  const [contasBancarias, setContasBancarias] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -41,21 +39,6 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
     };
     return labels[t];
   };
-
-  useEffect(() => {
-    async function fetchContasBancarias() {
-      if (tipo === 'centro_custo') {
-        const { data } = await supabase
-          .from('bank_accounts')
-          .select('id, bank_name, account_number')
-          .eq('is_active', true)
-          .order('bank_name');
-        
-        setContasBancarias(data || []);
-      }
-    }
-    fetchContasBancarias();
-  }, [tipo]);
 
   useEffect(() => {
     if (categoriaId && aberto) {
@@ -76,12 +59,6 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
           setNome(data.nome);
           setDescricao(data.descricao || '');
           setCor(data.cor || '#3b82f6');
-          
-          const contasHabilitadas = data.categoria_conta_bancaria
-            ?.filter((ccc: any) => ccc.habilitado)
-            .map((ccc: any) => ccc.conta_bancaria_id) || [];
-          
-          setContasSelecionadas(contasHabilitadas);
         }
       }
       fetchCategoria();
@@ -89,17 +66,8 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
       setNome('');
       setDescricao('');
       setCor(tipo === 'despesa' ? '#ef4444' : tipo === 'receita' ? '#10b981' : '#3b82f6');
-      setContasSelecionadas([]);
     }
-  }, [categoriaId, aberto]);
-
-  const handleToggleConta = (contaId: string, checked: boolean) => {
-    if (checked) {
-      setContasSelecionadas(prev => [...prev, contaId]);
-    } else {
-      setContasSelecionadas(prev => prev.filter(id => id !== contaId));
-    }
-  };
+  }, [categoriaId, aberto, tipo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,16 +110,25 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
 
         if (updateError) throw updateError;
 
+        // Se for centro de custo, vincular automaticamente a todas as contas ativas
         if (tipo === 'centro_custo') {
-          await supabase
-            .from('categoria_conta_bancaria')
-            .delete()
-            .eq('categoria_id', categoriaId);
+          // Buscar todas as contas ativas
+          const { data: allAccounts } = await supabase
+            .from('bank_accounts')
+            .select('id')
+            .eq('is_active', true);
 
-          if (contasSelecionadas.length > 0) {
-            const vinculos = contasSelecionadas.map(contaId => ({
+          if (allAccounts && allAccounts.length > 0) {
+            // Remover vínculos antigos
+            await supabase
+              .from('categoria_conta_bancaria')
+              .delete()
+              .eq('categoria_id', categoriaId);
+
+            // Criar vínculos com todas as contas
+            const vinculos = allAccounts.map(conta => ({
               categoria_id: categoriaId,
-              conta_bancaria_id: contaId,
+              conta_bancaria_id: conta.id,
               habilitado: true
             }));
 
@@ -185,18 +162,26 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
 
         if (insertError) throw insertError;
 
-        if (tipo === 'centro_custo' && contasSelecionadas.length > 0 && novaCategoria) {
-          const vinculos = contasSelecionadas.map(contaId => ({
-            categoria_id: novaCategoria.id,
-            conta_bancaria_id: contaId,
-            habilitado: true
-          }));
+        // Se for centro de custo, vincular automaticamente a todas as contas ativas
+        if (tipo === 'centro_custo' && novaCategoria) {
+          const { data: allAccounts } = await supabase
+            .from('bank_accounts')
+            .select('id')
+            .eq('is_active', true);
 
-          const { error: vinculoError } = await supabase
-            .from('categoria_conta_bancaria')
-            .insert(vinculos);
+          if (allAccounts && allAccounts.length > 0) {
+            const vinculos = allAccounts.map(conta => ({
+              categoria_id: novaCategoria.id,
+              conta_bancaria_id: conta.id,
+              habilitado: true
+            }));
 
-          if (vinculoError) throw vinculoError;
+            const { error: vinculoError } = await supabase
+              .from('categoria_conta_bancaria')
+              .insert(vinculos);
+
+            if (vinculoError) throw vinculoError;
+          }
         }
 
         toast({
@@ -258,10 +243,15 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
             </div>
 
             {tipo === 'centro_custo' && (
-              <ColorPicker
-                value={cor}
-                onChange={setCor}
-              />
+              <>
+                <ColorPicker
+                  value={cor}
+                  onChange={setCor}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este centro de custo será automaticamente vinculado a todas as contas bancárias ativas.
+                </p>
+              </>
             )}
 
             {tipo !== 'centro_custo' && (
@@ -280,40 +270,6 @@ export function FinancialCategoryDialog({ tipo, categoriaId, aberto, onClose }: 
                     </p>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {tipo === 'centro_custo' && (
-              <div className="grid gap-2">
-                <Label>Contas Bancárias Habilitadas</Label>
-                <div className="border rounded-md p-4 space-y-3 max-h-[200px] overflow-y-auto">
-                  {contasBancarias.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhuma conta bancária cadastrada
-                    </p>
-                  ) : (
-                    contasBancarias.map(conta => (
-                      <div key={conta.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`conta-${conta.id}`}
-                          checked={contasSelecionadas.includes(conta.id)}
-                          onCheckedChange={(checked) =>
-                            handleToggleConta(conta.id, checked as boolean)
-                          }
-                        />
-                        <Label
-                          htmlFor={`conta-${conta.id}`}
-                          className="text-sm font-normal cursor-pointer"
-                        >
-                          {conta.bank_name} - {conta.account_number}
-                        </Label>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Selecione em quais contas bancárias esta categoria estará disponível
-                </p>
               </div>
             )}
           </div>
