@@ -70,6 +70,26 @@ export function SelectCentroCusto({
 
   useEffect(() => {
     fetchCentrosCusto();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('centros-custo-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categorias'
+        },
+        () => {
+          fetchCentrosCusto();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const isDisabled = disabled || loading;

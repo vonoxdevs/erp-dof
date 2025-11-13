@@ -199,7 +199,8 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
-        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['categorias'] })
       ]);
       onClose(true);
     } catch (error: any) {

@@ -201,7 +201,8 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
-        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['categorias'] })
       ]);
       onClose(true);
     } catch (error: any) {
@@ -211,12 +212,15 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
     }
   };
 
-  const handleQuickCategoryClose = (newCategoryId?: string) => {
+  const handleCategoriaCreated = (newCategoryId?: string) => {
     setQuickCategoryDialogOpen(false);
     if (newCategoryId) {
       setCategoriaDespesaId(newCategoryId);
-      // Force refresh of categories
+      // Force immediate refresh
       queryClient.invalidateQueries({ queryKey: ['categorias'] });
+      setTimeout(() => {
+        setCategoriaDespesaId(newCategoryId);
+      }, 100);
     }
   };
 
@@ -513,7 +517,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         tipo="despesa"
         centroCustoId={centroCustoId}
         open={quickCategoryDialogOpen}
-        onClose={handleQuickCategoryClose}
+        onClose={handleCategoriaCreated}
       />
     </Dialog>
   );
