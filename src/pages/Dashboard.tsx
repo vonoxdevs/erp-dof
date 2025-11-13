@@ -3,23 +3,29 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { TrendingUp, TrendingDown, DollarSign, Building2, Calendar, ArrowUpRight, ArrowDownRight, Receipt, Users, FileText, Clock } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight, Clock, ChevronLeft, ChevronRight, Search, Calendar, Receipt, Building2, FileText } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 import { AccountsBalance } from "@/components/dashboard/AccountsBalance";
-import { DashboardPeriodFilter } from "@/components/dashboard/DashboardPeriodFilter";
 import { BudgetForecast } from "@/components/dashboard/BudgetForecast";
 import { PendingAlerts } from "@/components/dashboard/PendingAlerts";
 import { RevenueExpenseChart } from "@/components/dashboard/RevenueExpenseChart";
 import { CategoryPieChart } from "@/components/dashboard/CategoryPieChart";
 import { CashFlowChart } from "@/components/dashboard/CashFlowChart";
-import { DateRange } from "react-day-picker";
-import { format, subDays, eachDayOfInterval } from "date-fns";
+import { format, subDays, eachDayOfInterval, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { accounts } = useBankAccounts();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [currentPeriod, setCurrentPeriod] = useState(new Date());
   const [stats, setStats] = useState({
     totalBalance: 0,
     monthlyRevenue: 0,
@@ -31,8 +37,6 @@ const Dashboard = () => {
     futureExpenses: 0,
     projectedBalance: 0
   });
-  const [selectedPeriod, setSelectedPeriod] = useState<'30' | '90' | 'custom'>('30');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [overdueTransactions, setOverdueTransactions] = useState<{
     revenues: any[];
     expenses: any[];
@@ -105,7 +109,7 @@ const Dashboard = () => {
       subscription.unsubscribe();
       supabase.removeChannel(realtimeChannel);
     };
-  }, [navigate, selectedPeriod, dateRange]);
+  }, [navigate, currentPeriod, selectedAccount]);
   const loadStats = async () => {
     try {
       const {
@@ -124,18 +128,8 @@ const Dashboard = () => {
       }
 
       // Calcular datas baseado no período selecionado
-      let daysAgo = selectedPeriod === '30' ? 30 : 90;
-      let startDate: Date;
-      let endDate: Date = new Date();
-
-      if (selectedPeriod === 'custom' && dateRange?.from && dateRange?.to) {
-        startDate = dateRange.from;
-        endDate = dateRange.to;
-      } else {
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - daysAgo);
-      }
-
+      const startDate = startOfMonth(currentPeriod);
+      const endDate = endOfMonth(currentPeriod);
       const dateFilter = startDate.toISOString().split('T')[0];
       const today = new Date().toISOString().split('T')[0];
       const thirtyDaysFromNow = new Date();
@@ -143,9 +137,18 @@ const Dashboard = () => {
       const futureDate = thirtyDaysFromNow.toISOString().split('T')[0];
 
       // Load transactions do período selecionado
-      const {
-        data: recentTransactions
-      } = await supabase.from("transactions").select("*").eq("company_id", profile.company_id).gte("due_date", dateFilter);
+      let transactionsQuery = supabase
+        .from("transactions")
+        .select("*")
+        .eq("company_id", profile.company_id)
+        .gte("due_date", startDate.toISOString())
+        .lte("due_date", endDate.toISOString());
+
+      if (selectedAccount !== "all") {
+        transactionsQuery = transactionsQuery.or(`bank_account_id.eq.${selectedAccount},account_from_id.eq.${selectedAccount},account_to_id.eq.${selectedAccount}`);
+      }
+
+      const { data: recentTransactions } = await transactionsQuery;
 
       // Load todas as transações para pendentes/vencidas
       const {
@@ -338,7 +341,14 @@ const Dashboard = () => {
     if (user) {
       loadStats();
     }
-  }, [selectedPeriod, dateRange, user]);
+  }, [currentPeriod, selectedAccount, user]);
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedAccount("all");
+    setCurrentPeriod(new Date());
+    toast.info("Filtros limpos");
+  };
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -351,13 +361,73 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Visão 360° das suas finanças em tempo real</p>
         </div>
 
-        {/* Filtro de Período */}
-        <DashboardPeriodFilter
-          selectedPeriod={selectedPeriod}
-          dateRange={dateRange}
-          onPeriodChange={setSelectedPeriod}
-          onDateRangeChange={setDateRange}
-        />
+        {/* Filtros */}
+        <Card className="p-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            {/* Filtro de Período */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Período</label>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPeriod(subMonths(currentPeriod, 1))}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex-1 text-center font-medium text-primary">
+                  {format(currentPeriod, "MMMM 'de' yyyy", { locale: ptBR })}
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCurrentPeriod(addMonths(currentPeriod, 1))}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Pesquisar */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Pesquisar</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Pesquisar"
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            {/* Conta */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Conta</label>
+              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar todas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Selecionar todas</SelectItem>
+                  {accounts.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.bank_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Limpar filtros */}
+            <div className="flex items-end">
+              <Button variant="link" onClick={handleClearFilters} className="text-primary">
+                Limpar filtros
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {/* Saldos das Contas Bancárias */}
         <AccountsBalance />
