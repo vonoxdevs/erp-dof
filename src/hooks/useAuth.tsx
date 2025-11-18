@@ -93,11 +93,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isInvitePage = currentPath === '/auth/accept-invite';
       const isCallbackPage = currentPath.startsWith('/auth/callback');
       
-      console.log('✅ Perfil carregado com sucesso', { needsOnboarding: status.needsOnboarding, currentPath });
+      // Verificar se está em fluxo de recuperação de senha
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const isRecoveryFlow = hashParams.get('type') === 'recovery';
       
-      // Não redirecionar se estiver em páginas de reset/mudança de senha, convite ou callback
-      if (isPasswordResetPage || isInvitePage || isCallbackPage) {
-        console.log('🔐 Usuário em página especial, não redirecionando');
+      console.log('✅ Perfil carregado com sucesso', { needsOnboarding: status.needsOnboarding, currentPath, isRecoveryFlow });
+      
+      // Não redirecionar se estiver em páginas de reset/mudança de senha, convite, callback ou em fluxo de recuperação
+      if (isPasswordResetPage || isInvitePage || isCallbackPage || isRecoveryFlow) {
+        console.log('🔐 Usuário em página especial ou fluxo de recuperação, não redirecionando');
         return;
       }
       
