@@ -38,7 +38,7 @@ export function SelectCategoria({
 
   // Força refetch quando refreshKey muda
   React.useEffect(() => {
-    if (refreshKey) {
+    if (refreshKey !== undefined && refreshKey > 0) {
       refetch();
     }
   }, [refreshKey, refetch]);
