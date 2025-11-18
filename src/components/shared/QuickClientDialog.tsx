@@ -112,6 +112,9 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
       console.log('✅ Company ID:', profile.company_id);
 
       // Criar cliente
+      const hasAddress = formData.cep || formData.street || formData.number || 
+                        formData.neighborhood || formData.city || formData.state;
+      
       const { data, error } = await supabase
         .from("contacts")
         .insert({
@@ -122,13 +125,15 @@ export function QuickClientDialog({ open, onClose, onClientCreated }: Props) {
           type: "client",
           email: formData.email || null,
           phone: formData.phone || null,
-          cep: formData.cep || null,
-          street: formData.street || null,
-          number: formData.number || null,
-          complement: formData.complement || null,
-          neighborhood: formData.neighborhood || null,
-          city: formData.city || null,
-          state: formData.state || null,
+          address: hasAddress ? {
+            zip_code: formData.cep || "",
+            street: formData.street || "",
+            number: formData.number || "",
+            complement: formData.complement || "",
+            neighborhood: formData.neighborhood || "",
+            city: formData.city || "",
+            state: formData.state || "",
+          } : null,
           is_active: true,
         })
         .select()
