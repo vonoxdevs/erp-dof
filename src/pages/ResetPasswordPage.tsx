@@ -114,11 +114,14 @@ const ResetPasswordPage = () => {
       
       toast({
         title: "✅ Senha redefinida com sucesso!",
-        description: "Você já pode fazer login com sua nova senha",
+        description: "Faça login com sua nova senha",
         duration: 5000,
       });
 
-      // Aguardar 2 segundos e redirecionar
+      // Fazer logout para limpar a sessão temporária de recuperação
+      await supabase.auth.signOut();
+
+      // Aguardar 2 segundos e redirecionar para login
       setTimeout(() => {
         navigate("/login");
       }, 2000);

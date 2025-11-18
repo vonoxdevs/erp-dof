@@ -32,10 +32,41 @@ const AuthCallback = () => {
         return;
       }
 
-      console.log('🔄 Trocando código por sessão...');
+      console.log('🔄 Processando callback...');
       console.log('🔍 Tipo de callback:', type);
 
-      // Trocar o código por uma sessão
+      // Se for recuperação de senha, NÃO criar sessão ainda
+      // Apenas validar o token e redirecionar para a página de reset
+      if (type === 'recovery') {
+        console.log('🔑 Link de recuperação detectado');
+        
+        // Trocar o código por uma sessão para validar o token
+        const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
+
+        if (sessionError) {
+          console.error('❌ Erro ao validar token de recuperação:', sessionError);
+          toast.error('Link de recuperação inválido ou expirado');
+          navigate('/login');
+          return;
+        }
+
+        if (!data.session) {
+          console.error('❌ Token de recuperação inválido');
+          toast.error('Link de recuperação inválido');
+          navigate('/login');
+          return;
+        }
+
+        console.log('✅ Token de recuperação válido');
+        toast.success('Link de recuperação validado! Defina sua nova senha.');
+        
+        // Redirecionar para a página de reset com o hash indicando que é recovery
+        navigate('/reset-password#type=recovery');
+        return;
+      }
+
+      // Para outros tipos de callback (signup, etc), criar sessão normalmente
+      console.log('🔄 Trocando código por sessão...');
       const { data, error: sessionError } = await supabase.auth.exchangeCodeForSession(code);
 
       if (sessionError) {
@@ -53,14 +84,6 @@ const AuthCallback = () => {
 
       console.log('✅ Email confirmado com sucesso:', data.user?.email);
       console.log('📧 Email confirmado em:', data.user?.email_confirmed_at);
-
-      // Se for recuperação de senha, redirecionar para a página de reset
-      if (type === 'recovery') {
-        console.log('🔑 Redirecionando para reset de senha');
-        toast.success('Link de recuperação validado!');
-        navigate('/reset-password#type=recovery');
-        return;
-      }
 
       toast.success('Email confirmado com sucesso!');
 
