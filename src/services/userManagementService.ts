@@ -81,6 +81,13 @@ export async function inviteUser(data: InviteUserData): Promise<string> {
   
   if (!user) throw new Error('Usuário não autenticado');
   
+  // Get company details
+  const { data: company } = await supabase
+    .from("companies")
+    .select("name")
+    .eq("id", companyId)
+    .single();
+  
   // Gerar token único
   const token = crypto.randomUUID();
   
@@ -101,6 +108,30 @@ export async function inviteUser(data: InviteUserData): Promise<string> {
   
   if (error) throw error;
   
+  // Gerar link de convite
+  const inviteLink = `${window.location.origin}/auth/accept-invite?token=${token}`;
+  
+  // Enviar email de convite
+  try {
+    const { error: emailError } = await supabase.functions.invoke("send-invite-email", {
+      body: {
+        email: data.email,
+        fullName: data.full_name,
+        inviteLink,
+        companyName: company?.name || "Sistema Financeiro",
+        role: data.role,
+      },
+    });
+
+    if (emailError) {
+      console.error("Error sending invitation email:", emailError);
+      // Não lançar erro - o convite foi criado, email é opcional
+    }
+  } catch (emailError) {
+    console.error("Failed to send invitation email:", emailError);
+    // Não lançar erro - o convite foi criado, email é opcional
+  }
+  
   // Log de auditoria
   await logAudit({
     action: 'INVITE_USER',
@@ -109,7 +140,7 @@ export async function inviteUser(data: InviteUserData): Promise<string> {
   });
   
   // Retornar link de convite
-  return `${window.location.origin}/auth/accept-invite?token=${token}`;
+  return inviteLink;
 }
 
 /**
