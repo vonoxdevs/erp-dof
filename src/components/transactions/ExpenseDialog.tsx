@@ -71,6 +71,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   const [centroCustoId, setCentroCustoId] = useState<string | null>(null);
   const [categoriaDespesaId, setCategoriaDespesaId] = useState<string | null>(null);
   const [quickCategoryDialogOpen, setQuickCategoryDialogOpen] = useState(false);
+  const [categoriaRefreshKey, setCategoriaRefreshKey] = useState(0);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
@@ -214,6 +215,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   const handleCategoriaCreated = (newCategoryId: string) => {
     console.log('🔄 ExpenseDialog: Categoria criada com ID:', newCategoryId);
     setCategoriaDespesaId(newCategoryId);
+    setCategoriaRefreshKey(prev => prev + 1); // Força refresh do SelectCategoria
     queryClient.invalidateQueries({ queryKey: ['categorias'] });
     setQuickCategoryDialogOpen(false);
   };
@@ -378,6 +380,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
                     onChange={setCategoriaDespesaId}
                     placeholder="Selecione a categoria"
                     disabled={!centroCustoId}
+                    refreshKey={categoriaRefreshKey}
                   />
                 </div>
                 <Button
