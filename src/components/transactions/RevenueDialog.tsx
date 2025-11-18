@@ -107,6 +107,10 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
   useEffect(() => {
     if (open) {
       if (transaction) {
+        console.log('📝 Carregando receita para edição:', { 
+          centro_custo_id: transaction.centro_custo_id, 
+          categoria_receita_id: transaction.categoria_receita_id 
+        });
         setFormData({
           amount: transaction.amount,
           description: transaction.description,
@@ -192,6 +196,8 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         is_recurring: formData.is_recurring,
         recurrence_config: recurrenceConfig,
       };
+
+      console.log('💾 Salvando receita:', { centro_custo_id: centroCustoId, categoria_receita_id: categoriaReceitaId });
 
       if (transaction) {
         const { error } = await supabase
