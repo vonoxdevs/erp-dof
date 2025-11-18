@@ -89,8 +89,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirecionar conforme necessário
       const currentPath = window.location.pathname;
       const isAuthPage = ['/login', '/register', '/'].includes(currentPath);
+      const isPasswordResetPage = currentPath === '/reset-password' || currentPath === '/forced-password-change';
+      const isInvitePage = currentPath === '/auth/accept-invite';
+      const isCallbackPage = currentPath.startsWith('/auth/callback');
       
       console.log('✅ Perfil carregado com sucesso', { needsOnboarding: status.needsOnboarding, currentPath });
+      
+      // Não redirecionar se estiver em páginas de reset/mudança de senha, convite ou callback
+      if (isPasswordResetPage || isInvitePage || isCallbackPage) {
+        console.log('🔐 Usuário em página especial, não redirecionando');
+        return;
+      }
       
       if (status.needsOnboarding && isAuthPage) {
         console.log('🔄 Redirecionando para onboarding');
