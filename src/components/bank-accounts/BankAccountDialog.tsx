@@ -182,9 +182,9 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
       };
 
       if (account?.id) {
-        // Na edição, NUNCA atualiza initial_balance nem current_balance
-        // Remover campos que não podem ser editados
-        const { initial_balance, current_balance, ...editableData } = dataToSave;
+        // Na edição, permite alterar initial_balance mas não current_balance
+        // Remove current_balance para não sobrescrevê-lo
+        const { current_balance, ...editableData } = dataToSave;
         const { error } = await supabase
           .from("bank_accounts")
           .update(editableData)
