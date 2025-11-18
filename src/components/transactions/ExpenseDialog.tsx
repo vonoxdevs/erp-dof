@@ -103,6 +103,10 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   useEffect(() => {
     if (open) {
       if (transaction) {
+        console.log('📝 Carregando despesa para edição:', { 
+          centro_custo_id: transaction.centro_custo_id, 
+          categoria_despesa_id: transaction.categoria_despesa_id 
+        });
         setFormData({
           amount: transaction.amount,
           description: transaction.description,
@@ -185,6 +189,8 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         is_recurring: formData.is_recurring,
         recurrence_config: recurrenceConfig,
       };
+
+      console.log('💾 Salvando despesa:', { centro_custo_id: centroCustoId, categoria_despesa_id: categoriaDespesaId });
 
       if (transaction) {
         const { error } = await supabase
