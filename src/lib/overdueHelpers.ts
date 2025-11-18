@@ -1,21 +1,17 @@
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { formatInSaoPauloTZ, formatCurrency as formatCurrencyUtil } from './dateUtils';
 
 /**
  * Formata valor em Real brasileiro
  */
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
+  return formatCurrencyUtil(value);
 }
 
 /**
- * Formata data no formato dd/MM/yyyy
+ * Formata data no formato dd/MM/yyyy (timezone São Paulo)
  */
 export function formatDate(date: string | Date): string {
-  return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
+  return formatInSaoPauloTZ(date, 'dd/MM/yyyy');
 }
 
 /**

@@ -10,8 +10,8 @@ import { Upload, Trash2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { supabase } from "@/integrations/supabase/client";
+import { formatInSaoPauloTZ, nowInSaoPaulo } from "@/lib/dateUtils";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { SelectCentroCusto } from "@/components/shared/SelectCentroCusto";
 import { useCategoriasFiltradas } from "@/hooks/useCategoriasFiltradas";
 
@@ -138,13 +138,13 @@ export function ImportBankStatementDialog({ open, onClose, onImportComplete }: I
                 } else if (dateStr.includes('-')) {
                   formattedDate = dateStr;
                 } else {
-                  formattedDate = format(new Date(), 'yyyy-MM-dd');
+                  formattedDate = format(nowInSaoPaulo(), 'yyyy-MM-dd');
                 }
               } else {
-                formattedDate = format(new Date(), 'yyyy-MM-dd');
+                formattedDate = format(nowInSaoPaulo(), 'yyyy-MM-dd');
               }
             } catch (e) {
-              formattedDate = format(new Date(), 'yyyy-MM-dd');
+              formattedDate = format(nowInSaoPaulo(), 'yyyy-MM-dd');
             }
 
             return {
@@ -398,7 +398,7 @@ function TransactionRow({
         />
       </TableCell>
       <TableCell className="whitespace-nowrap">
-        {format(new Date(transaction.date), "dd/MM/yyyy", { locale: ptBR })}
+        {formatInSaoPauloTZ(transaction.date, "dd/MM/yyyy")}
       </TableCell>
       <TableCell>
         <Input
