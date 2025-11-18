@@ -74,6 +74,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
   const [centroCustoId, setCentroCustoId] = useState<string | null>(null);
   const [categoriaReceitaId, setCategoriaReceitaId] = useState<string | null>(null);
   const [quickCategoryOpen, setQuickCategoryOpen] = useState(false);
+  const [categoriaRefreshKey, setCategoriaRefreshKey] = useState(0);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
@@ -370,6 +371,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                     onChange={setCategoriaReceitaId}
                     placeholder="Selecione a categoria"
                     disabled={!centroCustoId}
+                    refreshKey={categoriaRefreshKey}
                   />
                 </div>
                 <Button
@@ -504,6 +506,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         onClose={() => setQuickCategoryOpen(false)}
         onCategoryCreated={(categoryId) => {
           setCategoriaReceitaId(categoryId);
+          setCategoriaRefreshKey(prev => prev + 1); // Força refresh do SelectCategoria
           queryClient.invalidateQueries({ queryKey: ['categorias'] });
           setQuickCategoryOpen(false);
         }}

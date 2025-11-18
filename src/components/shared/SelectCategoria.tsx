@@ -1,3 +1,4 @@
+import * as React from 'react';
 import {
   Select,
   SelectContent,
@@ -16,6 +17,7 @@ interface SelectCategoriaProps {
   onChange: (value: string) => void;
   placeholder: string;
   disabled?: boolean;
+  refreshKey?: number; // Key para forçar refetch
 }
 
 export function SelectCategoria({
@@ -25,13 +27,21 @@ export function SelectCategoria({
   value,
   onChange,
   placeholder,
-  disabled = false
+  disabled = false,
+  refreshKey
 }: SelectCategoriaProps) {
   const { categorias, loading, refetch } = useCategoriasFiltradas({
     contaBancariaId,
     centroCustoId,
     tipo
   });
+
+  // Força refetch quando refreshKey muda
+  React.useEffect(() => {
+    if (refreshKey) {
+      refetch();
+    }
+  }, [refreshKey, refetch]);
 
   // Para centro_custo, precisa contaBancariaId
   // Para receita/despesa, NÃO precisa mais de centroCustoId (aparecem em todos)
