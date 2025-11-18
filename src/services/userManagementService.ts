@@ -365,6 +365,12 @@ async function logAudit(data: {
     
     if (!user) return;
     
+    // Só inserir se entity_id estiver definido (campo obrigatório na tabela)
+    if (!data.entity_id) {
+      console.warn('Tentativa de criar log de auditoria sem entity_id:', data);
+      return;
+    }
+    
     await (supabase as any).from('audit_logs').insert({
       company_id: companyId,
       user_id: user.id,

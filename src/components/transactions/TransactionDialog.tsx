@@ -284,6 +284,28 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         if (!data || data.length === 0) {
           throw new Error("Transação não encontrada ou sem permissão para editar");
         }
+
+        // Atualizar saldo do cartão de crédito se necessário
+        if (validatedData.type === 'expense' && validatedData.account_from_id) {
+          const { data: accountData } = await supabase
+            .from('bank_accounts')
+            .select('account_type, credit_limit, available_credit')
+            .eq('id', validatedData.account_from_id)
+            .single();
+
+          if (accountData?.account_type === 'credit_card') {
+            // Buscar o valor anterior da transação
+            const oldAmount = transaction?.amount || 0;
+            const currentAvailable = accountData.available_credit ?? accountData.credit_limit ?? 0;
+            // Devolver o valor antigo e subtrair o novo
+            const newAvailable = currentAvailable + oldAmount - validatedData.amount;
+            
+            await supabase
+              .from('bank_accounts')
+              .update({ available_credit: newAvailable })
+              .eq('id', validatedData.account_from_id);
+          }
+        }
         
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
@@ -314,6 +336,25 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         
         if (!data || data.length === 0) {
           throw new Error("Erro ao criar transação: resposta vazia do servidor");
+        }
+
+        // Atualizar saldo do cartão de crédito se necessário
+        if (validatedData.type === 'expense' && validatedData.account_from_id) {
+          const { data: accountData } = await supabase
+            .from('bank_accounts')
+            .select('account_type, credit_limit, available_credit')
+            .eq('id', validatedData.account_from_id)
+            .single();
+
+          if (accountData?.account_type === 'credit_card') {
+            const currentAvailable = accountData.available_credit ?? accountData.credit_limit ?? 0;
+            const newAvailable = currentAvailable - validatedData.amount;
+            
+            await supabase
+              .from('bank_accounts')
+              .update({ available_credit: newAvailable })
+              .eq('id', validatedData.account_from_id);
+          }
         }
         
         await Promise.all([
