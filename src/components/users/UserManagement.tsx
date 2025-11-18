@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { InviteUserDialog } from "./InviteUserDialog";
 import { EditPermissionsDialog } from "./EditPermissionsDialog";
 import { useAuth } from "@/hooks/useAuth";
-import { getCompanyUsers, updateUserStatus, deleteUser } from "@/services/userManagementService";
+import { getCompanyUsers, updateUserStatus, deleteUser, getPendingInvites, resendInvite } from "@/services/userManagementService";
 
 export function UserManagement() {
   const queryClient = useQueryClient();
@@ -23,6 +23,13 @@ export function UserManagement() {
   const { data: users, isLoading } = useQuery({
     queryKey: ['company-users'],
     queryFn: getCompanyUsers,
+    enabled: hasRole(['admin', 'moderator']),
+  });
+
+  // Buscar convites pendentes
+  const { data: pendingInvites, isLoading: isLoadingInvites } = useQuery({
+    queryKey: ['pending-invites'],
+    queryFn: getPendingInvites,
     enabled: hasRole(['admin', 'moderator']),
   });
 
@@ -48,6 +55,18 @@ export function UserManagement() {
     },
     onError: () => {
       toast.error('Erro ao desativar usuário');
+    },
+  });
+
+  // Reenviar convite
+  const resendInviteMutation = useMutation({
+    mutationFn: resendInvite,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-invites'] });
+      toast.success('Convite reenviado com sucesso!');
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Erro ao reenviar convite');
     },
   });
 
@@ -111,6 +130,64 @@ export function UserManagement() {
         </Dialog>
       </CardHeader>
       <CardContent>
+        {/* Seção de Convites Pendentes */}
+        {pendingInvites && pendingInvites.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Convites Pendentes ({pendingInvites.length})
+            </h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Função</TableHead>
+                  <TableHead>Enviado em</TableHead>
+                  <TableHead>Expira em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingInvites.map((invite) => {
+                  const isExpired = new Date(invite.expires_at) < new Date();
+                  return (
+                    <TableRow key={invite.id} className="bg-muted/30">
+                      <TableCell className="font-medium">{invite.full_name}</TableCell>
+                      <TableCell>{invite.email}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{invite.role}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(invite.created_at).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <span className={isExpired ? "text-destructive" : ""}>
+                          {new Date(invite.expires_at).toLocaleDateString('pt-BR')}
+                          {isExpired && " (Expirado)"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => resendInviteMutation.mutate(invite.id)}
+                          disabled={resendInviteMutation.isPending}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Reenviar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {/* Seção de Usuários Ativos */}
+        <h3 className="text-sm font-medium mb-3">Usuários Ativos</h3>
         {isLoading ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
