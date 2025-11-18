@@ -15,6 +15,7 @@ import AuthCallback from "./pages/AuthCallback";
 import OnboardingPage from "./pages/OnboardingPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ForcedPasswordChangePage from "./pages/ForcedPasswordChangePage";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
 
 // Páginas protegidas
 import Dashboard from "./pages/Dashboard";
@@ -61,6 +62,7 @@ const App = () => {
               <Route path="/signup" element={<SignUpPage />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/accept-invite" element={<AcceptInvitePage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               
               {/* Mudança forçada de senha (requer autenticação mas não empresa) */}
