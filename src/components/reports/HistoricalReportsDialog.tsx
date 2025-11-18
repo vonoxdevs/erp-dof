@@ -6,7 +6,7 @@ import { FileText, Download } from "lucide-react";
 import { getHistoricalReports } from "@/services/reportService";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { formatInSaoPauloTZ } from "@/lib/dateUtils";
 
 export function HistoricalReportsDialog() {
   const [reports, setReports] = useState<any[]>([]);
@@ -76,10 +76,10 @@ export function HistoricalReportsDialog() {
               {reports.map(report => (
                 <TableRow key={report.id}>
                   <TableCell>
-                    {format(new Date(report.period_start), 'dd/MM/yyyy')} - {format(new Date(report.period_end), 'dd/MM/yyyy')}
+                    {formatInSaoPauloTZ(report.period_start, 'dd/MM/yyyy')} - {formatInSaoPauloTZ(report.period_end, 'dd/MM/yyyy')}
                   </TableCell>
                   <TableCell className="capitalize">{report.report_type}</TableCell>
-                  <TableCell>{format(new Date(report.created_at), 'dd/MM/yyyy HH:mm')}</TableCell>
+                  <TableCell>{formatInSaoPauloTZ(report.created_at, 'dd/MM/yyyy HH:mm')}</TableCell>
                   <TableCell>
                     <Button 
                       size="sm" 

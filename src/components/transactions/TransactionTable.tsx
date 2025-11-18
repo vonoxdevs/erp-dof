@@ -9,8 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, ArrowUpRight, ArrowDownRight, ArrowRightLeft, Building2 } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatInSaoPauloTZ } from "@/lib/dateUtils";
 
 interface Transaction {
   id: string;
@@ -179,7 +178,7 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
               </span>
             </TableCell>
             <TableCell>
-              {format(new Date(transaction.due_date), "dd/MM/yyyy", { locale: ptBR })}
+              {formatInSaoPauloTZ(transaction.due_date, "dd/MM/yyyy")}
             </TableCell>
             <TableCell>{getStatusBadge(transaction.status)}</TableCell>
             <TableCell className="text-right">
