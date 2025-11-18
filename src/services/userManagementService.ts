@@ -23,6 +23,17 @@ export interface InviteUserData {
   permissions: any;
 }
 
+export interface PendingInvite {
+  id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  department: string | null;
+  created_at: string;
+  expires_at: string;
+  token: string;
+}
+
 /**
  * Busca todos os usuários da empresa com suas roles
  */
@@ -140,6 +151,97 @@ export async function inviteUser(data: InviteUserData): Promise<string> {
   });
   
   // Retornar link de convite
+  return inviteLink;
+}
+
+/**
+ * Busca convites pendentes (não aceitos)
+ */
+export async function getPendingInvites(): Promise<PendingInvite[]> {
+  const companyId = await getUserCompanyId();
+  
+  const { data, error } = await supabase
+    .from('user_invites')
+    .select('id, email, full_name, role, department, created_at, expires_at, token')
+    .eq('company_id', companyId)
+    .is('accepted_at', null)
+    .order('created_at', { ascending: false });
+  
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Reenvia convite com novo token
+ */
+export async function resendInvite(inviteId: string): Promise<string> {
+  const companyId = await getUserCompanyId();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) throw new Error('Usuário não autenticado');
+  
+  // Buscar convite existente
+  const { data: invite, error: fetchError } = await supabase
+    .from('user_invites')
+    .select('*')
+    .eq('id', inviteId)
+    .eq('company_id', companyId)
+    .single();
+  
+  if (fetchError || !invite) throw new Error('Convite não encontrado');
+  
+  // Gerar novo token
+  const newToken = crypto.randomUUID();
+  const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  
+  // Atualizar convite com novo token e expiração
+  const { error: updateError } = await supabase
+    .from('user_invites')
+    .update({
+      token: newToken,
+      expires_at: newExpiresAt,
+    })
+    .eq('id', inviteId);
+  
+  if (updateError) throw updateError;
+  
+  // Get company details
+  const { data: company } = await supabase
+    .from("companies")
+    .select("name")
+    .eq("id", companyId)
+    .single();
+  
+  // Gerar novo link de convite
+  const inviteLink = `${window.location.origin}/auth/accept-invite?token=${newToken}`;
+  
+  // Reenviar email de convite
+  try {
+    const { error: emailError } = await supabase.functions.invoke("send-invite-email", {
+      body: {
+        email: invite.email,
+        fullName: invite.full_name,
+        inviteLink,
+        companyName: company?.name || "Sistema Financeiro",
+        role: invite.role,
+      },
+    });
+
+    if (emailError) {
+      console.error("Error resending invitation email:", emailError);
+    }
+  } catch (emailError) {
+    console.error("Failed to resend invitation email:", emailError);
+  }
+  
+  // Log da auditoria
+  await logAudit({
+    action: 'resend_invite',
+    entity_type: 'user_invite',
+    entity_id: inviteId,
+    new_data: { token: newToken, expires_at: newExpiresAt }
+  });
+  
   return inviteLink;
 }
 
