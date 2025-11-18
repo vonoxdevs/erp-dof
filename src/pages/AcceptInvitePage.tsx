@@ -34,6 +34,8 @@ export default function AcceptInvitePage() {
     try {
       setLoading(true);
       
+      console.log('🔍 Buscando convite com token:', token);
+      
       const { data, error: inviteError } = await supabase
         .from('user_invites')
         .select('*')
@@ -41,17 +43,26 @@ export default function AcceptInvitePage() {
         .is('accepted_at', null)
         .single();
 
+      console.log('📨 Resultado da busca:', { data, error: inviteError });
+
       if (inviteError || !data) {
+        console.error('❌ Erro ao buscar convite:', inviteError);
         throw new Error('Convite não encontrado ou já foi aceito');
       }
 
       // Verificar se expirou
-      if (new Date(data.expires_at) < new Date()) {
+      const expiresAt = new Date(data.expires_at);
+      const now = new Date();
+      console.log('⏰ Verificando expiração:', { expiresAt, now, expired: expiresAt < now });
+      
+      if (expiresAt < now) {
         throw new Error('Este convite expirou');
       }
 
+      console.log('✅ Convite válido:', data);
       setInvite(data);
     } catch (err: any) {
+      console.error('❌ Erro ao carregar convite:', err);
       setError(err.message);
     } finally {
       setLoading(false);
