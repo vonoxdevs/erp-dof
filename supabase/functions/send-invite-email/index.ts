@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Sistema Financeiro <onboarding@resend.dev>",
+        from: "Sistema Financeiro <noreply@domineofacilities.com.br>",
         to: [email],
         subject: `Convite para ${companyName}`,
         html: `
