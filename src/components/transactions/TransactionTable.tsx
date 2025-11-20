@@ -23,6 +23,18 @@ interface Transaction {
     icon?: string;
     color?: string;
   } | null;
+  categoria_receita?: {
+    id: string;
+    nome: string;
+    cor?: string;
+    icon?: string;
+  } | null;
+  categoria_despesa?: {
+    id: string;
+    nome: string;
+    cor?: string;
+    icon?: string;
+  } | null;
   bank_account?: {
     id: string;
     bank_name: string;
@@ -121,14 +133,25 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
             </TableCell>
             <TableCell className="font-medium">{transaction.description}</TableCell>
             <TableCell>
-              {transaction.categories ? (
-                <div className="flex items-center gap-2">
-                  {transaction.categories.icon && <span>{transaction.categories.icon}</span>}
-                  <span className="text-sm">{transaction.categories.name}</span>
-                </div>
-              ) : (
-                <span className="text-muted-foreground text-sm">-</span>
-              )}
+              {(() => {
+                const categoriaBase = transaction.categoria_despesa || transaction.categoria_receita;
+                const categoria = categoriaBase
+                  ? {
+                      name: categoriaBase.nome,
+                      icon: categoriaBase.icon,
+                      color: categoriaBase.cor,
+                    }
+                  : transaction.categories;
+
+                return categoria ? (
+                  <div className="flex items-center gap-2">
+                    {categoria.icon && <span>{categoria.icon}</span>}
+                    <span className="text-sm">{categoria.name}</span>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground text-sm">-</span>
+                );
+              })()}
             </TableCell>
             <TableCell>
               <div className="text-xs space-y-1">
