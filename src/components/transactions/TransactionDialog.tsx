@@ -367,7 +367,9 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
       }
       onClose(true);
     } catch (error: any) {
-      toast.error(sanitizeError(error));
+      console.error('❌ Erro ao salvar transação:', error);
+      const errorMessage = sanitizeError(error);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

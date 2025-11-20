@@ -77,22 +77,50 @@ const errorMappings: ErrorMapping[] = [
  * Logs the original error for debugging while showing sanitized message to user
  */
 export function sanitizeError(error: any): string {
-  // Extract error message
-  const errorMessage = error?.message || error?.toString() || "Erro desconhecido";
-
-  // Log detailed error for debugging (only in console, not exposed to user)
-  if (process.env.NODE_ENV === 'development') {
-    console.error('[Error Details]:', error);
-  }
-
-  // Try to map to a user-friendly message
-  for (const mapping of errorMappings) {
-    if (mapping.pattern.test(errorMessage)) {
-      return mapping.message;
+  try {
+    // Extract error message from various error formats
+    let errorMessage = "Erro desconhecido";
+    
+    if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (error?.message) {
+      errorMessage = String(error.message);
+    } else if (error?.error_description) {
+      // Supabase auth errors
+      errorMessage = String(error.error_description);
+    } else if (error?.hint) {
+      // Postgres errors
+      errorMessage = String(error.hint);
+    } else if (error?.details) {
+      // Supabase detailed errors
+      errorMessage = String(error.details);
+    } else {
+      try {
+        errorMessage = JSON.stringify(error);
+      } catch {
+        errorMessage = String(error);
+      }
     }
-  }
 
-  // If no specific mapping found, return a generic message
-  // Never expose the raw error message to the user
-  return "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente";
+    // Log detailed error for debugging
+    console.error('[Error Details]:', {
+      original: error,
+      extracted: errorMessage,
+      type: typeof error
+    });
+
+    // Try to map to a user-friendly message
+    for (const mapping of errorMappings) {
+      if (mapping.pattern.test(errorMessage)) {
+        return mapping.message;
+      }
+    }
+
+    // If no specific mapping found, return a generic message
+    return "Ocorreu um erro ao processar sua solicitação. Por favor, tente novamente";
+  } catch (e) {
+    // Fallback in case sanitization itself fails
+    console.error('[sanitizeError failed]:', e);
+    return "Ocorreu um erro inesperado. Por favor, tente novamente";
+  }
 }

@@ -219,7 +219,9 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
       ]);
       onClose(true);
     } catch (error: any) {
-      toast.error(sanitizeError(error));
+      console.error('❌ Erro ao salvar receita:', error);
+      const errorMessage = sanitizeError(error);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
