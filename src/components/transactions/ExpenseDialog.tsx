@@ -32,6 +32,7 @@ import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
 import { QuickCategoryDialog } from '@/components/categories/QuickCategoryDialog';
 import { EditRecurringDialog } from './EditRecurringDialog';
+import { getTodayForInput, formatDateForInput } from '@/lib/dateUtils';
 
 const expenseSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -79,7 +80,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
-    due_date: new Date().toISOString().split("T")[0],
+    due_date: getTodayForInput(),
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     supplier_name: "",
     account_from_id: null as string | null,
@@ -132,7 +133,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         setFormData({
           amount: undefined,
           description: "",
-          due_date: new Date().toISOString().split("T")[0],
+          due_date: getTodayForInput(),
           status: "pending",
           supplier_name: "",
           account_from_id: null,

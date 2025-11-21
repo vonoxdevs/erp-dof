@@ -29,6 +29,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
+import { getTodayForInput, formatDateForInput } from '@/lib/dateUtils';
 
 // Validation schema
 const transactionSchema = z.object({
@@ -119,7 +120,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
     type: "expense",
     amount: undefined,
     description: "",
-    due_date: new Date().toISOString().split("T")[0],
+    due_date: getTodayForInput(),
     status: "pending",
   });
   const [contacts, setContacts] = useState<any[]>([]);
@@ -190,7 +191,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
         type: "expense",
         amount: undefined,
         description: "",
-        due_date: new Date().toISOString().split("T")[0],
+        due_date: getTodayForInput(),
         status: "pending",
       });
       setCentroCustoId(null);

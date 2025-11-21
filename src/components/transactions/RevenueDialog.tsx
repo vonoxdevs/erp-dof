@@ -34,6 +34,7 @@ import { SelectCliente } from '@/components/shared/SelectCliente';
 import { QuickCategoryDialog } from '@/components/categories/QuickCategoryDialog';
 import { Plus } from 'lucide-react';
 import { EditRecurringDialog } from './EditRecurringDialog';
+import { getTodayForInput, formatDateForInput } from '@/lib/dateUtils';
 
 const revenueSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -82,7 +83,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
-    due_date: new Date().toISOString().split("T")[0],
+    due_date: getTodayForInput(),
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     customer_name: "",
     contact_id: "",
@@ -137,7 +138,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         setFormData({
           amount: undefined,
           description: "",
-          due_date: new Date().toISOString().split("T")[0],
+          due_date: getTodayForInput(),
           status: "pending",
           customer_name: "",
           contact_id: "",

@@ -42,6 +42,25 @@ export function nowInSaoPaulo(): Date {
 }
 
 /**
+ * Converte Date para formato YYYY-MM-DD sem problemas de timezone
+ * Usa a data LOCAL, não UTC
+ */
+export function formatDateForInput(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Obtém a data atual no formato YYYY-MM-DD (timezone local)
+ */
+export function getTodayForInput(): string {
+  return formatDateForInput(new Date());
+}
+
+/**
  * Formata valor monetário em Real brasileiro
  */
 export function formatCurrency(value: number): string {
