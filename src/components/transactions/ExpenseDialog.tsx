@@ -303,18 +303,22 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
       // Buscar todas as transações do mesmo contrato
       const { data: allTransactions, error: fetchError } = await supabase
         .from("transactions")
-        .select("id")
+        .select("id, due_date")
         .eq("contract_id", contractId);
 
       if (fetchError) throw fetchError;
 
-      // Atualizar todas uma por uma para manter contract_id
+      // Preparar dados sem o due_date (para preservar as datas originais)
+      const { due_date, ...dataWithoutDueDate } = pendingFormData;
+
+      // Atualizar todas uma por uma para manter contract_id e due_date original
       const updatePromises = allTransactions?.map(tx => 
         supabase
           .from("transactions")
           .update({
-            ...pendingFormData,
+            ...dataWithoutDueDate,
             contract_id: contractId, // Mantém o contract_id
+            due_date: tx.due_date, // Mantém a due_date original
           })
           .eq("id", tx.id)
       ) || [];
@@ -350,19 +354,23 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
       // Buscar todas as transações futuras do mesmo contrato (incluindo esta)
       const { data: futureTransactions, error: fetchError } = await supabase
         .from("transactions")
-        .select("id")
+        .select("id, due_date")
         .eq("contract_id", contractId)
         .gte("due_date", transaction.due_date);
 
       if (fetchError) throw fetchError;
 
-      // Atualizar cada uma mantendo o contract_id
+      // Preparar dados sem o due_date (para preservar as datas originais)
+      const { due_date, ...dataWithoutDueDate } = pendingFormData;
+
+      // Atualizar cada uma mantendo o contract_id e due_date original
       const updatePromises = futureTransactions?.map(tx => 
         supabase
           .from("transactions")
           .update({
-            ...pendingFormData,
+            ...dataWithoutDueDate,
             contract_id: contractId, // Mantém o contract_id
+            due_date: tx.due_date, // Mantém a due_date original
           })
           .eq("id", tx.id)
       ) || [];
