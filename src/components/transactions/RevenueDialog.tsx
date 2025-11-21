@@ -205,11 +205,14 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
       };
 
       // Se está editando uma transação recorrente, mostrar dialog de confirmação
-      if (transaction && (transaction.is_recurring || await hasContractId(transaction.id))) {
-        setPendingFormData(dataToSave);
-        setEditRecurringDialogOpen(true);
-        setLoading(false);
-        return;
+      if (transaction) {
+        const contractId = await getContractId(transaction.id);
+        if (contractId) {
+          setPendingFormData({ ...dataToSave, contract_id: contractId });
+          setEditRecurringDialogOpen(true);
+          setLoading(false);
+          return;
+        }
       }
 
       // Se não é recorrente ou é nova, salvar diretamente
@@ -222,13 +225,33 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
     }
   };
 
-  const hasContractId = async (transactionId: string): Promise<boolean> => {
+  const getContractId = async (transactionId: string): Promise<string | null> => {
     const { data } = await supabase
       .from("transactions")
-      .select("contract_id")
+      .select("contract_id, is_recurring")
       .eq("id", transactionId)
-      .single();
-    return !!data?.contract_id;
+      .maybeSingle();
+    
+    if (!data) return null;
+    
+    // Se tem contract_id, retorna
+    if (data.contract_id) return data.contract_id;
+    
+    // Se é marcada como recorrente mas não tem contract_id, 
+    // busca outras transações com mesma descrição e valores similares
+    if (data.is_recurring) {
+      const { data: similarTx } = await supabase
+        .from("transactions")
+        .select("contract_id")
+        .eq("description", transaction?.description)
+        .not("contract_id", "is", null)
+        .limit(1)
+        .maybeSingle();
+      
+      return similarTx?.contract_id || null;
+    }
+    
+    return null;
   };
 
   const saveTransaction = async (dataToSave: any, transactionId?: string) => {
@@ -263,30 +286,46 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
 
   const handleEditOne = async () => {
     if (!pendingFormData || !transaction) return;
-    await saveTransaction(pendingFormData, transaction.id);
+    // Remove o contract_id para desconectar da série, mas mantém is_recurring false
+    const dataToSave = { 
+      ...pendingFormData, 
+      contract_id: null,
+      is_recurring: false 
+    };
+    await saveTransaction(dataToSave, transaction.id);
   };
 
   const handleEditAll = async () => {
     if (!pendingFormData || !transaction) return;
     setLoading(true);
     try {
-      const { data: txData } = await supabase
-        .from("transactions")
-        .select("contract_id")
-        .eq("id", transaction.id)
-        .single();
+      const contractId = pendingFormData.contract_id;
 
-      if (!txData?.contract_id) {
+      if (!contractId) {
         await saveTransaction(pendingFormData, transaction.id);
         return;
       }
 
-      const { error } = await supabase
+      // Buscar todas as transações do mesmo contrato
+      const { data: allTransactions, error: fetchError } = await supabase
         .from("transactions")
-        .update(pendingFormData)
-        .eq("contract_id", txData.contract_id);
+        .select("id")
+        .eq("contract_id", contractId);
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
+
+      // Atualizar todas uma por uma para manter contract_id
+      const updatePromises = allTransactions?.map(tx => 
+        supabase
+          .from("transactions")
+          .update({
+            ...pendingFormData,
+            contract_id: contractId, // Mantém o contract_id
+          })
+          .eq("id", tx.id)
+      ) || [];
+
+      await Promise.all(updatePromises);
 
       toast.success("Todas as recorrências foram atualizadas!");
       await Promise.all([
@@ -307,24 +346,34 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
     if (!pendingFormData || !transaction) return;
     setLoading(true);
     try {
-      const { data: txData } = await supabase
-        .from("transactions")
-        .select("contract_id")
-        .eq("id", transaction.id)
-        .single();
+      const contractId = pendingFormData.contract_id;
 
-      if (!txData?.contract_id) {
+      if (!contractId) {
         await saveTransaction(pendingFormData, transaction.id);
         return;
       }
 
-      const { error } = await supabase
+      // Buscar todas as transações futuras do mesmo contrato (incluindo esta)
+      const { data: futureTransactions, error: fetchError } = await supabase
         .from("transactions")
-        .update(pendingFormData)
-        .eq("contract_id", txData.contract_id)
+        .select("id")
+        .eq("contract_id", contractId)
         .gte("due_date", transaction.due_date);
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
+
+      // Atualizar cada uma mantendo o contract_id
+      const updatePromises = futureTransactions?.map(tx => 
+        supabase
+          .from("transactions")
+          .update({
+            ...pendingFormData,
+            contract_id: contractId, // Mantém o contract_id
+          })
+          .eq("id", tx.id)
+      ) || [];
+
+      await Promise.all(updatePromises);
 
       toast.success("Esta transação e as futuras foram atualizadas!");
       await Promise.all([
@@ -657,7 +706,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         onEditAll={handleEditAll}
         onEditFromThis={handleEditFromThis}
         isRecurring={!!transaction?.is_recurring}
-        hasContract={!!transaction?.contract_id}
+        hasContract={!!pendingFormData?.contract_id}
       />
     </Dialog>
   );
