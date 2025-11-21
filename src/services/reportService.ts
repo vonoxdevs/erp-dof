@@ -11,12 +11,17 @@ export interface ReportData {
     averageTicket: number;
     pendingCount: number;
     overdueCount: number;
+    pendingRevenue: number;
+    pendingExpenses: number;
+    overdueRevenue: number;
+    overdueExpenses: number;
   };
   breakdown: {
     revenueByCategory: Array<{ category: string; amount: number; percentage: number; color: string }>;
     expensesByCategory: Array<{ category: string; amount: number; percentage: number; color: string }>;
     dailyFlow: Array<{ date: string; revenue: number; expense: number; balance: number }>;
     topCategories: Array<{ category: string; revenue: number; expense: number }>;
+    pendingByCategory: Array<{ category: string; revenue: number; expense: number }>;
   };
   transactions: Array<any>;
   trends: {
@@ -98,6 +103,22 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
 
   const pendingCount = transactions.filter(t => t.status === 'pending').length;
   const overdueCount = transactions.filter(t => t.status === 'overdue').length;
+
+  const pendingRevenue = transactions
+    .filter(t => t.type === 'revenue' && t.status === 'pending')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const pendingExpenses = transactions
+    .filter(t => t.type === 'expense' && t.status === 'pending')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const overdueRevenue = transactions
+    .filter(t => t.type === 'revenue' && t.status === 'overdue')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const overdueExpenses = transactions
+    .filter(t => t.type === 'expense' && t.status === 'overdue')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
 
   // Calcular crescimento comparado ao período anterior
   const prevRevenue = (previousTransactions || [])
@@ -209,6 +230,32 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
     .sort((a, b) => (b.revenue + b.expense) - (a.revenue + a.expense))
     .slice(0, 5);
 
+  // Categorias pendentes/previstas
+  const pendingByCategory = new Map<string, { revenue: number; expense: number }>();
+  
+  transactions.forEach(t => {
+    if (t.status === 'paid') return;
+    
+    const categoryName = t.categories?.name || 'Sem Categoria';
+    const current = pendingByCategory.get(categoryName) || { revenue: 0, expense: 0 };
+    
+    if (t.type === 'revenue') {
+      current.revenue += Number(t.amount);
+    } else if (t.type === 'expense') {
+      current.expense += Number(t.amount);
+    }
+    
+    pendingByCategory.set(categoryName, current);
+  });
+
+  const pendingByCategoryArray = Array.from(pendingByCategory.entries())
+    .map(([category, data]) => ({
+      category,
+      revenue: data.revenue,
+      expense: data.expense
+    }))
+    .sort((a, b) => (b.revenue + b.expense) - (a.revenue + a.expense));
+
   const topRevenueSource = revenueArray[0]?.category || 'N/A';
   const topExpenseCategory = expensesArray[0]?.category || 'N/A';
 
@@ -225,13 +272,18 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
       transactionCount,
       averageTicket,
       pendingCount,
-      overdueCount
+      overdueCount,
+      pendingRevenue,
+      pendingExpenses,
+      overdueRevenue,
+      overdueExpenses
     },
     breakdown: {
       revenueByCategory: revenueArray,
       expensesByCategory: expensesArray,
       dailyFlow,
-      topCategories
+      topCategories,
+      pendingByCategory: pendingByCategoryArray
     },
     transactions,
     trends: {
@@ -296,13 +348,18 @@ export async function getMonthlyReportData(year: number, month: number): Promise
         ? totalRevenue / transactions.filter(t => t.type === 'revenue' && t.status === 'paid').length 
         : 0,
       pendingCount: transactions.filter(t => t.status === 'pending').length,
-      overdueCount: transactions.filter(t => t.status === 'overdue').length
+      overdueCount: transactions.filter(t => t.status === 'overdue').length,
+      pendingRevenue: transactions.filter(t => t.type === 'revenue' && t.status === 'pending').reduce((sum, t) => sum + Number(t.amount), 0),
+      pendingExpenses: transactions.filter(t => t.type === 'expense' && t.status === 'pending').reduce((sum, t) => sum + Number(t.amount), 0),
+      overdueRevenue: transactions.filter(t => t.type === 'revenue' && t.status === 'overdue').reduce((sum, t) => sum + Number(t.amount), 0),
+      overdueExpenses: transactions.filter(t => t.type === 'expense' && t.status === 'overdue').reduce((sum, t) => sum + Number(t.amount), 0)
     },
     breakdown: {
       revenueByCategory: [],
       expensesByCategory: [],
       dailyFlow: [],
-      topCategories: []
+      topCategories: [],
+      pendingByCategory: []
     },
     transactions,
     trends: {
