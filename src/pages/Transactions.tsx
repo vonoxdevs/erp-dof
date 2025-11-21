@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, ChevronRight, Search, HelpCircle, ChevronDown, ArrowUpRight, ArrowDownRight, ArrowRightLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, HelpCircle, ChevronDown, ArrowUpRight, ArrowDownRight, ArrowRightLeft, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { RevenueDialog } from "@/components/transactions/RevenueDialog";
 import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { usePendingTransactions } from "@/hooks/usePendingTransactions";
 
 interface Transaction {
   id: string;
@@ -91,7 +92,8 @@ interface Transaction {
 
 const Transactions = () => {
   const queryClient = useQueryClient();
-  const { accounts } = useBankAccounts();
+  const { accounts, totalBalance } = useBankAccounts();
+  const { pendingBalances } = usePendingTransactions();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -412,6 +414,11 @@ const Transactions = () => {
     .reduce((sum, t) => sum + Number(t.amount), 0);
 
   const totalPeriodo = receitasRealizadas - despesasRealizadas;
+  
+  // Calcular saldo previsto total
+  const totalProjectedBalance = pendingBalances?.reduce((sum, balance) => {
+    return sum + balance.projectedBalance;
+  }, 0) ?? totalBalance;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -590,7 +597,7 @@ const Transactions = () => {
       </Card>
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
         <Card className="p-4">
           <p className="text-sm text-muted-foreground mb-2">Receitas em aberto (R$)</p>
           <p className="text-2xl font-bold text-orange-500">
@@ -613,6 +620,22 @@ const Transactions = () => {
           <p className="text-sm text-muted-foreground mb-2">Despesas realizadas (R$)</p>
           <p className="text-2xl font-bold text-destructive">
             {formatCurrency(despesasRealizadas)}
+          </p>
+        </Card>
+        <Card className="p-4 border-primary/50">
+          <div className="flex items-center gap-2 mb-2">
+            <p className="text-sm text-muted-foreground">Saldo Previsto (R$)</p>
+            <HelpCircle className="h-3 w-3 text-muted-foreground" />
+          </div>
+          <p className={cn(
+            "text-2xl font-bold flex items-center gap-1",
+            totalProjectedBalance >= 0 ? "text-primary" : "text-destructive"
+          )}>
+            <TrendingUp className="h-5 w-5" />
+            {formatCurrency(totalProjectedBalance)}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Pagas + Pendentes
           </p>
         </Card>
         <Card className="p-4 border-primary/50">
