@@ -1,8 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Star, CreditCard, Calendar, Calculator } from "lucide-react";
+import { Edit, Trash2, Star, CreditCard, Calendar, Calculator, TrendingUp, TrendingDown } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
+import { usePendingTransactions } from "@/hooks/usePendingTransactions";
 
 interface BankAccount {
   id: string;
@@ -28,6 +29,7 @@ interface Props {
 
 export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: Props) {
   const { isAdmin } = useUserRole();
+  const { getProjectedBalance, getPendingRevenue, getPendingExpense } = usePendingTransactions();
   
   const getAccountTypeLabel = (type: string) => {
     const types: Record<string, string> = {
@@ -41,6 +43,10 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: 
   };
 
   const isCreditCard = account.account_type === 'credit_card';
+  const projectedBalance = getProjectedBalance(account.id);
+  const pendingRevenue = getPendingRevenue(account.id);
+  const pendingExpense = getPendingExpense(account.id);
+  const hasPendingTransactions = pendingRevenue > 0 || pendingExpense > 0;
 
   return (
     <Card className={`p-6 glass ${account.is_default ? "border-2 border-primary" : ""}`}>
@@ -105,29 +111,51 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: 
             )}
           </>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div>
-              <p className="text-sm text-muted-foreground mb-1">Saldo Atual</p>
+              <p className="text-sm text-muted-foreground mb-1">Saldo Atual (Pago)</p>
               <p className="text-2xl font-bold">
                 R$ {Number(account.current_balance).toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
                 })}
               </p>
             </div>
+            
+            {hasPendingTransactions && projectedBalance !== null && (
+              <div className="border-t pt-3 space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="flex items-center gap-1 text-accent">
+                    <TrendingUp className="w-3 h-3" />
+                    Receitas Pendentes
+                  </span>
+                  <span className="font-medium text-accent">
+                    + R$ {pendingRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="flex items-center gap-1 text-destructive">
+                    <TrendingDown className="w-3 h-3" />
+                    Despesas Pendentes
+                  </span>
+                  <span className="font-medium text-destructive">
+                    - R$ {pendingExpense.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t">
+                  <span className="text-sm font-semibold">Saldo Previsto</span>
+                  <span className={`text-lg font-bold ${
+                    projectedBalance >= 0 ? "text-primary" : "text-destructive"
+                  }`}>
+                    R$ {projectedBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </div>
+            )}
+            
             <div className="text-xs text-muted-foreground border-t pt-2">
               <p>Saldo Inicial: R$ {Number(account.initial_balance).toLocaleString("pt-BR", {
                 minimumFractionDigits: 2,
               })}</p>
-              <p className={
-                account.current_balance - account.initial_balance >= 0 
-                  ? "text-accent font-semibold" 
-                  : "text-destructive font-semibold"
-              }>
-                Variação: R$ {(account.current_balance - account.initial_balance).toLocaleString("pt-BR", {
-                  minimumFractionDigits: 2,
-                  signDisplay: "always"
-                })}
-              </p>
             </div>
           </div>
         )}

@@ -49,6 +49,7 @@ export function useBankAccounts() {
         () => {
           // Invalidar e refetch quando houver mudanças
           queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+          queryClient.invalidateQueries({ queryKey: ['pending-transactions-balances'] });
         }
       )
       .on(
@@ -61,6 +62,7 @@ export function useBankAccounts() {
         () => {
           // Invalidar contas quando transações mudarem (afetam saldos)
           queryClient.invalidateQueries({ queryKey: ['bank-accounts'] });
+          queryClient.invalidateQueries({ queryKey: ['pending-transactions-balances'] });
         }
       )
       .subscribe();
