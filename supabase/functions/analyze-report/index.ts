@@ -40,6 +40,9 @@ ${reportData.filters.account ? `Conta: ${reportData.filters.account}` : ''}
 ${reportData.filters.type ? `Tipo: ${reportData.filters.type === 'revenue' ? 'Apenas Receitas' : 'Apenas Despesas'}` : ''}
 ${reportData.filters.status ? `Status: ${reportData.filters.status === 'paid' ? 'Somente Pagos' : reportData.filters.status === 'pending' ? 'Somente Pendentes' : 'Somente Vencidos'}` : ''}
 ${reportData.filters.category ? `Categoria: ${reportData.filters.category}` : ''}
+${reportData.filters.centroCusto ? `Centro de Custo: ${reportData.filters.centroCusto}` : ''}
+${reportData.filters.categoriaReceita ? `Categoria de Receita: ${reportData.filters.categoriaReceita}` : ''}
+${reportData.filters.categoriaDespesa ? `Categoria de Despesa: ${reportData.filters.categoriaDespesa}` : ''}
 
 ⚠️ IMPORTANTE: Esta análise considera APENAS as transações que atendem aos filtros acima.
 ` : '';

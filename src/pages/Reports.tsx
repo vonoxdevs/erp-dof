@@ -33,9 +33,17 @@ const Reports = () => {
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedCentroCusto, setSelectedCentroCusto] = useState<string>("all");
+  const [selectedCategoriaReceita, setSelectedCategoriaReceita] = useState<string>("all");
+  const [selectedCategoriaDespesa, setSelectedCategoriaDespesa] = useState<string>("all");
   
   const { accounts } = useBankAccounts();
   const { categorias } = useCategorias();
+  
+  // Separar categorias por tipo
+  const centrosCusto = categorias.filter(c => c.tipo === 'centro_custo' && c.ativo);
+  const categoriasReceita = categorias.filter(c => c.tipo === 'receita' && c.ativo);
+  const categoriasDespesa = categorias.filter(c => c.tipo === 'despesa' && c.ativo);
 
   const loadReportData = async () => {
     setLoading(true);
@@ -47,6 +55,9 @@ const Reports = () => {
         type: selectedType !== "all" ? selectedType as "revenue" | "expense" : undefined,
         status: selectedStatus !== "all" ? selectedStatus as "pending" | "paid" | "overdue" : undefined,
         categoryId: selectedCategory !== "all" ? selectedCategory : undefined,
+        centroCustoId: selectedCentroCusto !== "all" ? selectedCentroCusto : undefined,
+        categoriaReceitaId: selectedCategoriaReceita !== "all" ? selectedCategoriaReceita : undefined,
+        categoriaDespesaId: selectedCategoriaDespesa !== "all" ? selectedCategoriaDespesa : undefined,
       };
       
       const data = await getReportData(selectedPeriod, filters);
@@ -70,6 +81,9 @@ const Reports = () => {
     setSelectedType("all");
     setSelectedStatus("all");
     setSelectedCategory("all");
+    setSelectedCentroCusto("all");
+    setSelectedCategoriaReceita("all");
+    setSelectedCategoriaDespesa("all");
     toast.info("Filtros limpos");
   };
 
@@ -94,7 +108,7 @@ const Reports = () => {
 
   useEffect(() => {
     loadReportData();
-  }, [selectedPeriod, dateRange, selectedAccount, selectedType, selectedStatus, selectedCategory]);
+  }, [selectedPeriod, dateRange, selectedAccount, selectedType, selectedStatus, selectedCategory, selectedCentroCusto, selectedCategoriaReceita, selectedCategoriaDespesa]);
 
   // Realtime updates
   useEffect(() => {
@@ -187,7 +201,7 @@ const Reports = () => {
       {/* Filtros */}
       <Card className="p-6 glass">
         <h3 className="text-lg font-semibold mb-4">Filtros</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Data Range */}
           <div className="space-y-2">
             <Label>Período</Label>
@@ -262,6 +276,60 @@ const Reports = () => {
                       {cat.nome}
                     </SelectItem>
                   ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Centro de Custo */}
+          <div className="space-y-2">
+            <Label>Centro de Custo</Label>
+            <Select value={selectedCentroCusto} onValueChange={setSelectedCentroCusto}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {centrosCusto.map((cc) => (
+                  <SelectItem key={cc.id} value={cc.id}>
+                    {cc.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Categoria de Receita */}
+          <div className="space-y-2">
+            <Label>Categoria de Receita</Label>
+            <Select value={selectedCategoriaReceita} onValueChange={setSelectedCategoriaReceita}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categoriasReceita.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Categoria de Despesa */}
+          <div className="space-y-2">
+            <Label>Categoria de Despesa</Label>
+            <Select value={selectedCategoriaDespesa} onValueChange={setSelectedCategoriaDespesa}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categoriasDespesa.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.nome}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
