@@ -190,13 +190,33 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
           .update(editableData)
           .eq("id", account.id);
         if (error) throw error;
+        
+        // Recalcular saldo após atualizar initial_balance
+        const { error: recalcError } = await supabase.rpc('recalculate_bank_account_balance', {
+          account_id: account.id
+        });
+        if (recalcError) throw recalcError;
+        
         toast.success("Conta atualizada com sucesso!");
       } else {
         // Na criação, define current_balance E available_balance iguais ao initial_balance
         dataToSave.current_balance = validatedData.initial_balance;
         dataToSave.available_balance = validatedData.initial_balance;
-        const { error } = await supabase.from("bank_accounts").insert([dataToSave]);
+        const { data: newAccount, error } = await supabase
+          .from("bank_accounts")
+          .insert([dataToSave])
+          .select()
+          .single();
         if (error) throw error;
+        
+        // Recalcular saldo para garantir consistência
+        if (newAccount) {
+          const { error: recalcError } = await supabase.rpc('recalculate_bank_account_balance', {
+            account_id: newAccount.id
+          });
+          if (recalcError) console.warn('Erro ao recalcular saldo:', recalcError);
+        }
+        
         toast.success("Conta criada com sucesso!");
       }
       onClose(true);

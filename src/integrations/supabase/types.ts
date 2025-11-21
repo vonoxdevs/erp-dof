@@ -1219,6 +1219,10 @@ export type Database = {
       }
       is_company_active: { Args: { company_uuid: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      recalculate_bank_account_balance: {
+        Args: { account_id: string }
+        Returns: undefined
+      }
       user_has_company_access: { Args: { user_uuid: string }; Returns: boolean }
     }
     Enums: {
