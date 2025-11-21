@@ -1,8 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, format } from "date-fns";
+import type { DateRange } from "react-day-picker";
+
+export interface ReportFilters {
+  dateRange?: DateRange;
+  accountId?: string;
+  type?: "revenue" | "expense";
+  status?: "pending" | "paid" | "overdue";
+  categoryId?: string;
+}
 
 export interface ReportData {
   period: { start: string; end: string; days: number };
+  filters?: {
+    dateRange?: string;
+    account?: string;
+    type?: string;
+    status?: string;
+    category?: string;
+  };
   summary: {
     totalRevenue: number;
     totalExpenses: number;
@@ -45,15 +61,18 @@ async function getUserCompanyId(): Promise<string | null> {
   return profile?.company_id || null;
 }
 
-export async function getReportData(periodInDays: number): Promise<ReportData | null> {
+export async function getReportData(periodInDays: number, filters?: ReportFilters): Promise<ReportData | null> {
   const companyId = await getUserCompanyId();
   if (!companyId) return null;
 
-  const endDate = endOfDay(new Date());
-  const startDate = startOfDay(subDays(endDate, periodInDays - 1));
+  // Usar dateRange dos filtros ou período padrão
+  const endDate = filters?.dateRange?.to ? endOfDay(filters.dateRange.to) : endOfDay(new Date());
+  const startDate = filters?.dateRange?.from 
+    ? startOfDay(filters.dateRange.from) 
+    : startOfDay(subDays(endDate, periodInDays - 1));
 
-  // Buscar transações do período
-  const { data: transactions, error } = await supabase
+  // Buscar transações do período com filtros
+  let query = supabase
     .from('transactions')
     .select(`
       *,
@@ -62,8 +81,28 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
     `)
     .eq('company_id', companyId)
     .gte('due_date', format(startDate, 'yyyy-MM-dd'))
-    .lte('due_date', format(endDate, 'yyyy-MM-dd'))
-    .order('due_date', { ascending: false });
+    .lte('due_date', format(endDate, 'yyyy-MM-dd'));
+
+  // Aplicar filtros
+  if (filters?.accountId) {
+    query = query.or(`bank_account_id.eq.${filters.accountId},account_from_id.eq.${filters.accountId},account_to_id.eq.${filters.accountId}`);
+  }
+  
+  if (filters?.type) {
+    query = query.eq('type', filters.type);
+  }
+  
+  if (filters?.status) {
+    query = query.eq('status', filters.status);
+  }
+  
+  if (filters?.categoryId) {
+    query = query.or(`category_id.eq.${filters.categoryId},categoria_receita_id.eq.${filters.categoryId},categoria_despesa_id.eq.${filters.categoryId}`);
+  }
+
+  query = query.order('due_date', { ascending: false });
+
+  const { data: transactions, error } = await query;
 
   if (error || !transactions) {
     console.error('❌ Error fetching transactions:', {
@@ -259,12 +298,34 @@ export async function getReportData(periodInDays: number): Promise<ReportData | 
   const topRevenueSource = revenueArray[0]?.category || 'N/A';
   const topExpenseCategory = expensesArray[0]?.category || 'N/A';
 
+  // Montar informações sobre filtros aplicados
+  const filtersInfo: {
+    dateRange?: string;
+    account?: string;
+    type?: string;
+    status?: string;
+    category?: string;
+  } | undefined = filters ? {
+    dateRange: filters.dateRange ? `${format(filters.dateRange.from || startDate, 'dd/MM/yyyy')} - ${format(filters.dateRange.to || endDate, 'dd/MM/yyyy')}` : undefined,
+    account: filters.accountId ? 
+      (await supabase.from('bank_accounts').select('bank_name').eq('id', filters.accountId).single()).data?.bank_name 
+      : undefined,
+    type: filters.type ? (filters.type === 'revenue' ? 'Receitas' : 'Despesas') : undefined,
+    status: filters.status ? 
+      (filters.status === 'paid' ? 'Pagos' : filters.status === 'pending' ? 'Pendentes' : 'Vencidos')
+      : undefined,
+    category: filters.categoryId ?
+      (await supabase.from('categorias').select('nome').eq('id', filters.categoryId).single()).data?.nome
+      : undefined
+  } : undefined;
+
   return {
     period: {
       start: format(startDate, 'dd/MM/yyyy'),
       end: format(endDate, 'dd/MM/yyyy'),
       days: periodInDays
     },
+    filters: filtersInfo,
     summary: {
       totalRevenue,
       totalExpenses,
