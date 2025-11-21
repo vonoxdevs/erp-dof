@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -95,12 +96,13 @@ const Transactions = () => {
   const queryClient = useQueryClient();
   const { accounts, totalBalance } = useBankAccounts();
   const { pendingBalances } = usePendingTransactions();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
-  const [selectedType, setSelectedType] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>(searchParams.get("type") || "all");
+  const [selectedStatus, setSelectedStatus] = useState<string>(searchParams.get("status") || "all");
   const [currentPeriod, setCurrentPeriod] = useState(new Date());
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
@@ -121,6 +123,24 @@ const Transactions = () => {
     ['transactions', 'bank_accounts', 'contracts'],
     [['transactions'], ['bank-accounts']]
   );
+
+  // Aplicar filtros da URL ao carregar
+  useEffect(() => {
+    const typeParam = searchParams.get("type");
+    const statusParam = searchParams.get("status");
+    
+    if (typeParam) {
+      setSelectedType(typeParam);
+    }
+    if (statusParam) {
+      setSelectedStatus(statusParam);
+    }
+    
+    // Limpar params após aplicar para não manter na URL
+    if (typeParam || statusParam) {
+      setSearchParams({});
+    }
+  }, []);
 
   useEffect(() => {
     loadTransactions();
