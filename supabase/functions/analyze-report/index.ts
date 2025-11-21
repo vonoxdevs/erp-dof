@@ -27,51 +27,71 @@ serve(async (req) => {
 
     console.log("📊 Analisando relatório com IA...");
 
-    // Preparar contexto do relatório
+    // Preparar contexto do relatório com formatação clara
+    const totalPending = reportData.summary.pendingRevenue - reportData.summary.pendingExpenses;
+    const totalOverdue = reportData.summary.overdueRevenue - reportData.summary.overdueExpenses;
+    const projectedBalance = reportData.summary.balance + totalPending + totalOverdue;
+
     const context = `
-Período: ${reportData.period.start} até ${reportData.period.end} (${reportData.period.days} dias)
+=== PERÍODO DE ANÁLISE ===
+${reportData.period.start} até ${reportData.period.end} (${reportData.period.days} dias)
 
-RESUMO FINANCEIRO:
-- Receitas Totais (pagas): R$ ${reportData.summary.totalRevenue.toFixed(2)}
-- Despesas Totais (pagas): R$ ${reportData.summary.totalExpenses.toFixed(2)}
-- Saldo Realizado: R$ ${reportData.summary.balance.toFixed(2)}
-- Transações: ${reportData.summary.transactionCount}
-- Ticket Médio: R$ ${reportData.summary.averageTicket.toFixed(2)}
+=== VALORES REALIZADOS (JÁ PAGOS/RECEBIDOS) ===
+✅ Receitas Pagas: R$ ${reportData.summary.totalRevenue.toFixed(2)}
+✅ Despesas Pagas: R$ ${reportData.summary.totalExpenses.toFixed(2)}
+💰 Saldo Realizado: R$ ${reportData.summary.balance.toFixed(2)}
+📊 Total de Transações: ${reportData.summary.transactionCount}
+💵 Ticket Médio de Receitas: R$ ${reportData.summary.averageTicket.toFixed(2)}
 
-TRANSAÇÕES PREVISTAS/PENDENTES:
-- Receitas Pendentes: R$ ${reportData.summary.pendingRevenue.toFixed(2)} (${reportData.summary.pendingCount} transações)
-- Despesas Pendentes: R$ ${reportData.summary.pendingExpenses.toFixed(2)}
-- Receitas Atrasadas: R$ ${reportData.summary.overdueRevenue.toFixed(2)} (${reportData.summary.overdueCount} atrasadas)
-- Despesas Atrasadas: R$ ${reportData.summary.overdueExpenses.toFixed(2)}
-- Saldo Projetado (incluindo pendentes): R$ ${(reportData.summary.balance + reportData.summary.pendingRevenue - reportData.summary.pendingExpenses).toFixed(2)}
+=== VALORES PREVISTOS (AINDA NÃO REALIZADOS) ===
 
-TENDÊNCIAS:
-- Crescimento Receitas: ${reportData.trends.revenueGrowth.toFixed(1)}% vs período anterior
-- Crescimento Despesas: ${reportData.trends.expenseGrowth.toFixed(1)}% vs período anterior
-- Principal Fonte Receita: ${reportData.trends.topRevenueSource}
-- Principal Categoria Despesa: ${reportData.trends.topExpenseCategory}
+📅 PENDENTES (A vencer):
+   • Receitas: R$ ${reportData.summary.pendingRevenue.toFixed(2)} (${reportData.summary.pendingCount} transações)
+   • Despesas: R$ ${reportData.summary.pendingExpenses.toFixed(2)}
+   • Saldo Pendente: R$ ${totalPending.toFixed(2)}
 
-TOP CATEGORIAS (realizadas):
+⚠️ ATRASADAS (Vencidas):
+   • Receitas: R$ ${reportData.summary.overdueRevenue.toFixed(2)} (${reportData.summary.overdueCount} transações)
+   • Despesas: R$ ${reportData.summary.overdueExpenses.toFixed(2)}
+   • Saldo Atrasado: R$ ${totalOverdue.toFixed(2)}
+
+🎯 PROJEÇÃO COMPLETA:
+   • Saldo Atual (Realizado): R$ ${reportData.summary.balance.toFixed(2)}
+   • + Pendentes: R$ ${totalPending.toFixed(2)}
+   • + Atrasadas: R$ ${totalOverdue.toFixed(2)}
+   • = Saldo Projetado Total: R$ ${projectedBalance.toFixed(2)}
+
+=== ANÁLISE DE TENDÊNCIAS ===
+📈 Crescimento de Receitas: ${reportData.trends.revenueGrowth.toFixed(1)}% vs período anterior
+📉 Crescimento de Despesas: ${reportData.trends.expenseGrowth.toFixed(1)}% vs período anterior
+🏆 Principal Fonte de Receita: ${reportData.trends.topRevenueSource}
+💸 Principal Categoria de Despesa: ${reportData.trends.topExpenseCategory}
+
+=== BREAKDOWN POR CATEGORIA (VALORES REALIZADOS) ===
+
+Top 5 Categorias por Volume Total:
 ${reportData.breakdown.topCategories.map((cat: any, i: number) => 
-  `${i + 1}. ${cat.category}: Receitas R$ ${cat.revenue.toFixed(2)}, Despesas R$ ${cat.expense.toFixed(2)}`
+  `${i + 1}. ${cat.category}
+     Receitas: R$ ${cat.revenue.toFixed(2)} | Despesas: R$ ${cat.expense.toFixed(2)} | Saldo: R$ ${(cat.revenue - cat.expense).toFixed(2)}`
 ).join('\n')}
 
-DESPESAS POR CATEGORIA (pagas - Top 5):
+Despesas Pagas - Distribuição (%):
 ${reportData.breakdown.expensesByCategory.slice(0, 5).map((cat: any) => 
-  `- ${cat.category}: R$ ${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)`
+  `  • ${cat.category}: R$ ${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}% do total)`
 ).join('\n')}
 
-RECEITAS POR CATEGORIA (pagas - Top 5):
+Receitas Pagas - Distribuição (%):
 ${reportData.breakdown.revenueByCategory.slice(0, 5).map((cat: any) => 
-  `- ${cat.category}: R$ ${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)`
+  `  • ${cat.category}: R$ ${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}% do total)`
 ).join('\n')}
 
-VALORES PREVISTOS POR CATEGORIA (pendentes e atrasadas):
+=== VALORES PREVISTOS POR CATEGORIA ===
 ${reportData.breakdown.pendingByCategory && reportData.breakdown.pendingByCategory.length > 0 
   ? reportData.breakdown.pendingByCategory.slice(0, 5).map((cat: any) => 
-      `- ${cat.category}: Receitas R$ ${cat.revenue.toFixed(2)} | Despesas R$ ${cat.expense.toFixed(2)}`
+      `  • ${cat.category}
+     Receitas Previstas: R$ ${cat.revenue.toFixed(2)} | Despesas Previstas: R$ ${cat.expense.toFixed(2)}`
     ).join('\n')
-  : 'Nenhuma transação pendente'}
+  : '  Nenhuma transação pendente ou atrasada'}
 `;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -85,31 +105,74 @@ ${reportData.breakdown.pendingByCategory && reportData.breakdown.pendingByCatego
         messages: [
           {
             role: "system",
-            content: `Você é um analista financeiro experiente especializado em análise de demonstrativos financeiros empresariais. 
-Sua função é analisar dados financeiros e fornecer insights estratégicos, práticos e acionáveis em português brasileiro.
+            content: `Você é um CFO (Chief Financial Officer) sênior especializado em análise financeira empresarial.
+Sua missão é analisar demonstrativos financeiros e fornecer insights estratégicos acionáveis para PMEs brasileiras.
 
-DIRETRIZES:
-1. Seja objetivo e profissional
-2. Identifique pontos críticos e oportunidades
-3. Forneça recomendações práticas e específicas
-4. Use linguagem clara e acessível
-5. Considere o contexto de pequenas e médias empresas brasileiras
-6. Organize sua análise em seções claras
-7. IMPORTANTE: Considere tanto os valores realizados (pagos) quanto os previstos (pendentes e atrasados) na sua análise
-8. Dê atenção especial às transações atrasadas, pois podem indicar problemas de fluxo de caixa
+=== INSTRUÇÕES CRÍTICAS DE ANÁLISE ===
 
-ESTRUTURA DA RESPOSTA:
-📊 ANÁLISE GERAL (2-3 frases sobre a saúde financeira geral, incluindo projeções)
+1. ENTENDA OS NÚMEROS CORRETAMENTE:
+   • "VALORES REALIZADOS" = transações já pagas/recebidas (fatos consumados)
+   • "VALORES PREVISTOS" = transações pendentes + atrasadas (ainda não realizadas)
+   • "Saldo Projetado" = realizado + pendentes + atrasadas (visão completa do futuro)
 
-🎯 PRINCIPAIS INSIGHTS (3-5 pontos principais, cada um com título e explicação curta)
+2. ANÁLISE DEVE SER BASEADA EM:
+   ✅ Saldo Realizado: para avaliar a situação ATUAL
+   ✅ Valores Pendentes: para projetar o que DEVE acontecer
+   ⚠️ Valores Atrasados: para identificar PROBLEMAS DE FLUXO DE CAIXA
+   🎯 Saldo Projetado: para entender o cenário COMPLETO
 
-⚠️ PONTOS DE ATENÇÃO (2-3 alertas ou riscos identificados, incluindo análise de pendências e atrasos)
+3. EXEMPLO DE INTERPRETAÇÃO CORRETA:
+   Se o relatório mostra:
+   - Saldo Realizado: R$ 10.000 (já em caixa)
+   - Pendentes: R$ 5.000 receitas / R$ 3.000 despesas
+   - Atrasadas: R$ 2.000 receitas / R$ 1.000 despesas
+   
+   Análise correta:
+   "A empresa tem R$ 10.000 em caixa (realizados). Considerando as transações previstas (pendentes), 
+   o saldo deve subir para R$ 12.000. Porém, há R$ 2.000 em receitas atrasadas que precisam 
+   de atenção imediata, pois podem comprometer o fluxo de caixa."
 
-💡 RECOMENDAÇÕES ESTRATÉGICAS (3-4 ações concretas e específicas)
+4. NUNCA CONFUNDA:
+   ❌ "Saldo Realizado" com "Saldo Projetado"
+   ❌ "Receitas Pagas" com "Receitas Pendentes"
+   ❌ Ignore os valores previstos - eles são essenciais para a análise
 
-📈 OPORTUNIDADES (2-3 oportunidades de melhoria ou crescimento)
+5. ESTRUTURA OBRIGATÓRIA DA RESPOSTA:
 
-Seja direto, prático e focado em ações que a empresa pode tomar.`
+📊 SITUAÇÃO ATUAL
+- Analise APENAS valores realizados (caixa atual)
+- Seja específico sobre o que JÁ aconteceu
+
+📈 PROJEÇÃO E EXPECTATIVAS
+- Analise valores pendentes e projetados
+- Explique o que DEVE acontecer se tudo ocorrer conforme previsto
+
+⚠️ ALERTAS CRÍTICOS
+- Foque em valores ATRASADOS (estes são problemas reais)
+- Identifique riscos ao fluxo de caixa
+- Mencione concentrações de risco em categorias
+
+💡 RECOMENDAÇÕES PRÁTICAS (3-4 ações)
+- Seja específico e acionável
+- Priorize ações que resolvam os alertas críticos
+
+📊 OPORTUNIDADES (2-3 pontos)
+- Identifique potenciais de melhoria
+- Sugira otimizações baseadas nos dados
+
+=== DIRETRIZES DE COMUNICAÇÃO ===
+• Use linguagem objetiva e profissional
+• Cite números específicos do relatório
+• Evite jargão excessivo - seja claro
+• Priorize insights acionáveis sobre teoria
+• Considere o contexto de PMEs brasileiras
+
+=== O QUE NÃO FAZER ===
+❌ Não invente números que não estão no relatório
+❌ Não confunda realizado com projetado
+❌ Não ignore as transações atrasadas
+❌ Não dê recomendações genéricas sem base nos dados
+❌ Não use mais de 1500 tokens na resposta`
           },
           {
             role: "user",
