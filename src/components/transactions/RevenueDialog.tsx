@@ -98,7 +98,8 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
   };
 
   const getNewBalance = (accountId: string | null) => {
-    if (!accountId || !formData.amount) return null;
+    // Só calcula o novo saldo se a transação estiver paga
+    if (!accountId || !formData.amount || formData.status !== 'paid') return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
     if (!account) return null;
     return account.current_balance + formData.amount;
@@ -344,9 +345,14 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
-                {formData.account_to_id && formData.amount && (
-                  <p className="text-sm mt-2 font-medium text-foreground">
+                {formData.account_to_id && formData.amount && formData.status === 'paid' && (
+                  <p className="text-sm mt-2 font-medium text-accent">
                     Novo saldo: {formatCurrency(getNewBalance(formData.account_to_id) || 0)}
+                  </p>
+                )}
+                {formData.account_to_id && formData.amount && formData.status !== 'paid' && (
+                  <p className="text-xs mt-2 text-muted-foreground italic">
+                    💡 O saldo só será atualizado quando a transação for marcada como "Pago"
                   </p>
                 )}
               </div>
