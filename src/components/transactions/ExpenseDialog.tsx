@@ -93,11 +93,13 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
     }).format(value);
   };
 
-  const getNewBalance = (accountId: string | null) => {
-    // Só calcula o novo saldo se a transação estiver paga
-    if (!accountId || !formData.amount || formData.status !== 'paid') return null;
+  const getNewBalance = (accountId: string | null, isPaid: boolean = false) => {
+    if (!accountId || !formData.amount) return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
     if (!account) return null;
+    
+    // Se for pago, mostra o impacto no saldo atual
+    // Se for pendente, mostra o impacto no saldo previsto (não será aplicado agora)
     return account.current_balance - formData.amount;
   };
 
@@ -348,21 +350,35 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
-                {formData.account_from_id && formData.amount && formData.status === 'paid' && (
-                  <p className={cn(
-                    "text-sm mt-2 font-medium",
-                    getNewBalance(formData.account_from_id)! < 0 ? "text-destructive" : "text-foreground"
-                  )}>
-                    Novo saldo: {formatCurrency(getNewBalance(formData.account_from_id) || 0)}
-                    {getNewBalance(formData.account_from_id)! < 0 && (
-                      <span className="ml-2">(⚠️ Ficará negativo!)</span>
+                {formData.account_from_id && formData.amount && (
+                  <>
+                    {formData.status === 'paid' ? (
+                      <p className={cn(
+                        "text-sm mt-2 font-medium",
+                        getNewBalance(formData.account_from_id, true)! < 0 ? "text-destructive" : "text-foreground"
+                      )}>
+                        Novo saldo após pagamento: {formatCurrency(getNewBalance(formData.account_from_id, true) || 0)}
+                        {getNewBalance(formData.account_from_id, true)! < 0 && (
+                          <span className="ml-2">(⚠️ Ficará negativo!)</span>
+                        )}
+                      </p>
+                    ) : (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Saldo atual: {formatCurrency(bankAccounts?.find(acc => acc.id === formData.account_from_id)?.current_balance || 0)}
+                        </p>
+                        <p className={cn(
+                          "text-sm font-medium",
+                          getNewBalance(formData.account_from_id)! < 0 ? "text-destructive" : "text-primary"
+                        )}>
+                          Saldo previsto: {formatCurrency(getNewBalance(formData.account_from_id) || 0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground italic">
+                          💡 O saldo será atualizado quando marcar como "Pago"
+                        </p>
+                      </div>
                     )}
-                  </p>
-                )}
-                {formData.account_from_id && formData.amount && formData.status !== 'paid' && (
-                  <p className="text-xs mt-2 text-muted-foreground italic">
-                    💡 O saldo só será atualizado quando a transação for marcada como "Pago"
-                  </p>
+                  </>
                 )}
               </div>
             </CardContent>

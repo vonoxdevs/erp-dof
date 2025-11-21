@@ -97,11 +97,13 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
     }).format(value);
   };
 
-  const getNewBalance = (accountId: string | null) => {
-    // Só calcula o novo saldo se a transação estiver paga
-    if (!accountId || !formData.amount || formData.status !== 'paid') return null;
+  const getNewBalance = (accountId: string | null, isPaid: boolean = false) => {
+    if (!accountId || !formData.amount) return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
     if (!account) return null;
+    
+    // Se for pago, mostra o impacto no saldo atual
+    // Se for pendente, mostra o impacto no saldo previsto (não será aplicado agora)
     return account.current_balance + formData.amount;
   };
 
@@ -345,15 +347,26 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
-                {formData.account_to_id && formData.amount && formData.status === 'paid' && (
-                  <p className="text-sm mt-2 font-medium text-accent">
-                    Novo saldo: {formatCurrency(getNewBalance(formData.account_to_id) || 0)}
-                  </p>
-                )}
-                {formData.account_to_id && formData.amount && formData.status !== 'paid' && (
-                  <p className="text-xs mt-2 text-muted-foreground italic">
-                    💡 O saldo só será atualizado quando a transação for marcada como "Pago"
-                  </p>
+                {formData.account_to_id && formData.amount && (
+                  <>
+                    {formData.status === 'paid' ? (
+                      <p className="text-sm mt-2 font-medium text-accent">
+                        Novo saldo após recebimento: {formatCurrency(getNewBalance(formData.account_to_id, true) || 0)}
+                      </p>
+                    ) : (
+                      <div className="mt-2 space-y-1">
+                        <p className="text-xs text-muted-foreground">
+                          Saldo atual: {formatCurrency(bankAccounts?.find(acc => acc.id === formData.account_to_id)?.current_balance || 0)}
+                        </p>
+                        <p className="text-sm font-medium text-primary">
+                          Saldo previsto: {formatCurrency(getNewBalance(formData.account_to_id) || 0)}
+                        </p>
+                        <p className="text-xs text-muted-foreground italic">
+                          💡 O saldo será atualizado quando marcar como "Pago"
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </CardContent>
