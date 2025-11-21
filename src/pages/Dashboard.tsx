@@ -620,7 +620,10 @@ const Dashboard = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8 animate-slide-up">
-          <Card className="p-6 glass border-l-4 border-l-accent hover:shadow-xl transition-all">
+          <Card 
+            className="p-6 glass border-l-4 border-l-accent hover:shadow-xl transition-all cursor-pointer"
+            onClick={() => navigate('/transactions?type=revenue&status=paid')}
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
                 <TrendingUp className="w-6 h-6 text-accent" />
@@ -641,7 +644,10 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-6 glass border-l-4 border-l-destructive hover:shadow-xl transition-all">
+          <Card 
+            className="p-6 glass border-l-4 border-l-destructive hover:shadow-xl transition-all cursor-pointer"
+            onClick={() => navigate('/transactions?type=expense&status=paid')}
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
                 <TrendingDown className="w-6 h-6 text-destructive" />
@@ -662,7 +668,10 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-6 glass border-l-4 border-l-blue-500 hover:shadow-xl transition-all">
+          <Card 
+            className="p-6 glass border-l-4 border-l-blue-500 hover:shadow-xl transition-all cursor-pointer"
+            onClick={() => navigate('/transactions?type=revenue&status=pending')}
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
                 <Clock className="w-6 h-6 text-blue-500" />
@@ -683,7 +692,10 @@ const Dashboard = () => {
             </div>
           </Card>
 
-          <Card className="p-6 glass border-l-4 border-l-orange-500 hover:shadow-xl transition-all">
+          <Card 
+            className="p-6 glass border-l-4 border-l-orange-500 hover:shadow-xl transition-all cursor-pointer"
+            onClick={() => navigate('/transactions?type=expense&status=pending')}
+          >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
                 <Clock className="w-6 h-6 text-orange-500" />
