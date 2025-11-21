@@ -32,7 +32,20 @@ serve(async (req) => {
     const totalOverdue = reportData.summary.overdueRevenue - reportData.summary.overdueExpenses;
     const projectedBalance = reportData.summary.balance + totalPending + totalOverdue;
 
+    // Adicionar informações sobre filtros aplicados
+    const filtersInfo = reportData.filters ? `
+=== FILTROS APLICADOS ===
+${reportData.filters.dateRange ? `Período customizado: ${reportData.filters.dateRange}` : ''}
+${reportData.filters.account ? `Conta: ${reportData.filters.account}` : ''}
+${reportData.filters.type ? `Tipo: ${reportData.filters.type === 'revenue' ? 'Apenas Receitas' : 'Apenas Despesas'}` : ''}
+${reportData.filters.status ? `Status: ${reportData.filters.status === 'paid' ? 'Somente Pagos' : reportData.filters.status === 'pending' ? 'Somente Pendentes' : 'Somente Vencidos'}` : ''}
+${reportData.filters.category ? `Categoria: ${reportData.filters.category}` : ''}
+
+⚠️ IMPORTANTE: Esta análise considera APENAS as transações que atendem aos filtros acima.
+` : '';
+
     const context = `
+${filtersInfo}
 === PERÍODO DE ANÁLISE ===
 ${reportData.period.start} até ${reportData.period.end} (${reportData.period.days} dias)
 

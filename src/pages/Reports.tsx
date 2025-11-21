@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, TrendingDown, Calendar, FileDown, Loader2 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Calendar, FileDown, Loader2, X } from "lucide-react";
 import { getReportData, type ReportData } from "@/services/reportService";
 import { ReportCharts } from "@/components/reports/ReportCharts";
 import { ReportInsights } from "@/components/reports/ReportInsights";
@@ -12,6 +12,13 @@ import { HistoricalReportsDialog } from "@/components/reports/HistoricalReportsD
 import { exportTransactionsToPDF, convertTransactionsToCSV, downloadCSV } from "@/lib/exportUtils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import type { DateRange } from "react-day-picker";
+import { startOfMonth, endOfMonth, format as formatDate } from "date-fns";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { useCategorias } from "@/hooks/useCategorias";
 
 const Reports = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<number>(30);
@@ -19,12 +26,33 @@ const Reports = () => {
   const [loading, setLoading] = useState(true);
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Filtros
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
+  });
+  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  
+  const { accounts } = useBankAccounts();
+  const { categorias } = useCategorias();
 
-  const loadReportData = async (days: number) => {
+  const loadReportData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getReportData(days);
+      const filters = {
+        dateRange,
+        accountId: selectedAccount !== "all" ? selectedAccount : undefined,
+        type: selectedType !== "all" ? selectedType as "revenue" | "expense" : undefined,
+        status: selectedStatus !== "all" ? selectedStatus as "pending" | "paid" | "overdue" : undefined,
+        categoryId: selectedCategory !== "all" ? selectedCategory : undefined,
+      };
+      
+      const data = await getReportData(selectedPeriod, filters);
       if (!data) {
         setError("Não foi possível carregar os dados do relatório");
         toast.error("Erro ao carregar relatório");
@@ -37,6 +65,18 @@ const Reports = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClearFilters = () => {
+    setDateRange({
+      from: startOfMonth(new Date()),
+      to: endOfMonth(new Date()),
+    });
+    setSelectedAccount("all");
+    setSelectedType("all");
+    setSelectedStatus("all");
+    setSelectedCategory("all");
+    toast.info("Filtros limpos");
   };
 
   useEffect(() => {
@@ -59,8 +99,8 @@ const Reports = () => {
   }, []);
 
   useEffect(() => {
-    loadReportData(selectedPeriod);
-  }, [selectedPeriod]);
+    loadReportData();
+  }, [selectedPeriod, dateRange, selectedAccount, selectedType, selectedStatus, selectedCategory]);
 
   // Realtime updates
   useEffect(() => {
@@ -78,7 +118,7 @@ const Reports = () => {
         },
         () => {
           console.log('📊 Transação atualizada, recarregando relatório...');
-          loadReportData(selectedPeriod);
+          loadReportData();
         }
       )
       .subscribe();
@@ -149,6 +189,98 @@ const Reports = () => {
           <HistoricalReportsDialog />
         </div>
       </div>
+
+      {/* Filtros */}
+      <Card className="p-6 glass">
+        <h3 className="text-lg font-semibold mb-4">Filtros</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Data Range */}
+          <div className="space-y-2">
+            <Label>Período</Label>
+            <DateRangePicker
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+            />
+          </div>
+
+          {/* Conta Bancária */}
+          <div className="space-y-2">
+            <Label>Conta</Label>
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas as contas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as contas</SelectItem>
+                {accounts.map((account) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.bank_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Tipo */}
+          <div className="space-y-2">
+            <Label>Tipo</Label>
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="revenue">Receitas</SelectItem>
+                <SelectItem value="expense">Despesas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="paid">Pago</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="overdue">Vencido</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Categoria */}
+          <div className="space-y-2">
+            <Label>Categoria</Label>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {categorias
+                  .filter(cat => cat.ativo)
+                  .map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.nome}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* Botão limpar filtros */}
+        <div className="mt-4">
+          <Button variant="outline" onClick={handleClearFilters} size="sm">
+            <X className="w-4 h-4 mr-2" />
+            Limpar Filtros
+          </Button>
+        </div>
+      </Card>
 
       <Tabs value={selectedPeriod.toString()} onValueChange={(v) => setSelectedPeriod(Number(v))}>
         <TabsList className="grid w-full max-w-md grid-cols-3">
