@@ -43,9 +43,9 @@ const bankAccountSchema = z.object({
   account_type: z.enum(["checking", "savings", "investment", "credit_card", "cdb"], {
     errorMap: () => ({ message: "Tipo de conta inválido" })
   }),
-  credit_limit: z.number().min(0, "Limite deve ser positivo").optional(),
-  closing_day: z.number().min(1, "Dia deve estar entre 1 e 31").max(31, "Dia deve estar entre 1 e 31").optional(),
-  due_day: z.number().min(1, "Dia deve estar entre 1 e 31").max(31, "Dia deve estar entre 1 e 31").optional(),
+  credit_limit: z.number().min(0, "Limite deve ser positivo").nullable().optional(),
+  closing_day: z.number().min(1, "Dia deve estar entre 1 e 31").max(31, "Dia deve estar entre 1 e 31").nullable().optional(),
+  due_day: z.number().min(1, "Dia deve estar entre 1 e 31").max(31, "Dia deve estar entre 1 e 31").nullable().optional(),
   holder_name: z.string()
     .trim()
     .max(100, "Nome do titular deve ter no máximo 100 caracteres")
@@ -151,9 +151,9 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         initial_balance: formData.initial_balance || 0,
         is_active: formData.is_active !== false,
         is_default: formData.is_default || false,
-        credit_limit: formData.credit_limit,
-        closing_day: formData.closing_day,
-        due_day: formData.due_day,
+        credit_limit: formData.credit_limit || undefined,
+        closing_day: formData.closing_day || undefined,
+        due_day: formData.due_day || undefined,
       });
 
       if (!validationResult.success) {
