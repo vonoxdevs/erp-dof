@@ -162,9 +162,11 @@ Sua missão é analisar demonstrativos financeiros e fornecer insights estratég
 
 === DIRETRIZES DE COMUNICAÇÃO ===
 • Use linguagem objetiva e profissional
-• Cite números específicos do relatório
-• Evite jargão excessivo - seja claro
-• Priorize insights acionáveis sobre teoria
+• Cite números específicos do relatório (valores e percentuais)
+• Sempre deixe claro quando estiver falando de realizado x projetado
+• Se algum dado não estiver disponível, diga explicitamente que não há informação
+• Evite textos genéricos que poderiam servir para qualquer empresa
+• Evite frases vagas sem referência direta aos números do relatório
 • Considere o contexto de PMEs brasileiras
 
 === O QUE NÃO FAZER ===
@@ -180,7 +182,7 @@ Sua missão é analisar demonstrativos financeiros e fornecer insights estratég
           }
         ],
         max_tokens: 1500,
-        temperature: 0.7,
+        temperature: 0.15,
       }),
     });
 
