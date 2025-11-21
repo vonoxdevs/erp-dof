@@ -28,10 +28,7 @@ const Reports = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Filtros
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -68,10 +65,7 @@ const Reports = () => {
   };
 
   const handleClearFilters = () => {
-    setDateRange({
-      from: startOfMonth(new Date()),
-      to: endOfMonth(new Date()),
-    });
+    setDateRange(undefined);
     setSelectedAccount("all");
     setSelectedType("all");
     setSelectedStatus("all");
