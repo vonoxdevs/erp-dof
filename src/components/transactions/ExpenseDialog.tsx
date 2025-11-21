@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SelectCentroCusto } from '@/components/shared/SelectCentroCusto';
 import { SelectCategoria } from '@/components/shared/SelectCategoria';
 import { QuickCategoryDialog } from '@/components/categories/QuickCategoryDialog';
+import { EditRecurringDialog } from './EditRecurringDialog';
 
 const expenseSchema = z.object({
   amount: z.number().positive("O valor deve ser maior que zero"),
@@ -51,6 +52,7 @@ interface Transaction {
   centro_custo_id?: string | null;
   categoria_despesa_id?: string | null;
   bank_account_id?: string | null;
+  contract_id?: string | null;
   is_recurring?: boolean;
   recurrence_config?: {
     frequency: string;
@@ -72,6 +74,8 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   const [categoriaDespesaId, setCategoriaDespesaId] = useState<string | null>(null);
   const [quickCategoryDialogOpen, setQuickCategoryDialogOpen] = useState(false);
   const [categoriaRefreshKey, setCategoriaRefreshKey] = useState(0);
+  const [editRecurringDialogOpen, setEditRecurringDialogOpen] = useState(false);
+  const [pendingFormData, setPendingFormData] = useState<any>(null);
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
@@ -193,13 +197,41 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         recurrence_config: recurrenceConfig,
       };
 
-      console.log('💾 Salvando despesa:', { centro_custo_id: centroCustoId, categoria_despesa_id: categoriaDespesaId });
+      // Se está editando uma transação recorrente, mostrar dialog de confirmação
+      if (transaction && (transaction.is_recurring || await hasContractId(transaction.id))) {
+        setPendingFormData(dataToSave);
+        setEditRecurringDialogOpen(true);
+        setLoading(false);
+        return;
+      }
 
-      if (transaction) {
+      // Se não é recorrente ou é nova, salvar diretamente
+      await saveTransaction(dataToSave, transaction?.id);
+    } catch (error: any) {
+      console.error('❌ Erro ao salvar despesa:', error);
+      const errorMessage = sanitizeError(error);
+      toast.error(errorMessage);
+      setLoading(false);
+    }
+  };
+
+  const hasContractId = async (transactionId: string): Promise<boolean> => {
+    const { data } = await supabase
+      .from("transactions")
+      .select("contract_id")
+      .eq("id", transactionId)
+      .single();
+    return !!data?.contract_id;
+  };
+
+  const saveTransaction = async (dataToSave: any, transactionId?: string) => {
+    setLoading(true);
+    try {
+      if (transactionId) {
         const { error } = await supabase
           .from("transactions")
           .update(dataToSave)
-          .eq("id", transaction.id);
+          .eq("id", transactionId);
         if (error) throw error;
         toast.success("Despesa atualizada com sucesso!");
       } else {
@@ -215,9 +247,92 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
       ]);
       onClose(true);
     } catch (error: any) {
-      console.error('❌ Erro ao salvar despesa:', error);
-      const errorMessage = sanitizeError(error);
-      toast.error(errorMessage);
+      console.error('❌ Erro ao salvar:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditOne = async () => {
+    if (!pendingFormData || !transaction) return;
+    await saveTransaction(pendingFormData, transaction.id);
+  };
+
+  const handleEditAll = async () => {
+    if (!pendingFormData || !transaction) return;
+    setLoading(true);
+    try {
+      // Buscar contract_id
+      const { data: txData } = await supabase
+        .from("transactions")
+        .select("contract_id")
+        .eq("id", transaction.id)
+        .single();
+
+      if (!txData?.contract_id) {
+        await saveTransaction(pendingFormData, transaction.id);
+        return;
+      }
+
+      // Atualizar todas as transações do mesmo contrato
+      const { error } = await supabase
+        .from("transactions")
+        .update(pendingFormData)
+        .eq("contract_id", txData.contract_id);
+
+      if (error) throw error;
+
+      toast.success("Todas as recorrências foram atualizadas!");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['categorias'] })
+      ]);
+      onClose(true);
+    } catch (error: any) {
+      console.error('❌ Erro:', error);
+      toast.error(sanitizeError(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditFromThis = async () => {
+    if (!pendingFormData || !transaction) return;
+    setLoading(true);
+    try {
+      // Buscar contract_id
+      const { data: txData } = await supabase
+        .from("transactions")
+        .select("contract_id")
+        .eq("id", transaction.id)
+        .single();
+
+      if (!txData?.contract_id) {
+        await saveTransaction(pendingFormData, transaction.id);
+        return;
+      }
+
+      // Atualizar esta e todas as futuras do mesmo contrato
+      const { error } = await supabase
+        .from("transactions")
+        .update(pendingFormData)
+        .eq("contract_id", txData.contract_id)
+        .gte("due_date", transaction.due_date);
+
+      if (error) throw error;
+
+      toast.success("Esta transação e as futuras foram atualizadas!");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+        queryClient.invalidateQueries({ queryKey: ['pending-transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['categorias'] })
+      ]);
+      onClose(true);
+    } catch (error: any) {
+      console.error('❌ Erro:', error);
+      toast.error(sanitizeError(error));
     } finally {
       setLoading(false);
     }
@@ -544,6 +659,16 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         open={quickCategoryDialogOpen}
         onClose={() => setQuickCategoryDialogOpen(false)}
         onCategoryCreated={handleCategoriaCreated}
+      />
+
+      <EditRecurringDialog
+        open={editRecurringDialogOpen}
+        onClose={() => setEditRecurringDialogOpen(false)}
+        onEditOne={handleEditOne}
+        onEditAll={handleEditAll}
+        onEditFromThis={handleEditFromThis}
+        isRecurring={!!transaction?.is_recurring}
+        hasContract={!!transaction?.contract_id}
       />
     </Dialog>
   );
