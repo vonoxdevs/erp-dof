@@ -6,6 +6,7 @@ import { DollarSign, TrendingUp, TrendingDown, Calendar, FileDown, Loader2 } fro
 import { getReportData, type ReportData } from "@/services/reportService";
 import { ReportCharts } from "@/components/reports/ReportCharts";
 import { ReportInsights } from "@/components/reports/ReportInsights";
+import { AIReportAnalysis } from "@/components/reports/AIReportAnalysis";
 import { GenerateReportButton } from "@/components/reports/GenerateReportButton";
 import { HistoricalReportsDialog } from "@/components/reports/HistoricalReportsDialog";
 import { exportTransactionsToPDF, convertTransactionsToCSV, downloadCSV } from "@/lib/exportUtils";
@@ -233,6 +234,9 @@ const Reports = () => {
 
               {/* Insights */}
               <ReportInsights data={reportData} />
+
+              {/* Análise com IA */}
+              <AIReportAnalysis reportData={reportData} />
 
               {/* Gráficos */}
               {reportData.breakdown.dailyFlow.length > 0 && (
