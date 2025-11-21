@@ -32,13 +32,18 @@ serve(async (req) => {
 Período: ${reportData.period.start} até ${reportData.period.end} (${reportData.period.days} dias)
 
 RESUMO FINANCEIRO:
-- Receitas Totais: R$ ${reportData.summary.totalRevenue.toFixed(2)}
-- Despesas Totais: R$ ${reportData.summary.totalExpenses.toFixed(2)}
-- Saldo: R$ ${reportData.summary.balance.toFixed(2)}
+- Receitas Totais (pagas): R$ ${reportData.summary.totalRevenue.toFixed(2)}
+- Despesas Totais (pagas): R$ ${reportData.summary.totalExpenses.toFixed(2)}
+- Saldo Realizado: R$ ${reportData.summary.balance.toFixed(2)}
 - Transações: ${reportData.summary.transactionCount}
 - Ticket Médio: R$ ${reportData.summary.averageTicket.toFixed(2)}
-- Pendentes: ${reportData.summary.pendingCount}
-- Atrasadas: ${reportData.summary.overdueCount}
+
+TRANSAÇÕES PREVISTAS/PENDENTES:
+- Receitas Pendentes: R$ ${reportData.summary.pendingRevenue.toFixed(2)} (${reportData.summary.pendingCount} transações)
+- Despesas Pendentes: R$ ${reportData.summary.pendingExpenses.toFixed(2)}
+- Receitas Atrasadas: R$ ${reportData.summary.overdueRevenue.toFixed(2)} (${reportData.summary.overdueCount} atrasadas)
+- Despesas Atrasadas: R$ ${reportData.summary.overdueExpenses.toFixed(2)}
+- Saldo Projetado (incluindo pendentes): R$ ${(reportData.summary.balance + reportData.summary.pendingRevenue - reportData.summary.pendingExpenses).toFixed(2)}
 
 TENDÊNCIAS:
 - Crescimento Receitas: ${reportData.trends.revenueGrowth.toFixed(1)}% vs período anterior
@@ -46,20 +51,27 @@ TENDÊNCIAS:
 - Principal Fonte Receita: ${reportData.trends.topRevenueSource}
 - Principal Categoria Despesa: ${reportData.trends.topExpenseCategory}
 
-TOP CATEGORIAS:
+TOP CATEGORIAS (realizadas):
 ${reportData.breakdown.topCategories.map((cat: any, i: number) => 
   `${i + 1}. ${cat.category}: Receitas R$ ${cat.revenue.toFixed(2)}, Despesas R$ ${cat.expense.toFixed(2)}`
 ).join('\n')}
 
-DESPESAS POR CATEGORIA (Top 5):
+DESPESAS POR CATEGORIA (pagas - Top 5):
 ${reportData.breakdown.expensesByCategory.slice(0, 5).map((cat: any) => 
   `- ${cat.category}: R$ ${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)`
 ).join('\n')}
 
-RECEITAS POR CATEGORIA (Top 5):
+RECEITAS POR CATEGORIA (pagas - Top 5):
 ${reportData.breakdown.revenueByCategory.slice(0, 5).map((cat: any) => 
   `- ${cat.category}: R$ ${cat.amount.toFixed(2)} (${cat.percentage.toFixed(1)}%)`
 ).join('\n')}
+
+VALORES PREVISTOS POR CATEGORIA (pendentes e atrasadas):
+${reportData.breakdown.pendingByCategory && reportData.breakdown.pendingByCategory.length > 0 
+  ? reportData.breakdown.pendingByCategory.slice(0, 5).map((cat: any) => 
+      `- ${cat.category}: Receitas R$ ${cat.revenue.toFixed(2)} | Despesas R$ ${cat.expense.toFixed(2)}`
+    ).join('\n')
+  : 'Nenhuma transação pendente'}
 `;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -83,13 +95,15 @@ DIRETRIZES:
 4. Use linguagem clara e acessível
 5. Considere o contexto de pequenas e médias empresas brasileiras
 6. Organize sua análise em seções claras
+7. IMPORTANTE: Considere tanto os valores realizados (pagos) quanto os previstos (pendentes e atrasados) na sua análise
+8. Dê atenção especial às transações atrasadas, pois podem indicar problemas de fluxo de caixa
 
 ESTRUTURA DA RESPOSTA:
-📊 ANÁLISE GERAL (2-3 frases sobre a saúde financeira geral)
+📊 ANÁLISE GERAL (2-3 frases sobre a saúde financeira geral, incluindo projeções)
 
 🎯 PRINCIPAIS INSIGHTS (3-5 pontos principais, cada um com título e explicação curta)
 
-⚠️ PONTOS DE ATENÇÃO (2-3 alertas ou riscos identificados)
+⚠️ PONTOS DE ATENÇÃO (2-3 alertas ou riscos identificados, incluindo análise de pendências e atrasos)
 
 💡 RECOMENDAÇÕES ESTRATÉGICAS (3-4 ações concretas e específicas)
 
