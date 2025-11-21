@@ -94,7 +94,8 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   };
 
   const getNewBalance = (accountId: string | null) => {
-    if (!accountId || !formData.amount) return null;
+    // Só calcula o novo saldo se a transação estiver paga
+    if (!accountId || !formData.amount || formData.status !== 'paid') return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
     if (!account) return null;
     return account.current_balance - formData.amount;
@@ -347,7 +348,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
-                {formData.account_from_id && formData.amount && (
+                {formData.account_from_id && formData.amount && formData.status === 'paid' && (
                   <p className={cn(
                     "text-sm mt-2 font-medium",
                     getNewBalance(formData.account_from_id)! < 0 ? "text-destructive" : "text-foreground"
@@ -356,6 +357,11 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
                     {getNewBalance(formData.account_from_id)! < 0 && (
                       <span className="ml-2">(⚠️ Ficará negativo!)</span>
                     )}
+                  </p>
+                )}
+                {formData.account_from_id && formData.amount && formData.status !== 'paid' && (
+                  <p className="text-xs mt-2 text-muted-foreground italic">
+                    💡 O saldo só será atualizado quando a transação for marcada como "Pago"
                   </p>
                 )}
               </div>
