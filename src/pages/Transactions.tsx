@@ -98,6 +98,8 @@ const Transactions = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [currentPeriod, setCurrentPeriod] = useState(new Date());
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
@@ -371,6 +373,8 @@ const Transactions = () => {
   const handleClearFilters = () => {
     setSearchTerm("");
     setSelectedAccount("all");
+    setSelectedType("all");
+    setSelectedStatus("all");
     setCurrentPeriod(new Date());
     setDateRange({
       from: startOfMonth(new Date()),
@@ -381,7 +385,9 @@ const Transactions = () => {
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
+    const matchesType = selectedType === "all" || t.type === selectedType;
+    const matchesStatus = selectedStatus === "all" || t.status === selectedStatus;
+    return matchesSearch && matchesType && matchesStatus;
   });
 
   // Calcular saldo acumulado
@@ -501,7 +507,7 @@ const Transactions = () => {
 
       {/* Filtros */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-end">
           {/* Filtro de Mês/Ano */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Mês/Ano</label>
@@ -557,7 +563,7 @@ const Transactions = () => {
 
           {/* Pesquisar */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Pesquisar no período selecionado</label>
+            <label className="text-sm font-medium">Pesquisar</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -569,15 +575,48 @@ const Transactions = () => {
             </div>
           </div>
 
+          {/* Tipo de Transação */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Tipo</label>
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os tipos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                <SelectItem value="revenue">Receita</SelectItem>
+                <SelectItem value="expense">Despesa</SelectItem>
+                <SelectItem value="transfer">Transferência</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Status</label>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger>
+                <SelectValue placeholder="Todos os status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os status</SelectItem>
+                <SelectItem value="paid">Pago</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="overdue">Vencido</SelectItem>
+                <SelectItem value="cancelled">Cancelado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Conta */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Conta</label>
             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecionar todas" />
+                <SelectValue placeholder="Todas as contas" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Selecionar todas</SelectItem>
+                <SelectItem value="all">Todas as contas</SelectItem>
                 {accounts.map((account) => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.bank_name}
