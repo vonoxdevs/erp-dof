@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { forwardRef, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { MinusCircle, PlusCircle } from "lucide-react";
 
 interface CurrencyInputProps {
@@ -16,6 +16,11 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
     const currentValue = Number(value) || 0;
     const [isNegative, setIsNegative] = useState(currentValue < 0);
 
+    // Sincronizar o estado do botão com o valor recebido
+    useEffect(() => {
+      setIsNegative(currentValue < 0);
+    }, [currentValue]);
+
     const formatToBRL = (amount: number) => {
       return new Intl.NumberFormat("pt-BR", {
         style: "currency",
@@ -28,8 +33,8 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       let numericValue = Number(rawValue) / 100;
       
       // Aplicar sinal negativo se o toggle estiver ativo
-      if (isNegative) {
-        numericValue = -Math.abs(numericValue);
+      if (isNegative && numericValue > 0) {
+        numericValue = -numericValue;
       }
       
       onChange(numericValue);
@@ -39,7 +44,11 @@ export const CurrencyInput = forwardRef<HTMLInputElement, CurrencyInputProps>(
       const newIsNegative = !isNegative;
       setIsNegative(newIsNegative);
       const absoluteValue = Math.abs(currentValue);
-      onChange(newIsNegative ? -absoluteValue : absoluteValue);
+      
+      // Só atualizar se houver um valor
+      if (absoluteValue > 0) {
+        onChange(newIsNegative ? -absoluteValue : absoluteValue);
+      }
     };
 
     const displayValue = value !== undefined && value !== null && value !== "" 
