@@ -66,6 +66,11 @@ export function AccountsBalance() {
   const pendingReceivables = pendingTransactions?.filter(t => t.type === 'revenue').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
   const pendingPayables = pendingTransactions?.filter(t => t.type === 'expense').reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
   const projectedBalance = totalBalance + pendingReceivables - pendingPayables;
+
+  console.log('📊 Dashboard - Saldo Atual:', totalBalance);
+  console.log('📊 Dashboard - A Receber (mês):', pendingReceivables);
+  console.log('📊 Dashboard - A Pagar (mês):', pendingPayables);
+  console.log('📊 Dashboard - Saldo Previsto:', projectedBalance);
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
