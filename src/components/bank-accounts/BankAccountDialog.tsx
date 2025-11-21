@@ -183,8 +183,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
 
       if (account?.id) {
         // Na edição, permite alterar initial_balance mas não current_balance
-        // Remove current_balance para não sobrescrevê-lo
-        const { current_balance, ...editableData } = dataToSave;
+        // Remove current_balance e available_balance para não sobrescrevê-los
+        const { current_balance, available_balance, ...editableData } = dataToSave;
         const { error } = await supabase
           .from("bank_accounts")
           .update(editableData)
@@ -258,18 +258,15 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label>
-                {account?.id ? "Saldo Inicial (não editável)" : "Saldo Inicial (R$) *"}
-              </Label>
+              <Label>Saldo Inicial (R$) *</Label>
               <CurrencyInput
                 value={formData.initial_balance}
                 onChange={(value) => setFormData({ ...formData, initial_balance: value })}
                 placeholder="R$ 0,00"
-                disabled={!!account?.id}
               />
               {account?.id && (
                 <p className="text-xs text-muted-foreground">
-                  O saldo inicial não pode ser alterado após a criação. O saldo atual é calculado automaticamente pelas transações.
+                  Alterar o saldo inicial não afeta o saldo atual calculado pelas transações.
                 </p>
               )}
               {account?.id && account.current_balance !== undefined && (
