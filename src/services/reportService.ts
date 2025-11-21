@@ -8,6 +8,9 @@ export interface ReportFilters {
   type?: "revenue" | "expense";
   status?: "pending" | "paid" | "overdue";
   categoryId?: string;
+  centroCustoId?: string;
+  categoriaReceitaId?: string;
+  categoriaDespesaId?: string;
 }
 
 export interface ReportData {
@@ -18,6 +21,9 @@ export interface ReportData {
     type?: string;
     status?: string;
     category?: string;
+    centroCusto?: string;
+    categoriaReceita?: string;
+    categoriaDespesa?: string;
   };
   summary: {
     totalRevenue: number;
@@ -98,6 +104,18 @@ export async function getReportData(periodInDays: number, filters?: ReportFilter
   
   if (filters?.categoryId) {
     query = query.or(`category_id.eq.${filters.categoryId},categoria_receita_id.eq.${filters.categoryId},categoria_despesa_id.eq.${filters.categoryId}`);
+  }
+  
+  if (filters?.centroCustoId) {
+    query = query.eq('centro_custo_id', filters.centroCustoId);
+  }
+  
+  if (filters?.categoriaReceitaId) {
+    query = query.eq('categoria_receita_id', filters.categoriaReceitaId);
+  }
+  
+  if (filters?.categoriaDespesaId) {
+    query = query.eq('categoria_despesa_id', filters.categoriaDespesaId);
   }
 
   query = query.order('due_date', { ascending: false });
@@ -305,6 +323,9 @@ export async function getReportData(periodInDays: number, filters?: ReportFilter
     type?: string;
     status?: string;
     category?: string;
+    centroCusto?: string;
+    categoriaReceita?: string;
+    categoriaDespesa?: string;
   } | undefined = filters ? {
     dateRange: filters.dateRange ? `${format(filters.dateRange.from || startDate, 'dd/MM/yyyy')} - ${format(filters.dateRange.to || endDate, 'dd/MM/yyyy')}` : undefined,
     account: filters.accountId ? 
@@ -316,6 +337,15 @@ export async function getReportData(periodInDays: number, filters?: ReportFilter
       : undefined,
     category: filters.categoryId ?
       (await supabase.from('categorias').select('nome').eq('id', filters.categoryId).single()).data?.nome
+      : undefined,
+    centroCusto: filters.centroCustoId ?
+      (await supabase.from('categorias').select('nome').eq('id', filters.centroCustoId).single()).data?.nome
+      : undefined,
+    categoriaReceita: filters.categoriaReceitaId ?
+      (await supabase.from('categorias').select('nome').eq('id', filters.categoriaReceitaId).single()).data?.nome
+      : undefined,
+    categoriaDespesa: filters.categoriaDespesaId ?
+      (await supabase.from('categorias').select('nome').eq('id', filters.categoriaDespesaId).single()).data?.nome
       : undefined
   } : undefined;
 
