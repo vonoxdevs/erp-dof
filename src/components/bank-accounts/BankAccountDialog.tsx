@@ -55,8 +55,8 @@ const bankAccountSchema = z.object({
     .max(20, "Documento do titular deve ter no máximo 20 caracteres")
     .optional(),
   initial_balance: z.number()
-    .min(-999999999, "Saldo inválido")
-    .max(999999999, "Saldo muito alto")
+    .min(-999999999999, "Saldo inválido")
+    .max(999999999999, "Saldo muito alto")
     .finite("Saldo deve ser um número válido"),
   is_active: z.boolean(),
   is_default: z.boolean(),
