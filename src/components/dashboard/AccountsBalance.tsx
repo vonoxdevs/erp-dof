@@ -36,10 +36,28 @@ export function AccountsBalance() {
         data: profile
       } = await supabase.from("user_profiles").select("company_id").eq("id", user.id).single();
       if (!profile?.company_id) throw new Error("Empresa não encontrada");
+      
+      // Buscar apenas transações pendentes do mês atual
+      const startOfCurrentMonth = new Date();
+      startOfCurrentMonth.setDate(1);
+      startOfCurrentMonth.setHours(0, 0, 0, 0);
+      
+      const endOfCurrentMonth = new Date(startOfCurrentMonth);
+      endOfCurrentMonth.setMonth(endOfCurrentMonth.getMonth() + 1);
+      endOfCurrentMonth.setDate(0);
+      endOfCurrentMonth.setHours(23, 59, 59, 999);
+      
       const {
         data,
         error
-      } = await supabase.from('transactions').select('type, amount, status').eq('company_id', profile.company_id).in('status', ['pending', 'overdue']);
+      } = await supabase
+        .from('transactions')
+        .select('type, amount, status, due_date')
+        .eq('company_id', profile.company_id)
+        .in('status', ['pending', 'overdue'])
+        .gte('due_date', startOfCurrentMonth.toISOString().split('T')[0])
+        .lte('due_date', endOfCurrentMonth.toISOString().split('T')[0]);
+        
       if (error) throw error;
       return data || [];
     },
@@ -58,17 +76,9 @@ export function AccountsBalance() {
     return <div className="animate-pulse h-32 bg-muted rounded-lg mb-8" />;
   }
   
-  const totalProjectedBalance = regularAccounts.reduce((sum, acc) => {
-    const projected = getProjectedBalance(acc.id);
-    return sum + (projected ?? acc.current_balance);
-  }, 0);
-  
-  const totalPendingRevenue = regularAccounts.reduce((sum, acc) => sum + getPendingRevenue(acc.id), 0);
-  const totalPendingExpense = regularAccounts.reduce((sum, acc) => sum + getPendingExpense(acc.id), 0);
-  
   return <div className="space-y-4 mb-8">
-      {/* Resumo Geral */}
-      {(totalPendingRevenue > 0 || totalPendingExpense > 0) && (
+      {/* Resumo Geral - Apenas se houver pendências no mês atual */}
+      {(pendingReceivables > 0 || pendingPayables > 0) && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="pt-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -79,28 +89,28 @@ export function AccountsBalance() {
               <div>
                 <p className="text-xs text-accent mb-1 flex items-center gap-1">
                   <TrendingUp className="h-3 w-3" />
-                  A Receber
+                  A Receber (mês)
                 </p>
                 <p className="text-lg font-bold text-accent">
-                  +{formatCurrency(totalPendingRevenue)}
+                  +{formatCurrency(pendingReceivables)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-destructive mb-1 flex items-center gap-1">
                   <TrendingDown className="h-3 w-3" />
-                  A Pagar
+                  A Pagar (mês)
                 </p>
                 <p className="text-lg font-bold text-destructive">
-                  -{formatCurrency(totalPendingExpense)}
+                  -{formatCurrency(pendingPayables)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Saldo Previsto</p>
                 <p className={cn(
                   "text-lg font-bold",
-                  totalProjectedBalance >= 0 ? "text-primary" : "text-destructive"
+                  projectedBalance >= 0 ? "text-primary" : "text-destructive"
                 )}>
-                  {formatCurrency(totalProjectedBalance)}
+                  {formatCurrency(projectedBalance)}
                 </p>
               </div>
             </div>

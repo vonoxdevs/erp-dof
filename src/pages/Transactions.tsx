@@ -421,10 +421,8 @@ const Transactions = () => {
 
   const totalPeriodo = receitasRealizadas - despesasRealizadas;
   
-  // Calcular saldo previsto total
-  const totalProjectedBalance = pendingBalances?.reduce((sum, balance) => {
-    return sum + balance.projectedBalance;
-  }, 0) ?? totalBalance;
+  // Calcular saldo previsto do período (saldo atual + pendentes do período)
+  const saldoPrevistoPeriodo = totalBalance + receitasAbertas - despesasAbertas;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -668,13 +666,13 @@ const Transactions = () => {
           </div>
           <p className={cn(
             "text-2xl font-bold flex items-center gap-1",
-            totalProjectedBalance >= 0 ? "text-primary" : "text-destructive"
+            saldoPrevistoPeriodo >= 0 ? "text-primary" : "text-destructive"
           )}>
             <TrendingUp className="h-5 w-5" />
-            {formatCurrency(totalProjectedBalance)}
+            {formatCurrency(saldoPrevistoPeriodo)}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Pagas + Pendentes
+            Período selecionado
           </p>
         </Card>
         <Card className="p-4 border-primary/50">
