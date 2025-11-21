@@ -23,6 +23,7 @@ import { Loader2, ArrowRightLeft, AlertCircle, Repeat } from "lucide-react";
 import { z } from "zod";
 import { sanitizeError } from "@/lib/errorMapping";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { getTodayForInput, formatDateForInput } from '@/lib/dateUtils';
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -68,7 +69,7 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
   const [formData, setFormData] = useState({
     amount: undefined as number | undefined,
     description: "",
-    due_date: new Date().toISOString().split("T")[0],
+    due_date: getTodayForInput(),
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     account_from_id: null as string | null,
     account_to_id: null as string | null,
@@ -114,7 +115,7 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
         setFormData({
           amount: undefined,
           description: "",
-          due_date: new Date().toISOString().split("T")[0],
+          due_date: getTodayForInput(),
           status: "pending",
           account_from_id: null,
           account_to_id: null,
