@@ -13,6 +13,7 @@ import { RevenueDialog } from "@/components/transactions/RevenueDialog";
 import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
 import { TransferDialog } from "@/components/transactions/TransferDialog";
 import { DeleteRecurringDialog } from "@/components/transactions/DeleteRecurringDialog";
+import { BulkEditRecurringDialog } from "@/components/transactions/BulkEditRecurringDialog";
 import { sanitizeError } from "@/lib/errorMapping";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -112,6 +113,8 @@ const Transactions = () => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [bulkRecurringDialogOpen, setBulkRecurringDialogOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState<"delete" | "markAsPaid">("delete");
 
   // Sincronização em tempo real
   useRealtimeSync(
@@ -319,11 +322,26 @@ const Transactions = () => {
   };
 
   const handleBulkMarkAsPaid = async () => {
+    // Verificar se alguma das transações selecionadas é recorrente
+    const selectedTransactions = transactions.filter(t => selectedIds.includes(t.id));
+    const hasRecurring = selectedTransactions.some(t => t.is_recurring || t.contract_id);
+
+    if (hasRecurring) {
+      setBulkAction("markAsPaid");
+      setBulkRecurringDialogOpen(true);
+      return;
+    }
+
+    // Se não tem recorrentes, executa normalmente
+    executeBulkMarkAsPaid(selectedIds);
+  };
+
+  const executeBulkMarkAsPaid = async (ids: string[]) => {
     try {
       const { error } = await supabase
         .from("transactions")
         .update({ status: 'paid', payment_date: new Date().toISOString().split('T')[0] })
-        .in('id', selectedIds);
+        .in('id', ids);
         
       if (error) throw error;
       
@@ -332,7 +350,7 @@ const Transactions = () => {
         queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
       ]);
       
-      toast.success(`${selectedIds.length} transação(ões) marcada(s) como paga(s)!`);
+      toast.success(`${ids.length} transação(ões) marcada(s) como paga(s)!`);
       setSelectedIds([]);
       loadTransactions();
     } catch (error: any) {
@@ -341,11 +359,26 @@ const Transactions = () => {
   };
 
   const handleBulkDelete = async () => {
+    // Verificar se alguma das transações selecionadas é recorrente
+    const selectedTransactions = transactions.filter(t => selectedIds.includes(t.id));
+    const hasRecurring = selectedTransactions.some(t => t.is_recurring || t.contract_id);
+
+    if (hasRecurring) {
+      setBulkAction("delete");
+      setBulkRecurringDialogOpen(true);
+      return;
+    }
+
+    // Se não tem recorrentes, executa normalmente
+    executeBulkDelete(selectedIds);
+  };
+
+  const executeBulkDelete = async (ids: string[]) => {
     try {
       const { error } = await supabase
         .from("transactions")
         .delete()
-        .in('id', selectedIds);
+        .in('id', ids);
         
       if (error) throw error;
       
@@ -354,9 +387,87 @@ const Transactions = () => {
         queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
       ]);
       
-      toast.success(`${selectedIds.length} transação(ões) excluída(s)!`);
+      toast.success(`${ids.length} transação(ões) excluída(s)!`);
       setSelectedIds([]);
       loadTransactions();
+    } catch (error: any) {
+      toast.error(sanitizeError(error));
+    }
+  };
+
+  const handleBulkEditSelected = async () => {
+    if (bulkAction === "delete") {
+      await executeBulkDelete(selectedIds);
+    } else {
+      await executeBulkMarkAsPaid(selectedIds);
+    }
+  };
+
+  const handleBulkEditAll = async () => {
+    try {
+      const selectedTransactions = transactions.filter(t => selectedIds.includes(t.id));
+      const contractIds = [...new Set(selectedTransactions
+        .map(t => t.contract_id)
+        .filter(Boolean))] as string[];
+
+      if (contractIds.length === 0) {
+        handleBulkEditSelected();
+        return;
+      }
+
+      // Buscar todas as transações das séries recorrentes
+      const { data: allRecurringTransactions, error: fetchError } = await supabase
+        .from("transactions")
+        .select("id")
+        .in("contract_id", contractIds);
+
+      if (fetchError) throw fetchError;
+
+      const allIds = allRecurringTransactions?.map(t => t.id) || [];
+
+      if (bulkAction === "delete") {
+        await executeBulkDelete(allIds);
+      } else {
+        await executeBulkMarkAsPaid(allIds);
+      }
+    } catch (error: any) {
+      toast.error(sanitizeError(error));
+    }
+  };
+
+  const handleBulkEditFromThis = async () => {
+    try {
+      const selectedTransactions = transactions.filter(t => selectedIds.includes(t.id));
+      const minDate = selectedTransactions.reduce((min, t) => 
+        t.due_date < min ? t.due_date : min, 
+        selectedTransactions[0].due_date
+      );
+
+      const contractIds = [...new Set(selectedTransactions
+        .map(t => t.contract_id)
+        .filter(Boolean))] as string[];
+
+      if (contractIds.length === 0) {
+        handleBulkEditSelected();
+        return;
+      }
+
+      // Buscar todas as transações futuras das séries recorrentes
+      const { data: futureTransactions, error: fetchError } = await supabase
+        .from("transactions")
+        .select("id")
+        .in("contract_id", contractIds)
+        .gte("due_date", minDate);
+
+      if (fetchError) throw fetchError;
+
+      const futureIds = futureTransactions?.map(t => t.id) || [];
+
+      if (bulkAction === "delete") {
+        await executeBulkDelete(futureIds);
+      } else {
+        await executeBulkMarkAsPaid(futureIds);
+      }
     } catch (error: any) {
       toast.error(sanitizeError(error));
     }
@@ -897,6 +1008,15 @@ const Transactions = () => {
         onDeleteFromThis={handleDeleteFromThis}
         isRecurring={transactionToDelete?.is_recurring || !!transactionToDelete?.contract_id}
         hasRecurrences={!!transactionToDelete?.reference_number || transactionToDelete?.is_recurring || !!transactionToDelete?.contract_id}
+      />
+      <BulkEditRecurringDialog
+        open={bulkRecurringDialogOpen}
+        onClose={() => setBulkRecurringDialogOpen(false)}
+        onEditSelected={handleBulkEditSelected}
+        onEditAll={handleBulkEditAll}
+        onEditFromThis={handleBulkEditFromThis}
+        hasRecurring={true}
+        action={bulkAction}
       />
     </div>
   );
