@@ -73,14 +73,9 @@ export function useBankAccounts() {
   }, [queryClient]);
 
   const totalBalance = accounts?.reduce(
-    (sum, acc) => {
-      console.log('🏦 Conta:', acc.bank_name, 'Saldo:', acc.current_balance);
-      return sum + (acc.current_balance || 0);
-    }, 
+    (sum, acc) => sum + (acc.current_balance || 0), 
     0
   ) || 0;
-
-  console.log('💰 Total de contas:', accounts?.length || 0, 'Saldo total:', totalBalance);
 
   return { accounts, isLoading, error, totalBalance, refetch };
 }
