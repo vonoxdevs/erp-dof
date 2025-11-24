@@ -85,6 +85,8 @@ Regras importantes:
 6. Para débitos/saídas/pagamentos use type "expense"
 7. Para créditos/entradas/recebimentos use type "revenue"
 
+IMPORTANTE: Retorne no máximo 50 transações para evitar timeout. Se houver mais, priorize as mais recentes.
+
 Retorne um array JSON no formato:
 [
   {
@@ -128,9 +130,12 @@ Retorne um array JSON no formato:
             }
           }
         ],
-        tool_choice: { type: "function", function: { name: "extract_transactions" } }
+        tool_choice: { type: "function", function: { name: "extract_transactions" } },
+        temperature: 0.1
       }),
     });
+
+    console.log('AI API responded with status:', response.status);
 
     if (!response.ok) {
       if (response.status === 429) {
