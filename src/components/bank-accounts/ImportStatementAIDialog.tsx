@@ -44,6 +44,9 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
     if (selectedFile) {
       const isValidTxt = selectedFile.name.toLowerCase().endsWith('.txt') || 
                          selectedFile.type === 'text/plain';
+      const isValidCsv = selectedFile.name.toLowerCase().endsWith('.csv') ||
+                         selectedFile.type === 'text/csv' ||
+                         selectedFile.type === 'application/csv';
       const isValidExcel = selectedFile.name.toLowerCase().endsWith('.xlsx') ||
                           selectedFile.name.toLowerCase().endsWith('.xls') ||
                           selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
@@ -54,10 +57,10 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                            selectedFile.name.toLowerCase().endsWith('.png') ||
                            selectedFile.name.toLowerCase().endsWith('.webp'));
       
-      if (!isValidTxt && !isValidExcel && !isValidImage) {
+      if (!isValidTxt && !isValidCsv && !isValidExcel && !isValidImage) {
         toast({
           title: "Formato inválido",
-          description: "Por favor, selecione um arquivo TXT, Excel ou Imagem (JPG, PNG, WEBP).",
+          description: "Por favor, selecione um arquivo TXT, CSV, Excel ou Imagem (JPG, PNG, WEBP).",
           variant: "destructive",
         });
         event.target.value = '';
@@ -118,6 +121,28 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
           reader.readAsDataURL(file);
         });
         console.log('Image file converted to base64');
+      }
+      // Check if it's a CSV file
+      else if (file.name.toLowerCase().endsWith('.csv') ||
+               file.type === 'text/csv' ||
+               file.type === 'application/csv') {
+        // Read CSV file
+        console.log('Reading CSV file...');
+        fileContent = await file.text();
+        console.log('CSV content length:', fileContent.length, 'rows:', fileContent.split('\n').length);
+        console.log('First 200 chars:', fileContent.substring(0, 200));
+        
+        // Validate that CSV has content beyond just headers
+        const lines = fileContent.split('\n').filter(line => line.trim().length > 0);
+        if (lines.length < 2) {
+          toast({
+            title: "CSV sem dados",
+            description: "O arquivo não contém linhas de dados (apenas cabeçalhos ou vazio).",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
       }
       // Check if it's an Excel file
       else if (file.name.toLowerCase().endsWith('.xlsx') || 
@@ -375,7 +400,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   <Input
                     id="file"
                     type="file"
-                    accept=".txt,.xlsx,.xls,.jpg,.jpeg,.png,.webp,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/*"
+                    accept=".txt,.csv,.xlsx,.xls,.jpg,.jpeg,.png,.webp,text/plain,text/csv,application/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/*"
                     onChange={handleFileChange}
                     disabled={isProcessing}
                   />
@@ -398,7 +423,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Formatos aceitos: TXT, Excel (.xlsx, .xls), Imagens (JPG, PNG, WEBP)
+                  Formatos aceitos: TXT, CSV, Excel (.xlsx, .xls), Imagens (JPG, PNG, WEBP)
                 </p>
                 {file && (
                   <p className="text-xs text-primary mt-1">
