@@ -216,35 +216,47 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
       }
       
       console.log('File content ready, length:', fileContent.length);
+      console.log('Is image:', isImage);
       console.log('Sending to AI for analysis...');
       
-      // Call edge function to analyze with AI (with timeout for images)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        controller.abort();
-      }, isImage ? 60000 : 30000); // 60s for images, 30s for text
-      
+      // Call edge function to analyze with AI
       try {
+        const startTime = Date.now();
+        console.log('Calling edge function at:', new Date().toISOString());
+        
         const { data, error } = await supabase.functions.invoke('analyze-bank-statement', {
           body: { 
             content: fileContent,
             isImage: isImage 
-          },
-          headers: {
-            'Content-Type': 'application/json',
           }
         });
 
-        clearTimeout(timeoutId);
-
-        console.log('Edge function response:', { hasData: !!data, hasError: !!error });
+        const endTime = Date.now();
+        console.log('Edge function returned after', (endTime - startTime) / 1000, 'seconds');
+        console.log('Edge function response:', { 
+          hasData: !!data, 
+          hasError: !!error,
+          dataKeys: data ? Object.keys(data) : [],
+          errorDetails: error 
+        });
 
         if (error) {
           console.error('Edge function error:', error);
           throw new Error(error.message || 'Erro ao processar extrato');
         }
 
-        if (!data?.transactions || !Array.isArray(data.transactions)) {
+        if (!data) {
+          console.error('No data returned from edge function');
+          toast({
+            title: "Erro na resposta",
+            description: "A função não retornou dados.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        if (!data.transactions || !Array.isArray(data.transactions)) {
           console.error('Invalid response format:', data);
           toast({
             title: "Resposta inválida",
@@ -280,16 +292,9 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
           title: "Análise concluída",
           description: `${transactionsWithAccount.length} transações identificadas.`,
         });
-      } catch (abortError) {
-        if (abortError instanceof Error && abortError.name === 'AbortError') {
-          toast({
-            title: "Tempo esgotado",
-            description: "A análise demorou muito tempo. Tente com uma imagem menor ou em outro formato.",
-            variant: "destructive",
-          });
-        } else {
-          throw abortError;
-        }
+      } catch (invokeError) {
+        console.error('Error calling edge function:', invokeError);
+        throw invokeError;
       }
 
     } catch (error) {
