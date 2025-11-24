@@ -230,7 +230,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFncGVlYnZycmN5dGdobWlsenNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDc2MTAsImV4cCI6MjA3NjU4MzYxMH0.BlS6PZjuVsDuBW_mc5Y_4pjdLuFc5-kANYJBSm1iwFs`
             },
             body: JSON.stringify({
               content: fileContent,
