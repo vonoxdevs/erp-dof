@@ -113,6 +113,16 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
       // Check if it's an image file
       if (file.type.startsWith('image/')) {
         isImage = true;
+        
+        // Check image size (recommend max 2MB for better performance)
+        if (file.size > 2 * 1024 * 1024) {
+          toast({
+            title: "Imagem muito grande",
+            description: "Para melhor performance, use imagens menores que 2MB. A análise pode demorar mais.",
+            variant: "default",
+          });
+        }
+        
         // Read image as base64
         const reader = new FileReader();
         fileContent = await new Promise<string>((resolve, reject) => {
@@ -120,7 +130,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
           reader.onerror = reject;
           reader.readAsDataURL(file);
         });
-        console.log('Image file converted to base64');
+        console.log('Image file converted to base64, size:', fileContent.length);
       }
       // Check if it's a CSV file
       else if (file.name.toLowerCase().endsWith('.csv') ||
@@ -208,57 +218,79 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
       console.log('File content ready, length:', fileContent.length);
       console.log('Sending to AI for analysis...');
       
-      // Call edge function to analyze with AI
-      const { data, error } = await supabase.functions.invoke('analyze-bank-statement', {
-        body: { 
-          content: fileContent,
-          isImage: isImage 
-        }
-      });
-
-      console.log('Edge function response:', { hasData: !!data, hasError: !!error });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Erro ao processar extrato');
-      }
-
-      if (!data?.transactions || !Array.isArray(data.transactions)) {
-        console.error('Invalid response format:', data);
-        toast({
-          title: "Resposta inválida",
-          description: "A IA retornou um formato inválido.",
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return;
-      }
-
-      if (data.transactions.length === 0) {
-        toast({
-          title: "Nenhuma transação encontrada",
-          description: "A IA não conseguiu identificar transações no arquivo.",
-          variant: "destructive",
-        });
-        setIsProcessing(false);
-        return;
-      }
-
-      console.log('Transactions found:', data.transactions.length);
-
-      // Add default bank account to all transactions
-      const transactionsWithAccount = data.transactions.map((t: ParsedTransaction) => ({
-        ...t,
-        bankAccountId: selectedBankAccount,
-        ignore: false
-      }));
-
-      setParsedTransactions(transactionsWithAccount);
+      // Call edge function to analyze with AI (with timeout for images)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, isImage ? 60000 : 30000); // 60s for images, 30s for text
       
-      toast({
-        title: "Análise concluída",
-        description: `${transactionsWithAccount.length} transações identificadas.`,
-      });
+      try {
+        const { data, error } = await supabase.functions.invoke('analyze-bank-statement', {
+          body: { 
+            content: fileContent,
+            isImage: isImage 
+          },
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        clearTimeout(timeoutId);
+
+        console.log('Edge function response:', { hasData: !!data, hasError: !!error });
+
+        if (error) {
+          console.error('Edge function error:', error);
+          throw new Error(error.message || 'Erro ao processar extrato');
+        }
+
+        if (!data?.transactions || !Array.isArray(data.transactions)) {
+          console.error('Invalid response format:', data);
+          toast({
+            title: "Resposta inválida",
+            description: "A IA retornou um formato inválido.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        if (data.transactions.length === 0) {
+          toast({
+            title: "Nenhuma transação encontrada",
+            description: "A IA não conseguiu identificar transações no arquivo.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        console.log('Transactions found:', data.transactions.length);
+
+        // Add default bank account to all transactions
+        const transactionsWithAccount = data.transactions.map((t: ParsedTransaction) => ({
+          ...t,
+          bankAccountId: selectedBankAccount,
+          ignore: false
+        }));
+
+        setParsedTransactions(transactionsWithAccount);
+        
+        toast({
+          title: "Análise concluída",
+          description: `${transactionsWithAccount.length} transações identificadas.`,
+        });
+      } catch (abortError) {
+        if (abortError instanceof Error && abortError.name === 'AbortError') {
+          toast({
+            title: "Tempo esgotado",
+            description: "A análise demorou muito tempo. Tente com uma imagem menor ou em outro formato.",
+            variant: "destructive",
+          });
+        } else {
+          throw abortError;
+        }
+      }
 
     } catch (error) {
       console.error('Error analyzing statement:', error);
