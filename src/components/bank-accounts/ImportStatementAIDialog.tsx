@@ -41,26 +41,27 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
-      const validTypes = ['application/pdf', 'text/plain'];
-      const isValidExtension = selectedFile.name.toLowerCase().endsWith('.txt') || 
-                                selectedFile.name.toLowerCase().endsWith('.pdf');
+      const isValidTxt = selectedFile.name.toLowerCase().endsWith('.txt') || 
+                         selectedFile.type === 'text/plain';
       
-      if (!validTypes.includes(selectedFile.type) && !isValidExtension) {
+      if (!isValidTxt) {
         toast({
           title: "Formato inválido",
-          description: "Por favor, selecione um arquivo TXT ou PDF.",
+          description: "Por favor, selecione um arquivo TXT. PDFs serão suportados em breve.",
           variant: "destructive",
         });
+        event.target.value = '';
         return;
       }
       
-      // Check file size (max 5MB)
-      if (selectedFile.size > 5 * 1024 * 1024) {
+      // Check file size (max 2MB for text)
+      if (selectedFile.size > 2 * 1024 * 1024) {
         toast({
           title: "Arquivo muito grande",
-          description: "O arquivo deve ter no máximo 5MB.",
+          description: "O arquivo deve ter no máximo 2MB.",
           variant: "destructive",
         });
+        event.target.value = '';
         return;
       }
       
@@ -91,66 +92,54 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
     setIsProcessing(true);
 
     try {
-      let fileContent = '';
+      console.log('Reading file:', file.name, 'Size:', file.size, 'Type:', file.type);
       
-      console.log('Reading file:', file.name, 'Type:', file.type);
+      // Read text file
+      const fileContent = await file.text();
       
-      // Handle different file types
-      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      if (!fileContent || fileContent.trim().length === 0) {
         toast({
-          title: "Processando PDF...",
-          description: "Extraindo texto do documento, isso pode levar alguns segundos.",
-        });
-        
-        // For PDFs, we need to read as base64 and send to a parser
-        const reader = new FileReader();
-        fileContent = await new Promise<string>((resolve, reject) => {
-          reader.onload = async (e) => {
-            try {
-              const base64 = e.target?.result as string;
-              // For now, we'll just extract text content
-              // In production, you'd want to use a PDF parsing library
-              resolve(base64);
-            } catch (err) {
-              reject(err);
-            }
-          };
-          reader.onerror = reject;
-          reader.readAsText(file);
-        });
-      } else if (file.type.startsWith('image/')) {
-        toast({
-          title: "Formato não suportado",
-          description: "Imagens ainda não são suportadas. Use arquivos PDF ou TXT.",
+          title: "Arquivo vazio",
+          description: "O arquivo não contém texto para análise.",
           variant: "destructive",
         });
+        setIsProcessing(false);
         return;
-      } else {
-        // For text files
-        fileContent = await file.text();
       }
       
-      console.log('File content length:', fileContent.length);
-      console.log('Sending file to AI for analysis...');
+      console.log('File content length:', fileContent.length, 'characters');
+      console.log('Sending to AI for analysis...');
       
       // Call edge function to analyze with AI
       const { data, error } = await supabase.functions.invoke('analyze-bank-statement', {
         body: { content: fileContent }
       });
 
-      console.log('Edge function response:', { data, error });
+      console.log('Edge function response:', { hasData: !!data, hasError: !!error });
 
       if (error) {
         console.error('Edge function error:', error);
-        throw error;
+        throw new Error(error.message || 'Erro ao processar extrato');
       }
 
-      if (!data?.transactions || data.transactions.length === 0) {
+      if (!data?.transactions || !Array.isArray(data.transactions)) {
+        console.error('Invalid response format:', data);
+        toast({
+          title: "Resposta inválida",
+          description: "A IA retornou um formato inválido.",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      if (data.transactions.length === 0) {
         toast({
           title: "Nenhuma transação encontrada",
           description: "A IA não conseguiu identificar transações no arquivo.",
           variant: "destructive",
         });
+        setIsProcessing(false);
         return;
       }
 
@@ -310,7 +299,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   <Input
                     id="file"
                     type="file"
-                    accept=".txt,.pdf"
+                    accept=".txt,text/plain"
                     onChange={handleFileChange}
                     disabled={isProcessing}
                   />
@@ -333,11 +322,11 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Formatos aceitos: TXT, PDF (experimental)
+                  Formato aceito: TXT (extratos copiados como texto)
                 </p>
                 {file && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Arquivo selecionado: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                  <p className="text-xs text-primary mt-1">
+                    ✓ {file.name} ({(file.size / 1024).toFixed(1)} KB)
                   </p>
                 )}
               </div>
