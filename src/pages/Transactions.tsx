@@ -15,6 +15,7 @@ import { ExpenseDialog } from "@/components/transactions/ExpenseDialog";
 import { TransferDialog } from "@/components/transactions/TransferDialog";
 import { DeleteRecurringDialog } from "@/components/transactions/DeleteRecurringDialog";
 import { BulkEditRecurringDialog } from "@/components/transactions/BulkEditRecurringDialog";
+import { ImportStatementAIDialog } from "@/components/bank-accounts/ImportStatementAIDialog";
 import { sanitizeError } from "@/lib/errorMapping";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -117,6 +118,7 @@ const Transactions = () => {
   const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
   const [bulkRecurringDialogOpen, setBulkRecurringDialogOpen] = useState(false);
   const [bulkAction, setBulkAction] = useState<"delete" | "markAsPaid">("delete");
+  const [importAIDialogOpen, setImportAIDialogOpen] = useState(false);
 
   // Sincronização em tempo real
   useRealtimeSync(
@@ -630,6 +632,9 @@ const Transactions = () => {
             <DropdownMenuItem onClick={() => setTransferDialogOpen(true)}>
               Transferência
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setImportAIDialogOpen(true)}>
+              Importar Extrato com IA
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -1037,6 +1042,11 @@ const Transactions = () => {
         onEditFromThis={handleBulkEditFromThis}
         hasRecurring={true}
         action={bulkAction}
+      />
+      <ImportStatementAIDialog
+        open={importAIDialogOpen}
+        onClose={() => setImportAIDialogOpen(false)}
+        onImportComplete={loadTransactions}
       />
     </div>
   );
