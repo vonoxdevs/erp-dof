@@ -516,6 +516,7 @@ const Transactions = () => {
     toast.info("Filtros limpos");
   };
 
+  // Filtros para tabela (aplicam search, tipo e status)
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = selectedType === "all" || t.type === selectedType;
@@ -523,7 +524,30 @@ const Transactions = () => {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  // Calcular saldo acumulado
+  // Calcular resumos usando transactions (sem filtros de tipo/status)
+  // Isso garante que os cards mostrem os totais corretos do período
+  const receitasAbertas = transactions
+    .filter((t) => t.type === "revenue" && (t.status === "pending" || t.status === "overdue"))
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const receitasRealizadas = transactions
+    .filter((t) => t.type === "revenue" && t.status === "paid")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const despesasAbertas = transactions
+    .filter((t) => t.type === "expense" && (t.status === "pending" || t.status === "overdue"))
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const despesasRealizadas = transactions
+    .filter((t) => t.type === "expense" && t.status === "paid")
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const totalPeriodo = receitasRealizadas - despesasRealizadas;
+  
+  // Calcular saldo previsto do período (saldo atual + pendentes do período)
+  const saldoPrevistoPeriodo = totalBalance + receitasAbertas - despesasAbertas;
+
+  // Calcular saldo acumulado para a tabela (usa filteredTransactions)
   const transactionsWithBalance = filteredTransactions.map((transaction, index) => {
     const previousTransactions = filteredTransactions.slice(index + 1);
     const balance = previousTransactions.reduce((acc, t) => {
@@ -534,28 +558,6 @@ const Transactions = () => {
     
     return { ...transaction, balance };
   });
-
-  // Calcular resumos
-  const receitasAbertas = filteredTransactions
-    .filter((t) => t.type === "revenue" && (t.status === "pending" || t.status === "overdue"))
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  const receitasRealizadas = filteredTransactions
-    .filter((t) => t.type === "revenue" && t.status === "paid")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  const despesasAbertas = filteredTransactions
-    .filter((t) => t.type === "expense" && (t.status === "pending" || t.status === "overdue"))
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  const despesasRealizadas = filteredTransactions
-    .filter((t) => t.type === "expense" && t.status === "paid")
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-
-  const totalPeriodo = receitasRealizadas - despesasRealizadas;
-  
-  // Calcular saldo previsto do período (saldo atual + pendentes do período)
-  const saldoPrevistoPeriodo = totalBalance + receitasAbertas - despesasAbertas;
 
   const getStatusBadge = (status: string) => {
     switch (status) {
