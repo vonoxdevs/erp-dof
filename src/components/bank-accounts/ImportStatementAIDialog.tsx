@@ -125,18 +125,46 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
                file.type === 'application/vnd.ms-excel') {
         // Read Excel file
+        console.log('Reading Excel file...');
         const arrayBuffer = await file.arrayBuffer();
+        console.log('ArrayBuffer size:', arrayBuffer.byteLength);
+        
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        console.log('Workbook sheets:', workbook.SheetNames);
+        
+        if (workbook.SheetNames.length === 0) {
+          toast({
+            title: "Excel vazio",
+            description: "O arquivo Excel não contém planilhas.",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
         
         // Get first sheet
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
+        console.log('Reading sheet:', firstSheetName);
         
         // Convert to CSV format for AI analysis
         const csv = XLSX.utils.sheet_to_csv(worksheet);
         fileContent = csv;
         
-        console.log('Excel file converted to CSV, rows:', csv.split('\n').length);
+        console.log('Excel converted to CSV, length:', csv.length, 'rows:', csv.split('\n').length);
+        console.log('First 200 chars:', csv.substring(0, 200));
+        
+        // Validate that CSV has content beyond just headers
+        const lines = csv.split('\n').filter(line => line.trim().length > 0);
+        if (lines.length < 2) {
+          toast({
+            title: "Excel sem dados",
+            description: "A planilha não contém linhas de dados (apenas cabeçalhos ou vazia).",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
       } else {
         // Read text file
         fileContent = await file.text();
