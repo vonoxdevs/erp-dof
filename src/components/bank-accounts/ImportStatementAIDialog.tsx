@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Upload, Sparkles, CheckCircle2, Trash2 } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { useCategoriasFiltradas } from "@/hooks/useCategoriasFiltradas";
+import * as XLSX from 'xlsx';
 
 interface ImportStatementAIDialogProps {
   open: boolean;
@@ -43,22 +44,26 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
     if (selectedFile) {
       const isValidTxt = selectedFile.name.toLowerCase().endsWith('.txt') || 
                          selectedFile.type === 'text/plain';
+      const isValidExcel = selectedFile.name.toLowerCase().endsWith('.xlsx') ||
+                          selectedFile.name.toLowerCase().endsWith('.xls') ||
+                          selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                          selectedFile.type === 'application/vnd.ms-excel';
       
-      if (!isValidTxt) {
+      if (!isValidTxt && !isValidExcel) {
         toast({
           title: "Formato inválido",
-          description: "Por favor, selecione um arquivo TXT. PDFs serão suportados em breve.",
+          description: "Por favor, selecione um arquivo TXT ou Excel (.xlsx, .xls).",
           variant: "destructive",
         });
         event.target.value = '';
         return;
       }
       
-      // Check file size (max 2MB for text)
-      if (selectedFile.size > 2 * 1024 * 1024) {
+      // Check file size (max 5MB)
+      if (selectedFile.size > 5 * 1024 * 1024) {
         toast({
           title: "Arquivo muito grande",
-          description: "O arquivo deve ter no máximo 2MB.",
+          description: "O arquivo deve ter no máximo 5MB.",
           variant: "destructive",
         });
         event.target.value = '';
@@ -94,13 +99,37 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
     try {
       console.log('Reading file:', file.name, 'Size:', file.size, 'Type:', file.type);
       
-      // Read text file
-      const fileContent = await file.text();
+      let fileContent = '';
+      
+      // Check if it's an Excel file
+      const isExcel = file.name.toLowerCase().endsWith('.xlsx') || 
+                      file.name.toLowerCase().endsWith('.xls') ||
+                      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+                      file.type === 'application/vnd.ms-excel';
+      
+      if (isExcel) {
+        // Read Excel file
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        
+        // Get first sheet
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // Convert to CSV format for AI analysis
+        const csv = XLSX.utils.sheet_to_csv(worksheet);
+        fileContent = csv;
+        
+        console.log('Excel file converted to CSV, rows:', csv.split('\n').length);
+      } else {
+        // Read text file
+        fileContent = await file.text();
+      }
       
       if (!fileContent || fileContent.trim().length === 0) {
         toast({
           title: "Arquivo vazio",
-          description: "O arquivo não contém texto para análise.",
+          description: "O arquivo não contém dados para análise.",
           variant: "destructive",
         });
         setIsProcessing(false);
@@ -299,7 +328,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   <Input
                     id="file"
                     type="file"
-                    accept=".txt,text/plain"
+                    accept=".txt,.xlsx,.xls,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                     onChange={handleFileChange}
                     disabled={isProcessing}
                   />
@@ -322,7 +351,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Formato aceito: TXT (extratos copiados como texto)
+                  Formatos aceitos: TXT, Excel (.xlsx, .xls)
                 </p>
                 {file && (
                   <p className="text-xs text-primary mt-1">
