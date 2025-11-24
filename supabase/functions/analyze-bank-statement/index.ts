@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { content } = await req.json();
+    const { content, isImage } = await req.json();
     
     if (!content) {
       return new Response(
@@ -32,7 +32,29 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log('Analyzing bank statement with AI...');
+    console.log('Analyzing bank statement with AI...', { isImage });
+
+    // Build message content based on whether it's an image or text
+    let userMessageContent;
+    
+    if (isImage) {
+      // For images, send as image_url with proper format
+      userMessageContent = [
+        {
+          type: "text",
+          text: "Analise esta imagem de extrato bancário e extraia todas as transações que você conseguir identificar. Extraia a data, descrição, valor e tipo (receita ou despesa) de cada transação."
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: content // base64 data URL
+          }
+        }
+      ];
+    } else {
+      // For text/CSV, send as regular text
+      userMessageContent = `Analise este extrato bancário e extraia as transações:\n\n${content}`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -46,7 +68,7 @@ serve(async (req) => {
           {
             role: "system",
             content: `Você é um assistente especializado em análise de extratos bancários brasileiros. 
-Sua tarefa é extrair transações de um extrato bancário e retornar um JSON estruturado.
+Sua tarefa é extrair transações de um extrato bancário (texto ou imagem) e retornar um JSON estruturado.
 
 Para cada transação identifique:
 - Data (formato YYYY-MM-DD)
@@ -58,10 +80,10 @@ Regras importantes:
 1. Retorne APENAS transações claramente identificáveis
 2. Ignore linhas de cabeçalho, totais, saldos
 3. Para valores, use apenas números (sem R$, vírgulas como separador decimal devem virar ponto)
-4. Se a data estiver incompleta, use o ano atual
+4. Se a data estiver incompleta, use o ano atual (2025)
 5. Ignore duplicatas
-6. Para débitos/saídas use type "expense"
-7. Para créditos/entradas use type "revenue"
+6. Para débitos/saídas/pagamentos use type "expense"
+7. Para créditos/entradas/recebimentos use type "revenue"
 
 Retorne um array JSON no formato:
 [
@@ -75,7 +97,7 @@ Retorne um array JSON no formato:
           },
           {
             role: "user",
-            content: `Analise este extrato bancário e extraia as transações:\n\n${content}`
+            content: userMessageContent
           }
         ],
         tools: [

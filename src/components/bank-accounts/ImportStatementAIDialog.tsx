@@ -48,11 +48,16 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                           selectedFile.name.toLowerCase().endsWith('.xls') ||
                           selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
                           selectedFile.type === 'application/vnd.ms-excel';
+      const isValidImage = selectedFile.type.startsWith('image/') &&
+                          (selectedFile.name.toLowerCase().endsWith('.jpg') ||
+                           selectedFile.name.toLowerCase().endsWith('.jpeg') ||
+                           selectedFile.name.toLowerCase().endsWith('.png') ||
+                           selectedFile.name.toLowerCase().endsWith('.webp'));
       
-      if (!isValidTxt && !isValidExcel) {
+      if (!isValidTxt && !isValidExcel && !isValidImage) {
         toast({
           title: "Formato inválido",
-          description: "Por favor, selecione um arquivo TXT ou Excel (.xlsx, .xls).",
+          description: "Por favor, selecione um arquivo TXT, Excel ou Imagem (JPG, PNG, WEBP).",
           variant: "destructive",
         });
         event.target.value = '';
@@ -100,14 +105,25 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
       console.log('Reading file:', file.name, 'Size:', file.size, 'Type:', file.type);
       
       let fileContent = '';
+      let isImage = false;
       
+      // Check if it's an image file
+      if (file.type.startsWith('image/')) {
+        isImage = true;
+        // Read image as base64
+        const reader = new FileReader();
+        fileContent = await new Promise<string>((resolve, reject) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        console.log('Image file converted to base64');
+      }
       // Check if it's an Excel file
-      const isExcel = file.name.toLowerCase().endsWith('.xlsx') || 
-                      file.name.toLowerCase().endsWith('.xls') ||
-                      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                      file.type === 'application/vnd.ms-excel';
-      
-      if (isExcel) {
+      else if (file.name.toLowerCase().endsWith('.xlsx') || 
+               file.name.toLowerCase().endsWith('.xls') ||
+               file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+               file.type === 'application/vnd.ms-excel') {
         // Read Excel file
         const arrayBuffer = await file.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
@@ -136,12 +152,15 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
         return;
       }
       
-      console.log('File content length:', fileContent.length, 'characters');
+      console.log('File content ready, length:', fileContent.length);
       console.log('Sending to AI for analysis...');
       
       // Call edge function to analyze with AI
       const { data, error } = await supabase.functions.invoke('analyze-bank-statement', {
-        body: { content: fileContent }
+        body: { 
+          content: fileContent,
+          isImage: isImage 
+        }
       });
 
       console.log('Edge function response:', { hasData: !!data, hasError: !!error });
@@ -328,7 +347,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   <Input
                     id="file"
                     type="file"
-                    accept=".txt,.xlsx,.xls,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    accept=".txt,.xlsx,.xls,.jpg,.jpeg,.png,.webp,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,image/*"
                     onChange={handleFileChange}
                     disabled={isProcessing}
                   />
@@ -351,7 +370,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
                   </Button>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Formatos aceitos: TXT, Excel (.xlsx, .xls)
+                  Formatos aceitos: TXT, Excel (.xlsx, .xls), Imagens (JPG, PNG, WEBP)
                 </p>
                 {file && (
                   <p className="text-xs text-primary mt-1">
