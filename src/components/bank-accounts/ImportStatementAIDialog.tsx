@@ -219,59 +219,47 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
       console.log('Is image:', isImage);
       console.log('Sending to AI for analysis...');
       
-      // Call edge function to analyze with AI with timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('TIMEOUT'));
-        }, 45000); // 45 second timeout
-      });
-
       try {
         const startTime = Date.now();
         console.log('Calling edge function at:', new Date().toISOString());
         
-        const invokePromise = supabase.functions.invoke('analyze-bank-statement', {
-          body: { 
-            content: fileContent,
-            isImage: isImage 
+        // Use fetch directly instead of supabase.functions.invoke
+        const response = await fetch(
+          `https://agpeebvrrcytghmilzss.supabase.co/functions/v1/analyze-bank-statement`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({
+              content: fileContent,
+              isImage: isImage
+            })
           }
-        });
-
-        const { data, error } = await Promise.race([
-          invokePromise,
-          timeoutPromise
-        ]) as any;
+        );
 
         const endTime = Date.now();
         console.log('Edge function returned after', (endTime - startTime) / 1000, 'seconds');
-        console.log('Edge function response:', { 
-          hasData: !!data, 
-          hasError: !!error,
-          dataKeys: data ? Object.keys(data) : [],
-          errorDetails: error 
-        });
+        console.log('Response status:', response.status);
 
-        if (error) {
-          console.error('Edge function error:', error);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Edge function error:', response.status, errorText);
           toast({
             title: "Erro ao processar",
-            description: error.message || 'Erro ao processar extrato',
+            description: `Erro ${response.status}: ${errorText}`,
             variant: "destructive",
           });
           setIsProcessing(false);
           return;
         }
 
-        if (!data) {
-          console.error('No data returned from edge function');
-          toast({
-            title: "Erro na resposta",
-            description: "A função não retornou dados.",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-          return;
-        }
+        const data = await response.json();
+        console.log('Edge function data:', { 
+          hasTransactions: !!data.transactions,
+          transactionsCount: data.transactions?.length 
+        });
 
         if (!data.transactions || !Array.isArray(data.transactions)) {
           console.error('Invalid response format:', data);
@@ -309,22 +297,13 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
           title: "Análise concluída",
           description: `${transactionsWithAccount.length} transações identificadas.`,
         });
-      } catch (invokeError: any) {
-        console.error('Error calling edge function:', invokeError);
-        
-        if (invokeError.message === 'TIMEOUT') {
-          toast({
-            title: "Tempo esgotado",
-            description: "A análise demorou muito. Tente com um arquivo menor ou entre em contato com o suporte.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Erro na análise",
-            description: invokeError.message || "Erro ao analisar o extrato.",
-            variant: "destructive",
-          });
-        }
+      } catch (error: any) {
+        console.error('Error calling edge function:', error);
+        toast({
+          title: "Erro na análise",
+          description: error.message || "Erro ao analisar o extrato.",
+          variant: "destructive",
+        });
         setIsProcessing(false);
         return;
       }
