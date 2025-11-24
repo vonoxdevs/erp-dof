@@ -219,17 +219,28 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
       console.log('Is image:', isImage);
       console.log('Sending to AI for analysis...');
       
-      // Call edge function to analyze with AI
+      // Call edge function to analyze with AI with timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('TIMEOUT'));
+        }, 45000); // 45 second timeout
+      });
+
       try {
         const startTime = Date.now();
         console.log('Calling edge function at:', new Date().toISOString());
         
-        const { data, error } = await supabase.functions.invoke('analyze-bank-statement', {
+        const invokePromise = supabase.functions.invoke('analyze-bank-statement', {
           body: { 
             content: fileContent,
             isImage: isImage 
           }
         });
+
+        const { data, error } = await Promise.race([
+          invokePromise,
+          timeoutPromise
+        ]) as any;
 
         const endTime = Date.now();
         console.log('Edge function returned after', (endTime - startTime) / 1000, 'seconds');
@@ -242,7 +253,13 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
 
         if (error) {
           console.error('Edge function error:', error);
-          throw new Error(error.message || 'Erro ao processar extrato');
+          toast({
+            title: "Erro ao processar",
+            description: error.message || 'Erro ao processar extrato',
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
         }
 
         if (!data) {
@@ -292,9 +309,24 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
           title: "Análise concluída",
           description: `${transactionsWithAccount.length} transações identificadas.`,
         });
-      } catch (invokeError) {
+      } catch (invokeError: any) {
         console.error('Error calling edge function:', invokeError);
-        throw invokeError;
+        
+        if (invokeError.message === 'TIMEOUT') {
+          toast({
+            title: "Tempo esgotado",
+            description: "A análise demorou muito. Tente com um arquivo menor ou entre em contato com o suporte.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro na análise",
+            description: invokeError.message || "Erro ao analisar o extrato.",
+            variant: "destructive",
+          });
+        }
+        setIsProcessing(false);
+        return;
       }
 
     } catch (error) {
