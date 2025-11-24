@@ -217,13 +217,21 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
       
       console.log('File content ready, length:', fileContent.length);
       console.log('Is image:', isImage);
-      console.log('Sending to AI for analysis...');
+      console.log('🚀 STARTING AI ANALYSIS...');
+      console.log('File type:', isImage ? 'IMAGE' : 'TEXT/CSV');
+      console.log('Content length:', fileContent.length);
       
       try {
+        // Create abort controller with 60 second timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.error('⏱️ TIMEOUT: Request exceeded 60 seconds');
+          controller.abort();
+        }, 60000);
+
         const startTime = Date.now();
-        console.log('Calling edge function at:', new Date().toISOString());
+        console.log('📡 Calling edge function at:', new Date().toISOString());
         
-        // Use fetch directly instead of supabase.functions.invoke
         const response = await fetch(
           `https://agpeebvrrcytghmilzss.supabase.co/functions/v1/analyze-bank-statement`,
           {
@@ -235,17 +243,19 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
             body: JSON.stringify({
               content: fileContent,
               isImage: isImage
-            })
+            }),
+            signal: controller.signal
           }
         );
 
+        clearTimeout(timeoutId);
         const endTime = Date.now();
-        console.log('Edge function returned after', (endTime - startTime) / 1000, 'seconds');
-        console.log('Response status:', response.status);
+        console.log('✅ Response received after', (endTime - startTime) / 1000, 'seconds');
+        console.log('📊 Response status:', response.status);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('Edge function error:', response.status, errorText);
+          console.error('❌ Edge function error:', response.status, errorText);
           toast({
             title: "Erro ao processar",
             description: `Erro ${response.status}: ${errorText}`,
@@ -256,7 +266,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
         }
 
         const data = await response.json();
-        console.log('Edge function data:', { 
+        console.log('📦 Edge function data:', {
           hasTransactions: !!data.transactions,
           transactionsCount: data.transactions?.length 
         });
@@ -273,6 +283,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
         }
 
         if (data.transactions.length === 0) {
+          console.warn('⚠️ No transactions found');
           toast({
             title: "Nenhuma transação encontrada",
             description: "A IA não conseguiu identificar transações no arquivo.",
@@ -282,7 +293,7 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
           return;
         }
 
-        console.log('Transactions found:', data.transactions.length);
+        console.log('✅ Transactions found:', data.transactions.length);
 
         // Add default bank account to all transactions
         const transactionsWithAccount = data.transactions.map((t: ParsedTransaction) => ({
@@ -292,18 +303,31 @@ export function ImportStatementAIDialog({ open, onClose, onImportComplete }: Imp
         }));
 
         setParsedTransactions(transactionsWithAccount);
+        console.log('✅ AI analysis complete, displaying', transactionsWithAccount.length, 'transactions');
+        setIsProcessing(false);
         
         toast({
           title: "Análise concluída",
           description: `${transactionsWithAccount.length} transações identificadas.`,
         });
       } catch (error: any) {
-        console.error('Error calling edge function:', error);
-        toast({
-          title: "Erro na análise",
-          description: error.message || "Erro ao analisar o extrato.",
-          variant: "destructive",
-        });
+        console.error('❌ ERROR in AI analysis:', error);
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        
+        if (error.name === 'AbortError') {
+          toast({
+            title: "Tempo esgotado",
+            description: "A análise demorou muito. Tente um arquivo menor.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro na análise",
+            description: error.message || "Erro ao analisar o extrato.",
+            variant: "destructive",
+          });
+        }
         setIsProcessing(false);
         return;
       }
