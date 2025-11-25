@@ -115,7 +115,7 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: 
             <div>
               <p className="text-sm text-muted-foreground mb-1">Saldo Atual (Pago)</p>
               <p className="text-2xl font-bold">
-                R$ {Number(account.current_balance).toLocaleString("pt-BR", {
+                R$ {Number(account.current_balance ?? 0).toLocaleString("pt-BR", {
                   minimumFractionDigits: 2,
                 })}
               </p>
