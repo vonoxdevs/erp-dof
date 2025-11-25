@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getUserCompanyId } from "./userService";
+import { parseISO, differenceInDays } from 'date-fns';
+import { toSaoPauloTime } from '@/lib/dateUtils';
 
 export interface TransactionData {
   type: 'revenue' | 'expense' | 'transfer';
@@ -172,9 +174,9 @@ export async function getOverdueTransactions() {
 
     // Calcular dias de atraso e severidade
     const processedData = (data || []).map(t => {
-      const dueDate = new Date(t.due_date);
-      const todayDate = new Date();
-      const daysOverdue = Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const dueDate = toSaoPauloTime(t.due_date);
+      const todayDate = toSaoPauloTime(new Date());
+      const daysOverdue = differenceInDays(todayDate, dueDate);
       
       let severity: 'warning' | 'danger' | 'critical';
       if (daysOverdue <= 7) severity = 'warning';
@@ -200,7 +202,7 @@ export async function getOverdueTransactions() {
         averageDaysOverdue: revenues.length > 0 
           ? Math.round(revenues.reduce((sum, t) => sum + t.daysOverdue, 0) / revenues.length)
           : 0,
-        oldestDate: revenues.length > 0 ? new Date(revenues[0].due_date) : null,
+        oldestDate: revenues.length > 0 ? toSaoPauloTime(revenues[0].due_date) : null,
         transactions: revenues,
       },
       expenses: {
@@ -209,7 +211,7 @@ export async function getOverdueTransactions() {
         averageDaysOverdue: expenses.length > 0
           ? Math.round(expenses.reduce((sum, t) => sum + t.daysOverdue, 0) / expenses.length)
           : 0,
-        oldestDate: expenses.length > 0 ? new Date(expenses[0].due_date) : null,
+        oldestDate: expenses.length > 0 ? toSaoPauloTime(expenses[0].due_date) : null,
         transactions: expenses,
       },
     };
@@ -251,9 +253,9 @@ export async function getPendingTransactions() {
 
     // Calcular dias de atraso e severidade
     const processedData = (data || []).map(t => {
-      const dueDate = new Date(t.due_date);
-      const todayDate = new Date(today);
-      const daysOverdue = Math.floor((todayDate.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const dueDate = toSaoPauloTime(t.due_date);
+      const todayDate = toSaoPauloTime(today);
+      const daysOverdue = differenceInDays(todayDate, dueDate);
       const isOverdue = daysOverdue >= 0;
       
       let severity: 'warning' | 'danger' | 'critical' | 'on-time';
@@ -287,7 +289,7 @@ export async function getPendingTransactions() {
         averageDaysOverdue: overdue.length > 0 
           ? Math.round(overdue.reduce((sum, t) => sum + t.daysOverdue, 0) / overdue.length)
           : 0,
-        oldestDate: overdue.length > 0 ? new Date(overdue[0].due_date) : null,
+        oldestDate: overdue.length > 0 ? toSaoPauloTime(overdue[0].due_date) : null,
         transactions,
       };
     };
