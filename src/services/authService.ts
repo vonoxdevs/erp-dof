@@ -258,6 +258,7 @@ class AuthService {
       last_login_at: data.last_login_at,
       created_at: data.created_at,
       updated_at: data.updated_at,
+      is_trial_owner: data.is_trial_owner,
     } as UserProfile;
     
     const company = data.companies as Company | null;
