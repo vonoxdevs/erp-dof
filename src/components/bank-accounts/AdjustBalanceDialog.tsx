@@ -86,7 +86,7 @@ export function AdjustBalanceDialog({ open, onClose, account }: AdjustBalanceDia
           bank_account_id: account.id,
           account_to_id: adjustment >= 0 ? account.id : null,
           account_from_id: adjustment < 0 ? account.id : null,
-          notes: `Ajuste manual: Saldo anterior R$ ${account.current_balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} → Novo saldo R$ ${newBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+          notes: `Ajuste manual: Saldo anterior R$ ${(account.current_balance ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} → Novo saldo R$ ${newBalance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
           created_by: user.id,
           category_id: null,
           contact_id: null,
@@ -109,7 +109,7 @@ export function AdjustBalanceDialog({ open, onClose, account }: AdjustBalanceDia
   };
 
   const adjustment = account && newBalance !== undefined 
-    ? newBalance - account.current_balance 
+    ? newBalance - (account.current_balance ?? 0) 
     : 0;
 
   return (
@@ -125,7 +125,7 @@ export function AdjustBalanceDialog({ open, onClose, account }: AdjustBalanceDia
               <>
                 Conta: {account.bank_name}
                 <br />
-                Saldo atual: R$ {account.current_balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                Saldo atual: R$ {(account.current_balance ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </>
             )}
           </DialogDescription>

@@ -153,11 +153,11 @@ export function AddByTextDialog({ open, onOpenChange, onSuccess }: AddByTextDial
     }
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null | undefined) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(value);
+    }).format(value ?? 0);
   };
 
   const totalReceitas = extractedTransactions

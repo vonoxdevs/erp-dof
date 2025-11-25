@@ -129,20 +129,21 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
   // Usar hook de contas bancárias
   const { accounts: bankAccounts, isLoading: accountsLoading } = useBankAccounts();
   
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null | undefined) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(value);
+    }).format(value ?? 0);
   };
   
   const getNewBalance = (accountId: string | null | undefined, isDebit: boolean) => {
     if (!accountId || !formData.amount) return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
     if (!account) return null;
+    const currentBalance = account.current_balance ?? 0;
     return isDebit 
-      ? account.current_balance - formData.amount 
-      : account.current_balance + formData.amount;
+      ? currentBalance - formData.amount 
+      : currentBalance + formData.amount;
   };
 
   const loadFormData = async () => {
@@ -515,24 +516,28 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                           <div className="flex justify-between items-center w-full gap-4">
                             <span>{account.bank_name} - {account.account_number}</span>
                             <span className="text-sm text-muted-foreground">
-                              {formatCurrency(account.current_balance)}
+                              {formatCurrency(account.current_balance ?? 0)}
                             </span>
                           </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {formData.account_from_id && formData.amount && (
-                    <p className={cn(
-                      "text-sm mt-2 font-medium",
-                      getNewBalance(formData.account_from_id, true)! < 0 ? "text-destructive" : "text-foreground"
-                    )}>
-                      Novo saldo: {formatCurrency(getNewBalance(formData.account_from_id, true) || 0)}
-                      {getNewBalance(formData.account_from_id, true)! < 0 && (
-                        <span className="ml-2">(⚠️ Ficará negativo!)</span>
-                      )}
-                    </p>
-                  )}
+                  {formData.account_from_id && formData.amount && (() => {
+                    const newBalance = getNewBalance(formData.account_from_id, true);
+                    const isNegative = newBalance !== null && newBalance < 0;
+                    return (
+                      <p className={cn(
+                        "text-sm mt-2 font-medium",
+                        isNegative ? "text-destructive" : "text-foreground"
+                      )}>
+                        Novo saldo: {formatCurrency(newBalance ?? 0)}
+                        {isNegative && (
+                          <span className="ml-2">(⚠️ Ficará negativo!)</span>
+                        )}
+                      </p>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
@@ -569,7 +574,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                           <div className="flex justify-between items-center w-full gap-4">
                             <span>{account.bank_name} - {account.account_number}</span>
                             <span className="text-sm text-muted-foreground">
-                              {formatCurrency(account.current_balance)}
+                              {formatCurrency(account.current_balance ?? 0)}
                             </span>
                           </div>
                         </SelectItem>
