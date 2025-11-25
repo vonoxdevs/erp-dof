@@ -295,36 +295,38 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
                   disabled={accountsLoading || !bankAccounts?.length}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta de origem" />
+                    <SelectValue placeholder={accountsLoading ? "Carregando..." : bankAccounts?.length ? "Selecione a conta de origem" : "Nenhuma conta cadastrada"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {bankAccounts?.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        <div className="flex justify-between items-center w-full gap-4">
-                          <span>{account.bank_name} - {account.account_number}</span>
-                          <span className="text-sm text-muted-foreground">
-                            {formatCurrency(account.current_balance ?? 0)}
-                          </span>
-                        </div>
+                    {(bankAccounts && bankAccounts.length > 0) ? (
+                      bankAccounts.map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          <div className="flex justify-between items-center w-full gap-4">
+                            <span>{account.bank_name} - {account.account_number}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {formatCurrency(account.current_balance ?? 0)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="__placeholder__" disabled>
+                        {accountsLoading ? "Carregando contas..." : "Nenhuma conta encontrada"}
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
-                {formData.account_from_id && formData.amount && (() => {
-                  const newBalance = getNewBalance(formData.account_from_id, true);
-                  const isNegative = newBalance !== null && newBalance < 0;
-                  return (
-                    <p className={cn(
-                      "text-sm mt-2 font-medium",
-                      isNegative ? "text-destructive" : "text-foreground"
-                    )}>
-                      Novo saldo: {formatCurrency(newBalance ?? 0)}
-                      {isNegative && (
-                        <span className="ml-2">(⚠️ Ficará negativo!)</span>
-                      )}
-                    </p>
-                  );
-                })()}
+                {formData.account_from_id && formData.amount && (
+                  <p className={cn(
+                    "text-sm mt-2 font-medium",
+                    (getNewBalance(formData.account_from_id, true) ?? 0) < 0 ? "text-destructive" : "text-foreground"
+                  )}>
+                    Novo saldo: {formatCurrency(getNewBalance(formData.account_from_id, true) ?? 0)}
+                    {(getNewBalance(formData.account_from_id, true) ?? 0) < 0 && (
+                      <span className="ml-2">(⚠️ Ficará negativo!)</span>
+                    )}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -343,21 +345,31 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
                   disabled={accountsLoading || !bankAccounts?.length}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecione a conta de destino" />
+                    <SelectValue placeholder={accountsLoading ? "Carregando..." : bankAccounts?.length ? "Selecione a conta de destino" : "Nenhuma conta cadastrada"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {bankAccounts
-                      ?.filter(acc => acc.id !== formData.account_from_id)
-                      .map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex justify-between items-center w-full gap-4">
-                            <span>{account.bank_name} - {account.account_number}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {formatCurrency(account.current_balance ?? 0)}
-                            </span>
-                          </div>
+                    {(() => {
+                      const filteredAccounts = bankAccounts?.filter(acc => acc.id !== formData.account_from_id) || [];
+                      
+                      if (filteredAccounts.length > 0) {
+                        return filteredAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            <div className="flex justify-between items-center w-full gap-4">
+                              <span>{account.bank_name} - {account.account_number}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {formatCurrency(account.current_balance ?? 0)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ));
+                      }
+                      
+                      return (
+                        <SelectItem value="__placeholder__" disabled>
+                          {accountsLoading ? "Carregando contas..." : "Nenhuma conta disponível"}
                         </SelectItem>
-                      ))}
+                      );
+                    })()}
                   </SelectContent>
                 </Select>
                 {formData.account_to_id && formData.amount && (

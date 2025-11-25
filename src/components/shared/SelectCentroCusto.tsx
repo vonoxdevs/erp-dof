@@ -100,25 +100,30 @@ export function SelectCentroCusto({
     setDialogOpen(false);
   };
 
+  // Placeholder dinâmico baseado no estado
+  const displayPlaceholder = loading 
+    ? 'Carregando...' 
+    : centrosCusto.length === 0 
+      ? 'Nenhum centro de custo' 
+      : placeholder;
+
   return (
     <>
       <div className="flex gap-2">
-        <Select value={value} onValueChange={onChange} disabled={isDisabled}>
+        <Select 
+          value={centrosCusto.length > 0 ? value : ""} 
+          onValueChange={onChange} 
+          disabled={isDisabled || centrosCusto.length === 0}
+        >
           <SelectTrigger className="flex-1">
-            <SelectValue placeholder={placeholder} />
+            <SelectValue placeholder={displayPlaceholder} />
           </SelectTrigger>
           <SelectContent>
-            {centrosCusto.length === 0 ? (
-              <div className="p-2 text-sm text-muted-foreground">
-                {loading ? 'Carregando...' : 'Nenhum centro de custo cadastrado'}
-              </div>
-            ) : (
-              centrosCusto.map(centro => (
-                <SelectItem key={centro.id} value={centro.id}>
-                  <span>{centro.nome}</span>
-                </SelectItem>
-              ))
-            )}
+            {centrosCusto.map(centro => (
+              <SelectItem key={centro.id} value={centro.id}>
+                {centro.nome}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Button

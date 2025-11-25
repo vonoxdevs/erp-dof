@@ -508,19 +508,25 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                     disabled={accountsLoading || !bankAccounts?.length}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a conta de origem" />
+                      <SelectValue placeholder={accountsLoading ? "Carregando..." : bankAccounts?.length ? "Selecione a conta de origem" : "Nenhuma conta cadastrada"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {bankAccounts?.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex justify-between items-center w-full gap-4">
-                            <span>{account.bank_name} - {account.account_number}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {formatCurrency(account.current_balance ?? 0)}
-                            </span>
-                          </div>
+                      {(bankAccounts && bankAccounts.length > 0) ? (
+                        bankAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            <div className="flex justify-between items-center w-full gap-4">
+                              <span>{account.bank_name} - {account.account_number}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {formatCurrency(account.current_balance ?? 0)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="__placeholder__" disabled>
+                          {accountsLoading ? "Carregando contas..." : "Nenhuma conta encontrada"}
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                   {formData.account_from_id && formData.amount && (
@@ -560,21 +566,33 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                     disabled={accountsLoading || !bankAccounts?.length}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione a conta de destino" />
+                      <SelectValue placeholder={accountsLoading ? "Carregando..." : bankAccounts?.length ? "Selecione a conta de destino" : "Nenhuma conta cadastrada"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {bankAccounts?.filter(acc => 
-                        formData.type !== 'transfer' || acc.id !== formData.account_from_id
-                      ).map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex justify-between items-center w-full gap-4">
-                            <span>{account.bank_name} - {account.account_number}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {formatCurrency(account.current_balance ?? 0)}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
+                      {(() => {
+                        const filteredAccounts = bankAccounts?.filter(acc => 
+                          formData.type !== 'transfer' || acc.id !== formData.account_from_id
+                        ) || [];
+                        
+                        if (filteredAccounts.length > 0) {
+                          return filteredAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              <div className="flex justify-between items-center w-full gap-4">
+                                <span>{account.bank_name} - {account.account_number}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {formatCurrency(account.current_balance ?? 0)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ));
+                        }
+                        
+                        return (
+                          <SelectItem value="__placeholder__" disabled>
+                            {accountsLoading ? "Carregando contas..." : "Nenhuma conta encontrada"}
+                          </SelectItem>
+                        );
+                      })()}
                     </SelectContent>
                   </Select>
                   {formData.account_to_id && formData.amount && (
