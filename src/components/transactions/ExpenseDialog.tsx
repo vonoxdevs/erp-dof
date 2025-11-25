@@ -48,6 +48,7 @@ interface Transaction {
   amount: number;
   description: string;
   due_date: string;
+  payment_date?: string | null;
   status: "pending" | "paid" | "overdue" | "cancelled";
   supplier_name?: string | null;
   centro_custo_id?: string | null;
@@ -81,6 +82,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
     amount: undefined as number | undefined,
     description: "",
     due_date: getTodayForInput(),
+    payment_date: "",
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     supplier_name: "",
     account_from_id: null as string | null,
@@ -119,6 +121,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
           amount: transaction.amount,
           description: transaction.description,
           due_date: transaction.due_date,
+          payment_date: transaction.payment_date || "",
           status: transaction.status,
           supplier_name: transaction.supplier_name || "",
           account_from_id: transaction.bank_account_id || null,
@@ -134,6 +137,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
           amount: undefined,
           description: "",
           due_date: getTodayForInput(),
+          payment_date: "",
           status: "pending",
           supplier_name: "",
           account_from_id: null,
@@ -187,6 +191,7 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
         amount: formData.amount,
         description: formData.description,
         due_date: formData.due_date,
+        payment_date: formData.payment_date || null,
         status: formData.status,
         company_id: profile.company_id,
         created_by: user.id,
@@ -468,6 +473,19 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
               required
             />
           </div>
+
+          {formData.status === "paid" && (
+            <div className="space-y-2">
+              <Label>Data de Pagamento</Label>
+              <Input
+                type="date"
+                value={formData.payment_date || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, payment_date: e.target.value })
+                }
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Nome do Fornecedor</Label>
