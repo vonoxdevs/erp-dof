@@ -33,3 +33,5 @@ verify_jwt = true
 [functions.analyze-bank-statement]
 verify_jwt = true
 
+[functions.parse-transactions-text]
+verify_jwt = true
