@@ -4,10 +4,12 @@ import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, FileText, Send } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Search, FileText, Send, ChevronDown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { ContractDialog } from "@/components/contracts/ContractDialog";
 import { ContractTable } from "@/components/contracts/ContractTable";
+import { AddContractByTextDialog } from "@/components/contracts/AddContractByTextDialog";
 
 interface Contract {
   id: string;
@@ -40,6 +42,7 @@ const Contracts = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [addByTextDialogOpen, setAddByTextDialogOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
 
   // Sincronização em tempo real
@@ -173,10 +176,25 @@ const Contracts = () => {
           <h1 className="text-3xl font-bold">Contratos</h1>
           <p className="text-muted-foreground">Gerencie contratos recorrentes</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} size="lg">
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Contrato
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Contrato
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+              <FileText className="w-4 h-4 mr-2" />
+              Criar Manualmente
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAddByTextDialogOpen(true)}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Adicionar por Texto (IA)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Stats Cards */}
@@ -215,11 +233,17 @@ const Contracts = () => {
         />
       </Card>
 
-      {/* Dialog */}
+      {/* Dialogs */}
       <ContractDialog
         open={dialogOpen}
         onClose={handleDialogClose}
         contract={selectedContract}
+      />
+
+      <AddContractByTextDialog
+        open={addByTextDialogOpen}
+        onOpenChange={setAddByTextDialogOpen}
+        onSuccess={loadContracts}
       />
     </div>
   );

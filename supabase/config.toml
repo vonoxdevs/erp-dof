@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.parse-transactions-text]
 verify_jwt = true
+
+[functions.parse-contracts-text]
+verify_jwt = true
