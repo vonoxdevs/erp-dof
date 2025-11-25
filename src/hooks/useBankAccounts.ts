@@ -28,7 +28,13 @@ export function useBankAccounts() {
         .order('bank_name');
       
       if (error) throw error;
-      return data || [];
+      
+      // Garantir que current_balance nunca seja null
+      return (data || []).map(account => ({
+        ...account,
+        current_balance: account.current_balance ?? 0,
+        initial_balance: account.initial_balance ?? 0,
+      }));
     },
     staleTime: 0, // Sempre buscar dados frescos
     refetchOnWindowFocus: true,
