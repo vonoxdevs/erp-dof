@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, format } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { toSaoPauloTime } from '@/lib/dateUtils';
 
 export interface ReportFilters {
   dateRange?: DateRange;
@@ -235,7 +236,7 @@ export async function getReportData(periodInDays: number, filters?: ReportFilter
   transactions.forEach(t => {
     if (t.status !== 'paid') return;
     
-    const dateKey = format(new Date(t.due_date), 'dd/MM');
+    const dateKey = format(toSaoPauloTime(t.due_date), 'dd/MM');
     const current = dailyFlowMap.get(dateKey) || { revenue: 0, expense: 0 };
     
     if (t.type === 'revenue') {

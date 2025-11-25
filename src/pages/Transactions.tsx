@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
+import { toSaoPauloTime } from '@/lib/dateUtils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -900,7 +901,7 @@ const Transactions = () => {
                       />
                     </td>
                     <td className="p-3 text-sm">
-                      {format(new Date(transaction.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                      {format(toSaoPauloTime(transaction.due_date), "dd/MM/yyyy", { locale: ptBR })}
                     </td>
                     <td className="p-3">
                       <div className="flex items-center gap-2">

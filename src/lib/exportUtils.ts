@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { formatInSaoPauloTZ } from '@/lib/dateUtils';
 
 interface Transaction {
   type: "revenue" | "expense" | "transfer";
@@ -111,12 +112,12 @@ export function exportTransactionsToPDF(
   };
 
   const tableData = transactions.map(t => [
-    new Date(t.due_date).toLocaleDateString('pt-BR'),
+    formatInSaoPauloTZ(t.due_date, 'dd/MM/yyyy'),
     typeMap[t.type],
     t.description,
     `R$ ${Number(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
     statusMap[t.status],
-    t.payment_date ? new Date(t.payment_date).toLocaleDateString('pt-BR') : '-'
+    t.payment_date ? formatInSaoPauloTZ(t.payment_date, 'dd/MM/yyyy') : '-'
   ]);
 
   autoTable(doc, {
@@ -234,13 +235,13 @@ export function convertTransactionsToCSV(transactions: any[]): string {
   // Converter transações para linhas CSV
   const rows = transactions.map(t => {
     return [
-      new Date(t.due_date).toLocaleDateString('pt-BR'),
+      formatInSaoPauloTZ(t.due_date, 'dd/MM/yyyy'),
       typeMap[t.type as keyof typeof typeMap] || t.type,
       `"${t.description}"`, // Aspas para escapar vírgulas
       `"R$ ${Number(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}"`,
       statusMap[t.status as keyof typeof statusMap] || t.status,
-      t.payment_date ? new Date(t.payment_date).toLocaleDateString('pt-BR') : '-',
-      new Date(t.created_at).toLocaleDateString('pt-BR')
+      t.payment_date ? formatInSaoPauloTZ(t.payment_date, 'dd/MM/yyyy') : '-',
+      formatInSaoPauloTZ(t.created_at, 'dd/MM/yyyy')
     ].join(',');
   });
 

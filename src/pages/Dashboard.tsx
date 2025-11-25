@@ -20,6 +20,7 @@ import { ptBR } from "date-fns/locale";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
+import { getTodayForInput, formatDateForInput, toSaoPauloTime } from '@/lib/dateUtils';
 const Dashboard = () => {
   const navigate = useNavigate();
   const { accounts } = useBankAccounts();
@@ -226,17 +227,17 @@ const Dashboard = () => {
       // Calcular datas baseado no período selecionado (date range ou mês atual)
       const startDate = dateRange?.from || startOfMonth(currentPeriod);
       const endDate = dateRange?.to || endOfMonth(currentPeriod);
-      const dateFilter = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
-      const today = new Date().toISOString().split('T')[0];
+      const dateFilter = formatDateForInput(startDate);
+      const endDateStr = formatDateForInput(endDate);
+      const today = getTodayForInput();
 
       // Load transactions do período selecionado
       let transactionsQuery = supabase
         .from("transactions")
         .select("*")
         .eq("company_id", profile.company_id)
-        .gte("due_date", startDate.toISOString())
-        .lte("due_date", endDate.toISOString());
+        .gte("due_date", dateFilter)
+        .lte("due_date", endDateStr);
 
       if (selectedAccount !== "all") {
         transactionsQuery = transactionsQuery.or(`bank_account_id.eq.${selectedAccount},account_from_id.eq.${selectedAccount},account_to_id.eq.${selectedAccount}`);
@@ -249,15 +250,13 @@ const Dashboard = () => {
         // LÓGICA REFATORADA: Baseada nos filtros do dashboard
         // ==========================================
         
-        const today = new Date().toISOString().split('T')[0];
-        
         // 1. RECEITAS REALIZADAS (receitas pagas com payment_date no período filtrado)
         const receitasRealizadas = recentTransactions
           .filter(t => 
             t.type === "revenue" && 
             t.status === "paid" &&
-            t.due_date >= startDate.toISOString().split('T')[0] &&
-            t.due_date <= endDate.toISOString().split('T')[0]
+            t.due_date >= dateFilter &&
+            t.due_date <= endDateStr
           )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
@@ -266,8 +265,8 @@ const Dashboard = () => {
           .filter(t => 
             t.type === "expense" && 
             t.status === "paid" &&
-            t.due_date >= startDate.toISOString().split('T')[0] &&
-            t.due_date <= endDate.toISOString().split('T')[0]
+            t.due_date >= dateFilter &&
+            t.due_date <= endDateStr
           )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
@@ -276,8 +275,8 @@ const Dashboard = () => {
           .filter(t => 
             t.type === "revenue" && 
             (t.status === "pending" || t.status === "overdue") &&
-            t.due_date >= startDate.toISOString().split('T')[0] &&
-            t.due_date <= endDate.toISOString().split('T')[0]
+            t.due_date >= dateFilter &&
+            t.due_date <= endDateStr
           )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
@@ -286,8 +285,8 @@ const Dashboard = () => {
           .filter(t => 
             t.type === "expense" && 
             (t.status === "pending" || t.status === "overdue") &&
-            t.due_date >= startDate.toISOString().split('T')[0] &&
-            t.due_date <= endDate.toISOString().split('T')[0]
+            t.due_date >= dateFilter &&
+            t.due_date <= endDateStr
           )
           .reduce((sum, t) => sum + Number(t.amount), 0);
         
@@ -295,8 +294,8 @@ const Dashboard = () => {
         const pending = recentTransactions
           .filter(t => 
             (t.status === "pending" || t.status === "overdue") &&
-            t.due_date >= startDate.toISOString().split('T')[0] &&
-            t.due_date <= endDate.toISOString().split('T')[0]
+            t.due_date >= dateFilter &&
+            t.due_date <= endDateStr
           )
           .length;
         
@@ -304,8 +303,8 @@ const Dashboard = () => {
           .filter(t => 
             (t.status === "pending" || t.status === "overdue") && 
             t.due_date < today &&
-            t.due_date >= startDate.toISOString().split('T')[0] &&
-            t.due_date <= endDate.toISOString().split('T')[0]
+            t.due_date >= dateFilter &&
+            t.due_date <= endDateStr
           )
           .length;
 
@@ -314,16 +313,16 @@ const Dashboard = () => {
           t.type === "revenue" && 
           (t.status === "pending" || t.status === "overdue") && 
           t.due_date < today &&
-          t.due_date >= startDate.toISOString().split('T')[0] &&
-          t.due_date <= endDate.toISOString().split('T')[0]
+          t.due_date >= dateFilter &&
+          t.due_date <= endDateStr
         );
         
         const overdueExpenses = recentTransactions.filter(t => 
           t.type === "expense" && 
           (t.status === "pending" || t.status === "overdue") && 
           t.due_date < today &&
-          t.due_date >= startDate.toISOString().split('T')[0] &&
-          t.due_date <= endDate.toISOString().split('T')[0]
+          t.due_date >= dateFilter &&
+          t.due_date <= endDateStr
         );
 
         setOverdueTransactions({ revenues: overdueRevenues, expenses: overdueExpenses });
