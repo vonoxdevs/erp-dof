@@ -24,7 +24,7 @@ const ResetPasswordPage = () => {
   const [checkingToken, setCheckingToken] = useState(true);
   const [passwordStrength, setPasswordStrength] = useState<"weak" | "medium" | "strong">("weak");
 
-  // Verificar se há um token válido na URL
+  // Verificar se há um token válido na URL ou sessionStorage
   useEffect(() => {
     const checkRecoveryToken = async () => {
       try {
@@ -32,7 +32,13 @@ const ResetPasswordPage = () => {
         const hashParams = new URLSearchParams(location.hash.slice(1));
         const type = hashParams.get('type');
         
+        // Verificar sessionStorage para fluxo de recuperação em andamento
+        const recoveryInProgress = sessionStorage.getItem('password_recovery_flow') === 'true';
+        
         if (type === 'recovery') {
+          // Marcar que estamos em fluxo de recuperação
+          sessionStorage.setItem('password_recovery_flow', 'true');
+          
           // Verificar se o usuário está autenticado (token válido)
           const { data: { session } } = await supabase.auth.getSession();
           
@@ -44,6 +50,22 @@ const ResetPasswordPage = () => {
               description: "Solicite um novo link de recuperação de senha",
               variant: "destructive",
             });
+            sessionStorage.removeItem('password_recovery_flow');
+            setTimeout(() => navigate("/login"), 3000);
+          }
+        } else if (recoveryInProgress) {
+          // Verificar se ainda temos uma sessão válida
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session) {
+            setIsValidToken(true);
+          } else {
+            toast({
+              title: "Sessão expirada",
+              description: "Solicite um novo link de recuperação de senha",
+              variant: "destructive",
+            });
+            sessionStorage.removeItem('password_recovery_flow');
             setTimeout(() => navigate("/login"), 3000);
           }
         } else {
@@ -62,6 +84,7 @@ const ResetPasswordPage = () => {
           description: "Tente solicitar um novo link de recuperação",
           variant: "destructive",
         });
+        sessionStorage.removeItem('password_recovery_flow');
         setTimeout(() => navigate("/login"), 3000);
       } finally {
         setCheckingToken(false);
@@ -111,6 +134,9 @@ const ResetPasswordPage = () => {
 
     try {
       await authService.updatePassword(formData.password);
+      
+      // Limpar flag de recuperação ANTES do logout
+      sessionStorage.removeItem('password_recovery_flow');
       
       toast({
         title: "✅ Senha redefinida com sucesso!",

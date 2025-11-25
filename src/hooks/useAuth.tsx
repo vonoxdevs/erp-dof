@@ -41,6 +41,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     needsOnboarding: false,
   });
 
+  // Detectar fluxo de recuperação de senha na inicialização
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const type = hashParams.get('type');
+    
+    if (type === 'recovery') {
+      console.log('🔐 Fluxo de recuperação detectado, armazenando flag');
+      sessionStorage.setItem('password_recovery_flow', 'true');
+    }
+  }, []);
+
+  const isInRecoveryFlow = (): boolean => {
+    // Verificar sessionStorage primeiro (persiste após redirecionamentos)
+    if (sessionStorage.getItem('password_recovery_flow') === 'true') {
+      return true;
+    }
+    // Verificar hash da URL
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    return hashParams.get('type') === 'recovery';
+  };
+
   const loadUserProfile = useCallback(async (user: User | null, retries = 3) => {
     if (!user) {
       setState({
@@ -93,14 +114,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isInvitePage = currentPath === '/auth/accept-invite';
       const isCallbackPage = currentPath.startsWith('/auth/callback');
       
-      // Verificar se está em fluxo de recuperação de senha
-      const hashParams = new URLSearchParams(window.location.hash.slice(1));
-      const isRecoveryFlow = hashParams.get('type') === 'recovery';
+      // Verificar se está em fluxo de recuperação de senha (usando função que verifica sessionStorage)
+      const recoveryFlow = isInRecoveryFlow();
       
-      console.log('✅ Perfil carregado com sucesso', { needsOnboarding: status.needsOnboarding, currentPath, isRecoveryFlow });
+      console.log('✅ Perfil carregado com sucesso', { needsOnboarding: status.needsOnboarding, currentPath, isRecoveryFlow: recoveryFlow });
+      
+      // Se está em fluxo de recuperação, redirecionar para página de reset
+      if (recoveryFlow && currentPath !== '/reset-password') {
+        console.log('🔐 Usuário em fluxo de recuperação, redirecionando para reset-password');
+        navigate('/reset-password');
+        return;
+      }
       
       // Não redirecionar se estiver em páginas de reset/mudança de senha, convite, callback ou em fluxo de recuperação
-      if (isPasswordResetPage || isInvitePage || isCallbackPage || isRecoveryFlow) {
+      if (isPasswordResetPage || isInvitePage || isCallbackPage || recoveryFlow) {
         console.log('🔐 Usuário em página especial ou fluxo de recuperação, não redirecionando');
         return;
       }
@@ -137,10 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         needsOnboarding: false, // Permitir acesso mesmo com erro
       });
       
-      // Redirecionar para dashboard após 2 segundos
+      // Redirecionar para dashboard após 2 segundos (apenas se não estiver em recovery)
       setTimeout(() => {
         const currentPath = window.location.pathname;
-        if (['/login', '/register', '/'].includes(currentPath)) {
+        if (['/login', '/register', '/'].includes(currentPath) && !isInRecoveryFlow()) {
           navigate('/dashboard');
         }
       }, 2000);
