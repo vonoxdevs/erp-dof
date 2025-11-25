@@ -523,21 +523,17 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                       ))}
                     </SelectContent>
                   </Select>
-                  {formData.account_from_id && formData.amount && (() => {
-                    const newBalance = getNewBalance(formData.account_from_id, true);
-                    const isNegative = newBalance !== null && newBalance < 0;
-                    return (
-                      <p className={cn(
-                        "text-sm mt-2 font-medium",
-                        isNegative ? "text-destructive" : "text-foreground"
-                      )}>
-                        Novo saldo: {formatCurrency(newBalance ?? 0)}
-                        {isNegative && (
-                          <span className="ml-2">(⚠️ Ficará negativo!)</span>
-                        )}
-                      </p>
-                    );
-                  })()}
+                  {formData.account_from_id && formData.amount && (
+                    <p className={cn(
+                      "text-sm mt-2 font-medium",
+                      (getNewBalance(formData.account_from_id, true) ?? 0) < 0 ? "text-destructive" : "text-foreground"
+                    )}>
+                      Novo saldo: {formatCurrency(getNewBalance(formData.account_from_id, true) ?? 0)}
+                      {(getNewBalance(formData.account_from_id, true) ?? 0) < 0 && (
+                        <span className="ml-2">(⚠️ Ficará negativo!)</span>
+                      )}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
