@@ -97,21 +97,22 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
   });
   const { accounts: bankAccounts, isLoading: accountsLoading } = useBankAccounts();
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null | undefined) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(value);
+    }).format(value ?? 0);
   };
 
-  const getNewBalance = (accountId: string | null, isPaid: boolean = false) => {
+  const getNewBalance = (accountId: string | null, isPaid: boolean = false): number | null => {
     if (!accountId || !formData.amount) return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
     if (!account) return null;
+    const currentBalance = account.current_balance ?? 0;
     
     // Se for pago, mostra o impacto no saldo atual
     // Se for pendente, mostra o impacto no saldo previsto (não será aplicado agora)
-    return account.current_balance + formData.amount;
+    return currentBalance + formData.amount;
   };
 
   useEffect(() => {
@@ -527,7 +528,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                         <div className="flex justify-between items-center w-full gap-4">
                           <span>{account.bank_name} - {account.account_number}</span>
                           <span className="text-sm text-muted-foreground">
-                            {formatCurrency(account.current_balance)}
+                            {formatCurrency(account.current_balance ?? 0)}
                           </span>
                         </div>
                       </SelectItem>

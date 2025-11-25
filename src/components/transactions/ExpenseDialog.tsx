@@ -93,21 +93,22 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
   });
   const { accounts: bankAccounts, isLoading: accountsLoading } = useBankAccounts();
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number | null | undefined) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(value);
+    }).format(value ?? 0);
   };
 
-  const getNewBalance = (accountId: string | null, isPaid: boolean = false) => {
+  const getNewBalance = (accountId: string | null, isPaid: boolean = false): number | null => {
     if (!accountId || !formData.amount) return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
     if (!account) return null;
+    const currentBalance = account.current_balance ?? 0;
     
     // Se for pago, mostra o impacto no saldo atual
     // Se for pendente, mostra o impacto no saldo previsto (não será aplicado agora)
-    return account.current_balance - formData.amount;
+    return currentBalance - formData.amount;
   };
 
   useEffect(() => {
@@ -530,43 +531,50 @@ export function ExpenseDialog({ open, onClose, transaction }: Props) {
                         <div className="flex justify-between items-center w-full gap-4">
                           <span>{account.bank_name} - {account.account_number}</span>
                           <span className="text-sm text-muted-foreground">
-                            {formatCurrency(account.current_balance)}
+                            {formatCurrency(account.current_balance ?? 0)}
                           </span>
                         </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {formData.account_from_id && formData.amount && (
-                  <>
-                    {formData.status === 'paid' ? (
-                      <p className={cn(
-                        "text-sm mt-2 font-medium",
-                        getNewBalance(formData.account_from_id, true)! < 0 ? "text-destructive" : "text-foreground"
-                      )}>
-                        Novo saldo após pagamento: {formatCurrency(getNewBalance(formData.account_from_id, true) || 0)}
-                        {getNewBalance(formData.account_from_id, true)! < 0 && (
-                          <span className="ml-2">(⚠️ Ficará negativo!)</span>
-                        )}
-                      </p>
-                    ) : (
-                      <div className="mt-2 space-y-1">
-                        <p className="text-xs text-muted-foreground">
-                          Saldo atual: {formatCurrency(bankAccounts?.find(acc => acc.id === formData.account_from_id)?.current_balance || 0)}
-                        </p>
+                {formData.account_from_id && formData.amount && (() => {
+                  const paidBalance = getNewBalance(formData.account_from_id, true);
+                  const pendingBalance = getNewBalance(formData.account_from_id);
+                  const isPaidNegative = paidBalance !== null && paidBalance < 0;
+                  const isPendingNegative = pendingBalance !== null && pendingBalance < 0;
+                  
+                  return (
+                    <>
+                      {formData.status === 'paid' ? (
                         <p className={cn(
-                          "text-sm font-medium",
-                          getNewBalance(formData.account_from_id)! < 0 ? "text-destructive" : "text-primary"
+                          "text-sm mt-2 font-medium",
+                          isPaidNegative ? "text-destructive" : "text-foreground"
                         )}>
-                          Saldo previsto: {formatCurrency(getNewBalance(formData.account_from_id) || 0)}
+                          Novo saldo após pagamento: {formatCurrency(paidBalance ?? 0)}
+                          {isPaidNegative && (
+                            <span className="ml-2">(⚠️ Ficará negativo!)</span>
+                          )}
                         </p>
-                        <p className="text-xs text-muted-foreground italic">
-                          💡 O saldo será atualizado quando marcar como "Pago"
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
+                      ) : (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            Saldo atual: {formatCurrency(bankAccounts?.find(acc => acc.id === formData.account_from_id)?.current_balance ?? 0)}
+                          </p>
+                          <p className={cn(
+                            "text-sm font-medium",
+                            isPendingNegative ? "text-destructive" : "text-primary"
+                          )}>
+                            Saldo previsto: {formatCurrency(pendingBalance ?? 0)}
+                          </p>
+                          <p className="text-xs text-muted-foreground italic">
+                            💡 O saldo será atualizado quando marcar como "Pago"
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
