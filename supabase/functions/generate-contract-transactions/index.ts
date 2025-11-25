@@ -272,7 +272,14 @@ serve(async (req) => {
           
           console.log(`📝 Criando transação: tipo=${transactionType}, conta=${bankAccountId}`);
           
-          // Criar transação (marcada como recorrente pois vem de contrato, mas SEM recurrence_config)
+          // Criar transação com configuração de recorrência baseada no contrato
+          const recurrenceConfig = {
+            frequency: contract.frequency,
+            startDate: contract.start_date,
+            endDate: contract.end_date || null,
+            total_installments: contract.total_installments || null
+          };
+
           const newTransaction = {
             company_id: contract.company_id,
             type: transactionType,
@@ -289,8 +296,8 @@ serve(async (req) => {
             categoria_receita_id: contract.categoria_receita_id,
             categoria_despesa_id: contract.categoria_despesa_id,
             payment_method: contract.payment_method,
-            is_recurring: false, // IMPORTANTE: FALSE para não ser processada pela função de recorrentes
-            recurrence_config: null, // IMPORTANTE: NULL para não gerar duplicatas
+            is_recurring: true, // Transação recorrente baseada no contrato
+            recurrence_config: recurrenceConfig,
             reference_number: contract.id,
           };
           
