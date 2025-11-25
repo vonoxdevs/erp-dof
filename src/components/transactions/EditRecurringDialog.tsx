@@ -29,13 +29,11 @@ export function EditRecurringDialog({
   isRecurring,
   hasContract,
 }: EditRecurringDialogProps) {
-  // Se não é recorrente e não tem contrato, salva diretamente
-  if (!isRecurring && !hasContract) {
-    return null;
-  }
+  // Se não é recorrente e não tem contrato, não mostra o dialog
+  const shouldShow = open && (isRecurring || hasContract);
 
   return (
-    <AlertDialog open={open} onOpenChange={onClose}>
+    <AlertDialog open={shouldShow} onOpenChange={onClose}>
       <AlertDialogContent className="max-w-2xl">
         <AlertDialogHeader>
           <div className="flex items-center gap-2">

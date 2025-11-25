@@ -48,23 +48,28 @@ export function SelectCategoria({
   const requiredId = tipo === 'centro_custo' ? contaBancariaId : true;
   const isDisabled = disabled || (tipo === 'centro_custo' && !contaBancariaId) || loading;
 
+  // Se não há categorias, mostra placeholder apropriado
+  const displayPlaceholder = loading 
+    ? 'Carregando...' 
+    : categorias.length === 0 
+      ? 'Nenhuma categoria disponível' 
+      : placeholder;
+
   return (
-    <Select value={value} onValueChange={onChange} disabled={isDisabled}>
+    <Select 
+      value={categorias.length > 0 ? value : ""} 
+      onValueChange={onChange} 
+      disabled={isDisabled || categorias.length === 0}
+    >
       <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={displayPlaceholder} />
       </SelectTrigger>
       <SelectContent>
-        {categorias.length === 0 ? (
-          <div className="p-2 text-sm text-muted-foreground">
-            {loading ? 'Carregando...' : 'Nenhuma categoria disponível para esta conta'}
-          </div>
-        ) : (
-          categorias.map(categoria => (
-            <SelectItem key={categoria.id} value={categoria.id}>
-              {categoria.nome}
-            </SelectItem>
-          ))
-        )}
+        {categorias.map(categoria => (
+          <SelectItem key={categoria.id} value={categoria.id}>
+            {categoria.nome}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
