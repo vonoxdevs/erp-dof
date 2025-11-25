@@ -50,6 +50,7 @@ interface Transaction {
   amount: number;
   description: string;
   due_date: string;
+  payment_date?: string | null;
   status: "pending" | "paid" | "overdue" | "cancelled";
   customer_name?: string | null;
   contact_id?: string | null;
@@ -84,6 +85,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
     amount: undefined as number | undefined,
     description: "",
     due_date: getTodayForInput(),
+    payment_date: "",
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
     customer_name: "",
     contact_id: "",
@@ -123,6 +125,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           amount: transaction.amount,
           description: transaction.description,
           due_date: transaction.due_date,
+          payment_date: transaction.payment_date || "",
           status: transaction.status,
           customer_name: transaction.customer_name || "",
           contact_id: transaction.contact_id || "",
@@ -139,6 +142,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
           amount: undefined,
           description: "",
           due_date: getTodayForInput(),
+          payment_date: "",
           status: "pending",
           customer_name: "",
           contact_id: "",
@@ -193,6 +197,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
         amount: formData.amount,
         description: formData.description,
         due_date: formData.due_date,
+        payment_date: formData.payment_date || null,
         status: formData.status,
         company_id: profile.company_id,
         created_by: user.id,
@@ -467,6 +472,19 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
               required
             />
           </div>
+
+          {formData.status === "paid" && (
+            <div className="space-y-2">
+              <Label>Data de Recebimento</Label>
+              <Input
+                type="date"
+                value={formData.payment_date || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, payment_date: e.target.value })
+                }
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Cliente</Label>
