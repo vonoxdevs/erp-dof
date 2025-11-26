@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Categoria, TipoCategoria } from '@/types/categoria';
 
@@ -12,7 +12,7 @@ export function useCategoriasFiltradas({ contaBancariaId, centroCustoId, tipo }:
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchCategoriasFiltradas = async () => {
+  const fetchCategoriasFiltradas = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -22,40 +22,85 @@ export function useCategoriasFiltradas({ contaBancariaId, centroCustoId, tipo }:
         return;
       }
 
-      // Query diferente baseado no tipo
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setCategorias([]);
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.company_id) {
+        setCategorias([]);
+        return;
+      }
+
+      // Query para centro de custo com conta bancária
       if (tipo === 'centro_custo' && contaBancariaId) {
-        const { data, error } = await supabase
-          .from('categorias')
-          .select(`
-            id,
-            nome,
-            descricao,
-            tipo,
-            cor,
-            icon,
-            company_id,
-            ativo,
-            created_at,
-            updated_at,
-            categoria_conta_bancaria!inner(
-              habilitado,
-              conta_bancaria_id
-            )
-          `)
-          .eq('tipo', tipo)
-          .eq('ativo', true)
-          .eq('categoria_conta_bancaria.conta_bancaria_id', contaBancariaId)
-          .eq('categoria_conta_bancaria.habilitado', true)
-          .order('nome');
+        // Busca vínculos primeiro
+        const { data: linkedCategories, error: linkedError } = await supabase
+          .from('categoria_conta_bancaria')
+          .select('categoria_id')
+          .eq('conta_bancaria_id', contaBancariaId)
+          .eq('habilitado', true);
 
-        if (error) throw error;
+        if (linkedError) {
+          console.error('Erro ao buscar vínculos:', linkedError);
+          // Fallback: mostra todos
+          const { data } = await supabase
+            .from('categorias')
+            .select('*')
+            .eq('tipo', tipo)
+            .eq('ativo', true)
+            .eq('company_id', profile.company_id)
+            .order('nome');
+          
+          setCategorias((data || []).map(cat => ({
+            ...cat,
+            tipo: cat.tipo as TipoCategoria
+          })));
+          return;
+        }
 
-        const categoriasFormatadas: Categoria[] = (data || []).map(cat => ({
-          ...cat,
-          tipo: cat.tipo as TipoCategoria
-        }));
+        if (linkedCategories && linkedCategories.length > 0) {
+          const categoryIds = linkedCategories.map(lc => lc.categoria_id);
+          
+          const { data, error } = await supabase
+            .from('categorias')
+            .select('*')
+            .eq('tipo', tipo)
+            .eq('ativo', true)
+            .eq('company_id', profile.company_id)
+            .in('id', categoryIds)
+            .order('nome');
 
-        setCategorias(categoriasFormatadas);
+          if (error) throw error;
+          
+          setCategorias((data || []).map(cat => ({
+            ...cat,
+            tipo: cat.tipo as TipoCategoria
+          })));
+        } else {
+          // Nenhum vínculo - mostra todos
+          const { data, error } = await supabase
+            .from('categorias')
+            .select('*')
+            .eq('tipo', tipo)
+            .eq('ativo', true)
+            .eq('company_id', profile.company_id)
+            .order('nome');
+
+          if (error) throw error;
+          
+          setCategorias((data || []).map(cat => ({
+            ...cat,
+            tipo: cat.tipo as TipoCategoria
+          })));
+        }
       } else if (tipo === 'receita' || tipo === 'despesa') {
         // Categorias de receita e despesa aparecem em TODOS os centros de custo
         const { data, error } = await supabase
@@ -67,12 +112,10 @@ export function useCategoriasFiltradas({ contaBancariaId, centroCustoId, tipo }:
 
         if (error) throw error;
 
-        const categoriasFormatadas: Categoria[] = (data || []).map(cat => ({
+        setCategorias((data || []).map(cat => ({
           ...cat,
           tipo: cat.tipo as TipoCategoria
-        }));
-
-        setCategorias(categoriasFormatadas);
+        })));
       }
     } catch (error) {
       console.error('Erro ao buscar categorias filtradas:', error);
@@ -80,12 +123,14 @@ export function useCategoriasFiltradas({ contaBancariaId, centroCustoId, tipo }:
     } finally {
       setLoading(false);
     }
-  };
+  }, [contaBancariaId, centroCustoId, tipo]);
 
   useEffect(() => {
     fetchCategoriasFiltradas();
+  }, [fetchCategoriasFiltradas]);
 
-    // Realtime subscription para categorias
+  // Realtime subscription
+  useEffect(() => {
     const channel = supabase
       .channel('categorias-filtradas-changes')
       .on(
@@ -115,7 +160,7 @@ export function useCategoriasFiltradas({ contaBancariaId, centroCustoId, tipo }:
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [contaBancariaId, centroCustoId, tipo]);
+  }, [fetchCategoriasFiltradas]);
 
   return { categorias, loading, refetch: fetchCategoriasFiltradas };
 }

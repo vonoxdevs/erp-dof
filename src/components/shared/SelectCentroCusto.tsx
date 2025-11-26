@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus } from 'lucide-react';
 import { QuickCentroCustoDialog } from './QuickCentroCustoDialog';
@@ -36,12 +36,15 @@ export function SelectCentroCusto({
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const fetchCentrosCusto = async () => {
+  const fetchCentrosCusto = useCallback(async () => {
     try {
       setLoading(true);
 
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setCentrosCusto([]);
+        return;
+      }
 
       const { data: profile } = await supabase
         .from("user_profiles")
@@ -49,30 +52,61 @@ export function SelectCentroCusto({
         .eq("id", user.id)
         .single();
 
-      if (!profile?.company_id) return;
+      if (!profile?.company_id) {
+        setCentrosCusto([]);
+        return;
+      }
 
-      // Se tem conta bancária selecionada, filtra pelos centros vinculados
+      // Se tem conta bancária selecionada, busca os centros vinculados via categoria_conta_bancaria
       if (contaBancariaId) {
-        const { data, error } = await supabase
-          .from('categorias')
-          .select(`
-            id,
-            nome,
-            cor,
-            categoria_conta_bancaria!inner(
-              habilitado,
-              conta_bancaria_id
-            )
-          `)
-          .eq('tipo', 'centro_custo')
-          .eq('ativo', true)
-          .eq('company_id', profile.company_id)
-          .eq('categoria_conta_bancaria.conta_bancaria_id', contaBancariaId)
-          .eq('categoria_conta_bancaria.habilitado', true)
-          .order('nome');
+        // Primeiro busca os IDs dos centros de custo vinculados à conta
+        const { data: linkedCategories, error: linkedError } = await supabase
+          .from('categoria_conta_bancaria')
+          .select('categoria_id')
+          .eq('conta_bancaria_id', contaBancariaId)
+          .eq('habilitado', true);
 
-        if (error) throw error;
-        setCentrosCusto(data || []);
+        if (linkedError) {
+          console.error('Erro ao buscar vínculos:', linkedError);
+          // Em caso de erro, mostra todos os centros de custo
+          const { data: allCentros } = await supabase
+            .from('categorias')
+            .select('id, nome, cor')
+            .eq('tipo', 'centro_custo')
+            .eq('ativo', true)
+            .eq('company_id', profile.company_id)
+            .order('nome');
+          setCentrosCusto(allCentros || []);
+          return;
+        }
+
+        if (linkedCategories && linkedCategories.length > 0) {
+          const categoryIds = linkedCategories.map(lc => lc.categoria_id);
+          
+          const { data, error } = await supabase
+            .from('categorias')
+            .select('id, nome, cor')
+            .eq('tipo', 'centro_custo')
+            .eq('ativo', true)
+            .eq('company_id', profile.company_id)
+            .in('id', categoryIds)
+            .order('nome');
+
+          if (error) throw error;
+          setCentrosCusto(data || []);
+        } else {
+          // Nenhum vínculo encontrado - mostra todos os centros de custo
+          const { data, error } = await supabase
+            .from('categorias')
+            .select('id, nome, cor')
+            .eq('tipo', 'centro_custo')
+            .eq('ativo', true)
+            .eq('company_id', profile.company_id)
+            .order('nome');
+
+          if (error) throw error;
+          setCentrosCusto(data || []);
+        }
       } else {
         // Sem conta selecionada, mostra todos os centros de custo ativos
         const { data, error } = await supabase
@@ -92,12 +126,14 @@ export function SelectCentroCusto({
     } finally {
       setLoading(false);
     }
-  };
+  }, [contaBancariaId]);
 
   useEffect(() => {
     fetchCentrosCusto();
+  }, [fetchCentrosCusto]);
 
-    // Realtime subscription
+  // Realtime subscription separado
+  useEffect(() => {
     const channel = supabase
       .channel('centros-custo-changes')
       .on(
@@ -127,7 +163,7 @@ export function SelectCentroCusto({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [contaBancariaId]);
+  }, [fetchCentrosCusto]);
 
   const isDisabled = disabled || loading;
 
@@ -141,7 +177,7 @@ export function SelectCentroCusto({
   const displayPlaceholder = loading 
     ? 'Carregando...' 
     : centrosCusto.length === 0 
-      ? (contaBancariaId ? 'Nenhum centro vinculado à conta' : 'Nenhum centro de custo')
+      ? 'Nenhum centro de custo'
       : placeholder;
 
   return (
