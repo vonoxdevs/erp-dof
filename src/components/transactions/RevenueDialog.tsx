@@ -104,6 +104,17 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
     }).format(value ?? 0);
   };
 
+  const getAccountTypeLabel = (type?: string | null): string => {
+    switch (type) {
+      case "checking": return "Conta";
+      case "savings": return "Poupança";
+      case "credit":
+      case "credit_card": return "Cartão";
+      case "investment": return "Investimento";
+      default: return "";
+    }
+  };
+
   const getNewBalance = (accountId: string | null, isPaid: boolean = false): number | null => {
     if (!accountId || !formData.amount) return null;
     const account = bankAccounts?.find(acc => acc.id === accountId);
@@ -524,16 +535,19 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                   </SelectTrigger>
                   <SelectContent>
                     {(bankAccounts && bankAccounts.length > 0) ? (
-                      bankAccounts.map((account) => (
-                        <SelectItem key={account.id} value={account.id}>
-                          <div className="flex justify-between items-center w-full gap-4">
-                            <span>{account.bank_name} - {account.account_number}</span>
-                            <span className="text-sm text-muted-foreground">
-                              {formatCurrency(account.current_balance ?? 0)}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))
+                      bankAccounts.map((account) => {
+                        const typeLabel = getAccountTypeLabel(account.account_type);
+                        return (
+                          <SelectItem key={account.id} value={account.id}>
+                            <div className="flex justify-between items-center w-full gap-4">
+                              <span>{account.bank_name}{typeLabel ? ` (${typeLabel})` : ''}</span>
+                              <span className="text-sm text-muted-foreground">
+                                {formatCurrency(account.current_balance ?? 0)}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })
                     ) : (
                       <SelectItem value="__placeholder__" disabled>
                         {accountsLoading ? "Carregando contas..." : "Nenhuma conta encontrada"}
@@ -578,6 +592,7 @@ export function RevenueDialog({ open, onClose, transaction }: Props) {
                 }}
                 placeholder="Selecione o centro de custo"
                 disabled={!formData.account_to_id}
+                contaBancariaId={formData.account_to_id}
               />
             </div>
 

@@ -26,6 +26,7 @@ const getAccountTypeLabel = (type?: string | null): string => {
     case "savings":
       return "Poupança";
     case "credit":
+    case "credit_card":
       return "Cartão";
     case "investment":
       return "Investimento";

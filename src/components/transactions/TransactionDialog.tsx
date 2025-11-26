@@ -135,6 +135,17 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
       currency: 'BRL'
     }).format(value ?? 0);
   };
+
+  const getAccountTypeLabel = (type?: string | null): string => {
+    switch (type) {
+      case "checking": return "Conta";
+      case "savings": return "Poupança";
+      case "credit":
+      case "credit_card": return "Cartão";
+      case "investment": return "Investimento";
+      default: return "";
+    }
+  };
   
   const getNewBalance = (accountId: string | null | undefined, isDebit: boolean) => {
     if (!accountId || !formData.amount) return null;
@@ -512,16 +523,19 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                     </SelectTrigger>
                     <SelectContent>
                       {(bankAccounts && bankAccounts.length > 0) ? (
-                        bankAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            <div className="flex justify-between items-center w-full gap-4">
-                              <span>{account.bank_name} - {account.account_number}</span>
-                              <span className="text-sm text-muted-foreground">
-                                {formatCurrency(account.current_balance ?? 0)}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
+                        bankAccounts.map((account) => {
+                          const typeLabel = getAccountTypeLabel(account.account_type);
+                          return (
+                            <SelectItem key={account.id} value={account.id}>
+                              <div className="flex justify-between items-center w-full gap-4">
+                                <span>{account.bank_name}{typeLabel ? ` (${typeLabel})` : ''}</span>
+                                <span className="text-sm text-muted-foreground">
+                                  {formatCurrency(account.current_balance ?? 0)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })
                       ) : (
                         <SelectItem value="__placeholder__" disabled>
                           {accountsLoading ? "Carregando contas..." : "Nenhuma conta encontrada"}
@@ -617,6 +631,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                     setCategoriaReceitaId(null);
                   }}
                   placeholder="Selecione o centro de custo"
+                  contaBancariaId={formData.bank_account_id}
                 />
               </div>
               <div className="space-y-2">
@@ -645,6 +660,7 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
                     setCategoriaDespesaId(null);
                   }}
                   placeholder="Selecione o centro de custo"
+                  contaBancariaId={formData.account_from_id}
                 />
               </div>
               <div className="space-y-2">
