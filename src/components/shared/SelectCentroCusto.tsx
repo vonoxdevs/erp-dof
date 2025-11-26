@@ -22,13 +22,15 @@ interface SelectCentroCustoProps {
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  contaBancariaId?: string | null;
 }
 
 export function SelectCentroCusto({
   value,
   onChange,
   placeholder = 'Selecione um centro de custo',
-  disabled = false
+  disabled = false,
+  contaBancariaId
 }: SelectCentroCustoProps) {
   const [centrosCusto, setCentrosCusto] = useState<CentroCusto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -49,17 +51,41 @@ export function SelectCentroCusto({
 
       if (!profile?.company_id) return;
 
-      const { data, error } = await supabase
-        .from('categorias')
-        .select('id, nome, cor')
-        .eq('tipo', 'centro_custo')
-        .eq('ativo', true)
-        .eq('company_id', profile.company_id)
-        .order('nome');
+      // Se tem conta bancária selecionada, filtra pelos centros vinculados
+      if (contaBancariaId) {
+        const { data, error } = await supabase
+          .from('categorias')
+          .select(`
+            id,
+            nome,
+            cor,
+            categoria_conta_bancaria!inner(
+              habilitado,
+              conta_bancaria_id
+            )
+          `)
+          .eq('tipo', 'centro_custo')
+          .eq('ativo', true)
+          .eq('company_id', profile.company_id)
+          .eq('categoria_conta_bancaria.conta_bancaria_id', contaBancariaId)
+          .eq('categoria_conta_bancaria.habilitado', true)
+          .order('nome');
 
-      if (error) throw error;
+        if (error) throw error;
+        setCentrosCusto(data || []);
+      } else {
+        // Sem conta selecionada, mostra todos os centros de custo ativos
+        const { data, error } = await supabase
+          .from('categorias')
+          .select('id, nome, cor')
+          .eq('tipo', 'centro_custo')
+          .eq('ativo', true)
+          .eq('company_id', profile.company_id)
+          .order('nome');
 
-      setCentrosCusto(data || []);
+        if (error) throw error;
+        setCentrosCusto(data || []);
+      }
     } catch (error) {
       console.error('Erro ao buscar centros de custo:', error);
       setCentrosCusto([]);
@@ -85,12 +111,23 @@ export function SelectCentroCusto({
           fetchCentrosCusto();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'categoria_conta_bancaria'
+        },
+        () => {
+          fetchCentrosCusto();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [contaBancariaId]);
 
   const isDisabled = disabled || loading;
 
@@ -104,7 +141,7 @@ export function SelectCentroCusto({
   const displayPlaceholder = loading 
     ? 'Carregando...' 
     : centrosCusto.length === 0 
-      ? 'Nenhum centro de custo' 
+      ? (contaBancariaId ? 'Nenhum centro vinculado à conta' : 'Nenhum centro de custo')
       : placeholder;
 
   return (
@@ -121,7 +158,15 @@ export function SelectCentroCusto({
           <SelectContent>
             {centrosCusto.map(centro => (
               <SelectItem key={centro.id} value={centro.id}>
-                {centro.nome}
+                <div className="flex items-center gap-2">
+                  {centro.cor && (
+                    <div 
+                      className="w-3 h-3 rounded-full shrink-0" 
+                      style={{ backgroundColor: centro.cor }}
+                    />
+                  )}
+                  <span>{centro.nome}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>
