@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelectAccounts } from "@/components/shared/MultiSelectAccounts";
 import { toast } from "sonner";
 import { TrendingUp, TrendingDown, DollarSign, ArrowUpRight, ArrowDownRight, Clock, ChevronLeft, ChevronRight, Search, Calendar, Receipt, Building2, FileText } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
@@ -27,7 +27,7 @@ const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [currentPeriod, setCurrentPeriod] = useState(new Date());
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
@@ -149,7 +149,7 @@ const Dashboard = () => {
     if (user) {
       loadStats();
     }
-  }, [dateRange, selectedAccount]);
+  }, [dateRange, selectedAccounts]);
 
   const generateAutomaticTransactions = async () => {
     try {
@@ -239,8 +239,11 @@ const Dashboard = () => {
         .gte("due_date", dateFilter)
         .lte("due_date", endDateStr);
 
-      if (selectedAccount !== "all") {
-        transactionsQuery = transactionsQuery.or(`bank_account_id.eq.${selectedAccount},account_from_id.eq.${selectedAccount},account_to_id.eq.${selectedAccount}`);
+      if (selectedAccounts.length > 0) {
+        const accountFilters = selectedAccounts.map(id => 
+          `bank_account_id.eq.${id},account_from_id.eq.${id},account_to_id.eq.${id}`
+        ).join(',');
+        transactionsQuery = transactionsQuery.or(accountFilters);
       }
 
       const { data: recentTransactions } = await transactionsQuery;
@@ -334,8 +337,8 @@ const Dashboard = () => {
           .eq("company_id", profile.company_id)
           .eq("is_active", true);
         
-        if (selectedAccount !== "all") {
-          accountsQuery = accountsQuery.eq("id", selectedAccount);
+        if (selectedAccounts.length > 0) {
+          accountsQuery = accountsQuery.in("id", selectedAccounts);
         }
         
         const { data: accounts } = await accountsQuery;
@@ -493,11 +496,11 @@ const Dashboard = () => {
     if (user) {
       loadStats();
     }
-  }, [currentPeriod, selectedAccount, dateRange, user]);
+  }, [currentPeriod, selectedAccounts, dateRange, user]);
 
   const handleClearFilters = () => {
     setSearchTerm("");
-    setSelectedAccount("all");
+    setSelectedAccounts([]);
     setCurrentPeriod(new Date());
     setDateRange({
       from: startOfMonth(new Date()),
@@ -590,19 +593,12 @@ const Dashboard = () => {
             {/* Conta */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Conta</label>
-              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar todas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Selecionar todas</SelectItem>
-                  {accounts.map((account) => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.bank_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <MultiSelectAccounts
+                accounts={accounts || []}
+                selectedAccounts={selectedAccounts}
+                onSelectionChange={setSelectedAccounts}
+                placeholder="Selecionar contas"
+              />
             </div>
 
             {/* Limpar filtros */}
