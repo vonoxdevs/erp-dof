@@ -63,7 +63,7 @@ export function DeleteRecurringDialog({
             <AlertDialogTitle className="text-xl">Excluir transação recorrente</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="text-base pt-2">
-            Esta transação faz parte de uma série recorrente (contrato ou recorrência). Escolha como deseja proceder com a exclusão:
+            Esta transação faz parte de uma <strong>série recorrente (contrato ou recorrência)</strong>. Escolha como deseja proceder com a exclusão:
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -82,7 +82,7 @@ export function DeleteRecurringDialog({
               <div className="flex-1">
                 <h4 className="font-semibold text-sm mb-1">Excluir apenas esta transação</h4>
                 <p className="text-xs text-muted-foreground">
-                  Remove apenas esta ocorrência específica. As demais permanecerão intactas.
+                  Remove apenas esta parcela específica. As demais parcelas do contrato/recorrência permanecerão intactas.
                 </p>
               </div>
             </CardContent>
@@ -102,7 +102,7 @@ export function DeleteRecurringDialog({
               <div className="flex-1">
                 <h4 className="font-semibold text-sm mb-1">Excluir desta em diante</h4>
                 <p className="text-xs text-muted-foreground">
-                  Remove esta transação e todas as futuras. As anteriores permanecerão.
+                  Remove esta parcela e todas as futuras do contrato/recorrência. As anteriores permanecerão.
                 </p>
               </div>
             </CardContent>
@@ -121,10 +121,10 @@ export function DeleteRecurringDialog({
               </div>
               <div className="flex-1">
                 <h4 className="font-semibold text-sm mb-1 text-destructive">
-                  Excluir todas as recorrências
+                  Excluir todas as parcelas/recorrências
                 </h4>
                 <p className="text-xs text-muted-foreground">
-                  Remove a transação original e todas as recorrências geradas. Esta ação não pode ser desfeita.
+                  Remove <strong>TODAS as parcelas</strong> do contrato ou série recorrente. Esta ação não pode ser desfeita.
                 </p>
               </div>
             </CardContent>

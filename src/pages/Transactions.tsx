@@ -220,6 +220,15 @@ const Transactions = () => {
       const { data, error } = await query;
 
       if (error) throw error;
+      
+      // Log para debug: verificar se contract_id está vindo
+      console.log('Transações carregadas:', data?.slice(0, 3).map(t => ({
+        id: t.id,
+        description: t.description,
+        contract_id: t.contract_id,
+        is_recurring: t.is_recurring
+      })));
+      
       setTransactions((data || []) as Transaction[]);
     } catch (error: any) {
       toast.error(sanitizeError(error));
@@ -254,6 +263,15 @@ const Transactions = () => {
     const transaction = transactions.find(t => t.id === id);
     if (!transaction) return;
     
+    // Log para debug
+    console.log('Excluindo transação:', {
+      id: transaction.id,
+      description: transaction.description,
+      is_recurring: transaction.is_recurring,
+      contract_id: transaction.contract_id,
+      reference_number: transaction.reference_number
+    });
+    
     setTransactionToDelete(transaction);
     setDeleteDialogOpen(true);
   };
@@ -285,6 +303,25 @@ const Transactions = () => {
     if (!transactionToDelete) return;
 
     try {
+      // Se tem contract_id, excluir todas as transações desse contrato
+      if (transactionToDelete.contract_id) {
+        const { error } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("contract_id", transactionToDelete.contract_id);
+          
+        if (error) throw error;
+        
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+          queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+        ]);
+        
+        toast.success("Todas as parcelas do contrato foram excluídas!");
+        loadTransactions();
+        return;
+      }
+
       // Se é a transação original (is_recurring = true), excluir por reference_number
       // Se é uma gerada (reference_number não null), excluir por reference_number
       const referenceId = transactionToDelete.is_recurring 
@@ -321,6 +358,26 @@ const Transactions = () => {
     if (!transactionToDelete) return;
 
     try {
+      // Se tem contract_id, excluir desta parcela em diante do contrato
+      if (transactionToDelete.contract_id) {
+        const { error } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("contract_id", transactionToDelete.contract_id)
+          .gte("due_date", transactionToDelete.due_date);
+          
+        if (error) throw error;
+        
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
+          queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
+        ]);
+        
+        toast.success("Parcelas futuras do contrato excluídas com sucesso!");
+        loadTransactions();
+        return;
+      }
+
       const referenceId = transactionToDelete.is_recurring 
         ? transactionToDelete.id 
         : transactionToDelete.reference_number;
@@ -916,6 +973,13 @@ const Transactions = () => {
                       <div>
                         <p className="font-medium text-sm">{transaction.description}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
+                          {/* Badge de Contrato */}
+                          {transaction.contract_id && (
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-500 font-medium border border-purple-500/20">
+                              📋 Contrato
+                            </span>
+                          )}
+                          
                           {/* Conta Bancária */}
                           {transaction.type === 'transfer' ? (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
