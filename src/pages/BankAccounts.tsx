@@ -284,6 +284,7 @@ const BankAccounts = () => {
             onEdit={handleEdit}
             onDelete={handleDelete}
             onAdjustBalance={handleAdjustBalance}
+            onRecalculate={loadAccounts}
           />
         ))}
       </div>

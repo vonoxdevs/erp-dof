@@ -1,9 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Star, CreditCard, Calendar, Calculator, TrendingUp, TrendingDown } from "lucide-react";
+import { Edit, Trash2, Star, CreditCard, Calendar, Calculator, TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
 import { usePendingTransactions } from "@/hooks/usePendingTransactions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useState } from "react";
 
 interface BankAccount {
   id: string;
@@ -25,11 +28,13 @@ interface Props {
   onEdit: (account: BankAccount) => void;
   onDelete: (id: string) => void;
   onAdjustBalance?: (account: BankAccount) => void;
+  onRecalculate?: () => void;
 }
 
-export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: Props) {
+export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance, onRecalculate }: Props) {
   const { isAdmin } = useUserRole();
   const { getProjectedBalance, getPendingRevenue, getPendingExpense } = usePendingTransactions();
+  const [recalculating, setRecalculating] = useState(false);
   
   const getAccountTypeLabel = (type: string) => {
     const types: Record<string, string> = {
@@ -47,6 +52,51 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: 
   const pendingRevenue = getPendingRevenue(account.id);
   const pendingExpense = getPendingExpense(account.id);
   const hasPendingTransactions = pendingRevenue > 0 || pendingExpense > 0;
+
+  const handleRecalculate = async () => {
+    setRecalculating(true);
+    try {
+      const oldBalance = Number(account.current_balance ?? 0);
+      
+      // Chamar a função do banco de dados que recalcula o saldo
+      const { error } = await supabase.rpc('recalculate_bank_account_balance', {
+        account_id: account.id
+      });
+
+      if (error) throw error;
+
+      // Buscar o novo saldo
+      const { data: updatedAccount, error: fetchError } = await supabase
+        .from('bank_accounts')
+        .select('current_balance')
+        .eq('id', account.id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const newBalance = Number(updatedAccount?.current_balance ?? 0);
+      const difference = newBalance - oldBalance;
+
+      if (Math.abs(difference) < 0.01) {
+        toast.success("✅ Saldo verificado - Nenhuma divergência encontrada!", {
+          description: `Saldo atual: R$ ${newBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+        });
+      } else {
+        toast.warning("⚠️ Divergência detectada e corrigida!", {
+          description: `Saldo anterior: R$ ${oldBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nSaldo correto: R$ ${newBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nDiferença: R$ ${Math.abs(difference).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`,
+          duration: 6000,
+        });
+      }
+
+      // Atualizar a interface
+      if (onRecalculate) onRecalculate();
+    } catch (error: any) {
+      console.error('Erro ao recalcular saldo:', error);
+      toast.error("Erro ao recalcular saldo: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   return (
     <Card className={`p-6 glass ${account.is_default ? "border-2 border-primary" : ""}`}>
@@ -170,15 +220,28 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance }: 
             <Edit className="w-4 h-4 mr-2" />
             Editar
           </Button>
-          {!isCreditCard && onAdjustBalance && isAdmin && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onAdjustBalance(account)}
-              title="Ajustar saldo manualmente (apenas admins)"
-            >
-              <Calculator className="w-4 h-4" />
-            </Button>
+          {!isCreditCard && (
+            <>
+              {onAdjustBalance && isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onAdjustBalance(account)}
+                  title="Ajustar saldo manualmente (apenas admins)"
+                >
+                  <Calculator className="w-4 h-4" />
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRecalculate}
+                disabled={recalculating}
+                title="Recalcular saldo verificando todas as transações"
+              >
+                <RefreshCw className={`w-4 h-4 ${recalculating ? 'animate-spin' : ''}`} />
+              </Button>
+            </>
           )}
           <Button
             variant="outline"
