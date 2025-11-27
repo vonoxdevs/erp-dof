@@ -19,6 +19,7 @@ import type { DateRange } from "react-day-picker";
 import { startOfMonth, endOfMonth, format as formatDate } from "date-fns";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { useCategorias } from "@/hooks/useCategorias";
+import { MultiSelectAccounts } from "@/components/shared/MultiSelectAccounts";
 
 const Reports = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<number>(30);
@@ -29,7 +30,7 @@ const Reports = () => {
   
   // Filtros
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
-  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -51,7 +52,7 @@ const Reports = () => {
     try {
       const filters = {
         dateRange,
-        accountId: selectedAccount !== "all" ? selectedAccount : undefined,
+        accountIds: selectedAccounts.length > 0 ? selectedAccounts : undefined,
         type: selectedType !== "all" ? selectedType as "revenue" | "expense" : undefined,
         status: selectedStatus !== "all" ? selectedStatus as "pending" | "paid" | "overdue" : undefined,
         categoryId: selectedCategory !== "all" ? selectedCategory : undefined,
@@ -77,7 +78,7 @@ const Reports = () => {
 
   const handleClearFilters = () => {
     setDateRange(undefined);
-    setSelectedAccount("all");
+    setSelectedAccounts([]);
     setSelectedType("all");
     setSelectedStatus("all");
     setSelectedCategory("all");
@@ -108,7 +109,7 @@ const Reports = () => {
 
   useEffect(() => {
     loadReportData();
-  }, [selectedPeriod, dateRange, selectedAccount, selectedType, selectedStatus, selectedCategory, selectedCentroCusto, selectedCategoriaReceita, selectedCategoriaDespesa]);
+  }, [selectedPeriod, dateRange, selectedAccounts, selectedType, selectedStatus, selectedCategory, selectedCentroCusto, selectedCategoriaReceita, selectedCategoriaDespesa]);
 
   // Realtime updates
   useEffect(() => {
@@ -214,19 +215,12 @@ const Reports = () => {
           {/* Conta Bancária */}
           <div className="space-y-2">
             <Label>Conta</Label>
-            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas as contas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as contas</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.bank_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelectAccounts
+              accounts={accounts}
+              selectedAccounts={selectedAccounts}
+              onSelectionChange={setSelectedAccounts}
+              placeholder="Selecionar contas"
+            />
           </div>
 
           {/* Tipo */}
