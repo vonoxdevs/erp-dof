@@ -6,6 +6,7 @@ import { toSaoPauloTime } from '@/lib/dateUtils';
 export interface ReportFilters {
   dateRange?: DateRange;
   accountId?: string;
+  accountIds?: string[];
   type?: "revenue" | "expense";
   status?: "pending" | "paid" | "overdue";
   categoryId?: string;
@@ -91,7 +92,12 @@ export async function getReportData(periodInDays: number, filters?: ReportFilter
     .lte('due_date', format(endDate, 'yyyy-MM-dd'));
 
   // Aplicar filtros
-  if (filters?.accountId) {
+  if (filters?.accountIds && filters.accountIds.length > 0) {
+    const accountFilters = filters.accountIds.map(accountId => 
+      `bank_account_id.eq.${accountId},account_from_id.eq.${accountId},account_to_id.eq.${accountId}`
+    ).join(',');
+    query = query.or(accountFilters);
+  } else if (filters?.accountId) {
     query = query.or(`bank_account_id.eq.${filters.accountId},account_from_id.eq.${filters.accountId},account_to_id.eq.${filters.accountId}`);
   }
   
@@ -318,6 +324,22 @@ export async function getReportData(periodInDays: number, filters?: ReportFilter
   const topExpenseCategory = expensesArray[0]?.category || 'N/A';
 
   // Montar informações sobre filtros aplicados
+  let accountNames: string | undefined = undefined;
+  if (filters?.accountIds && filters.accountIds.length > 0) {
+    const { data: accounts } = await supabase
+      .from('bank_accounts')
+      .select('bank_name')
+      .in('id', filters.accountIds);
+    accountNames = accounts?.map(a => a.bank_name).join(', ');
+  } else if (filters?.accountId) {
+    const { data: account } = await supabase
+      .from('bank_accounts')
+      .select('bank_name')
+      .eq('id', filters.accountId)
+      .single();
+    accountNames = account?.bank_name;
+  }
+
   const filtersInfo: {
     dateRange?: string;
     account?: string;
@@ -329,9 +351,7 @@ export async function getReportData(periodInDays: number, filters?: ReportFilter
     categoriaDespesa?: string;
   } | undefined = filters ? {
     dateRange: filters.dateRange ? `${format(filters.dateRange.from || startDate, 'dd/MM/yyyy')} - ${format(filters.dateRange.to || endDate, 'dd/MM/yyyy')}` : undefined,
-    account: filters.accountId ? 
-      (await supabase.from('bank_accounts').select('bank_name').eq('id', filters.accountId).single()).data?.bank_name 
-      : undefined,
+    account: accountNames,
     type: filters.type ? (filters.type === 'revenue' ? 'Receitas' : 'Despesas') : undefined,
     status: filters.status ? 
       (filters.status === 'paid' ? 'Pagos' : filters.status === 'pending' ? 'Pendentes' : 'Vencidos')
