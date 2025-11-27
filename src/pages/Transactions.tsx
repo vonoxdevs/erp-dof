@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { usePendingTransactions } from "@/hooks/usePendingTransactions";
+import { MultiSelectAccounts } from "@/components/shared/MultiSelectAccounts";
 
 interface Transaction {
   id: string;
@@ -103,7 +104,7 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedAccount, setSelectedAccount] = useState<string>("all");
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<string>(searchParams.get("type") || "all");
   const [selectedStatus, setSelectedStatus] = useState<string>(searchParams.get("status") || "all");
   const [currentPeriod, setCurrentPeriod] = useState(new Date());
@@ -150,7 +151,7 @@ const Transactions = () => {
   useEffect(() => {
     loadTransactions();
     generateRecurringTransactions();
-  }, [currentPeriod, selectedAccount, dateRange]);
+  }, [currentPeriod, selectedAccounts, dateRange]);
 
   const generateRecurringTransactions = async () => {
     try {
@@ -208,8 +209,12 @@ const Transactions = () => {
         .lte("due_date", endDate)
         .order("due_date", { ascending: false });
 
-      if (selectedAccount !== "all") {
-        query = query.or(`bank_account_id.eq.${selectedAccount},account_from_id.eq.${selectedAccount},account_to_id.eq.${selectedAccount}`);
+      // Filtro por contas selecionadas (multi-select)
+      if (selectedAccounts.length > 0) {
+        const accountFilters = selectedAccounts.map(accountId => 
+          `bank_account_id.eq.${accountId},account_from_id.eq.${accountId},account_to_id.eq.${accountId}`
+        ).join(',');
+        query = query.or(accountFilters);
       }
 
       const { data, error } = await query;
@@ -508,7 +513,7 @@ const Transactions = () => {
 
   const handleClearFilters = () => {
     setSearchTerm("");
-    setSelectedAccount("all");
+    setSelectedAccounts([]);
     setSelectedType("all");
     setSelectedStatus("all");
     setCurrentPeriod(new Date());
@@ -753,19 +758,12 @@ const Transactions = () => {
           {/* Conta */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Conta</label>
-            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-              <SelectTrigger>
-                <SelectValue placeholder="Todas as contas" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as contas</SelectItem>
-                {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.bank_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <MultiSelectAccounts
+              accounts={accounts}
+              selectedAccounts={selectedAccounts}
+              onSelectionChange={setSelectedAccounts}
+              placeholder="Selecionar contas"
+            />
           </div>
 
           {/* Limpar filtros */}
