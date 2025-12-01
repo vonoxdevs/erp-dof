@@ -17,6 +17,7 @@ import { DeleteRecurringDialog } from "@/components/transactions/DeleteRecurring
 import { BulkEditRecurringDialog } from "@/components/transactions/BulkEditRecurringDialog";
 import { ImportStatementAIDialog } from "@/components/bank-accounts/ImportStatementAIDialog";
 import { AddByTextDialog } from "@/components/transactions/AddByTextDialog";
+import { ReceiptDialog } from "@/components/transactions/ReceiptDialog";
 import { sanitizeError } from "@/lib/errorMapping";
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -123,6 +124,8 @@ const Transactions = () => {
   const [bulkAction, setBulkAction] = useState<"delete" | "markAsPaid">("delete");
   const [importAIDialogOpen, setImportAIDialogOpen] = useState(false);
   const [addByTextDialogOpen, setAddByTextDialogOpen] = useState(false);
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [transactionForReceipt, setTransactionForReceipt] = useState<Transaction | null>(null);
 
   // Sincronização em tempo real
   useRealtimeSync(
@@ -257,6 +260,15 @@ const Transactions = () => {
     } else if (transaction.type === "transfer") {
       setTransferDialogOpen(true);
     }
+  };
+
+  const handleEmitReceipt = (transaction: Transaction) => {
+    if (transaction.status !== 'paid') {
+      toast.error('Apenas transações pagas podem gerar recibo');
+      return;
+    }
+    setTransactionForReceipt(transaction);
+    setReceiptDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -1059,6 +1071,11 @@ const Transactions = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          {transaction.status === "paid" && (
+                            <DropdownMenuItem onClick={() => handleEmitReceipt(transaction)}>
+                              Emitir Recibo
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleEdit(transaction)}>
                             Editar
                           </DropdownMenuItem>
@@ -1122,6 +1139,14 @@ const Transactions = () => {
         open={addByTextDialogOpen}
         onOpenChange={setAddByTextDialogOpen}
         onSuccess={loadTransactions}
+      />
+      <ReceiptDialog
+        open={receiptDialogOpen}
+        onClose={() => {
+          setReceiptDialogOpen(false);
+          setTransactionForReceipt(null);
+        }}
+        transaction={transactionForReceipt}
       />
     </div>
   );
