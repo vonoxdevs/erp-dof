@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, ArrowUpRight, ArrowDownRight, ArrowRightLeft, Building2 } from "lucide-react";
+import { Edit, Trash2, ArrowUpRight, ArrowDownRight, ArrowRightLeft, Building2, FileText } from "lucide-react";
 import { formatInSaoPauloTZ } from "@/lib/dateUtils";
 
 interface Transaction {
@@ -56,9 +56,10 @@ interface Props {
   transactions: Transaction[];
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
+  onEmitReceipt?: (transaction: Transaction) => void;
 }
 
-export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
+export function TransactionTable({ transactions, onEdit, onDelete, onEmitReceipt }: Props) {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "revenue":
@@ -204,6 +205,16 @@ export function TransactionTable({ transactions, onEdit, onDelete }: Props) {
             <TableCell>{getStatusBadge(transaction.status)}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
+                {transaction.status === "paid" && onEmitReceipt && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEmitReceipt(transaction)}
+                    title="Emitir recibo"
+                  >
+                    <FileText className="w-4 h-4" />
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

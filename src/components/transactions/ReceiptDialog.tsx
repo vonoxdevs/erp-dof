@@ -1,0 +1,410 @@
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Loader2, Download, Printer, FileText } from "lucide-react";
+import { toast } from "sonner";
+import jsPDF from "jspdf";
+import { formatCurrency } from "@/lib/dateUtils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface Transaction {
+  id: string;
+  type: "revenue" | "expense" | "transfer";
+  amount: number;
+  description: string;
+  due_date: string;
+  payment_date?: string | null;
+  paid_date?: string | null;
+  customer_name?: string | null;
+  supplier_name?: string | null;
+  contact_id?: string | null;
+  reference_number?: string | null;
+  category?: { name: string } | null;
+  contact?: { name: string; document?: string } | null;
+  bank_account?: { bank_name: string } | null;
+  account_from?: { bank_name: string } | null;
+  account_to?: { bank_name: string } | null;
+}
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  transaction: Transaction | null;
+}
+
+interface CompanyData {
+  name: string;
+  legal_name: string;
+  cnpj: string;
+  address?: {
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+  };
+  phone?: string;
+  email?: string;
+}
+
+export function ReceiptDialog({ open, onClose, transaction }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+
+  useEffect(() => {
+    if (open && transaction) {
+      loadCompanyData();
+    }
+  }, [open, transaction]);
+
+  const loadCompanyData = async () => {
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile?.company_id) return;
+
+      const { data: company } = await supabase
+        .from("companies")
+        .select("name, legal_name, cnpj, address, phone, email")
+        .eq("id", profile.company_id)
+        .single();
+
+      if (company) {
+        setCompanyData(company as CompanyData);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dados da empresa:", error);
+      toast.error("Erro ao carregar dados da empresa");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDocument = (doc: string) => {
+    if (!doc) return "";
+    // Remove caracteres não numéricos
+    const numbers = doc.replace(/\D/g, "");
+    // Formata CNPJ ou CPF
+    if (numbers.length === 14) {
+      return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    } else if (numbers.length === 11) {
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+    }
+    return doc;
+  };
+
+  const getReceiptType = () => {
+    if (!transaction) return "";
+    switch (transaction.type) {
+      case "revenue":
+        return "RECIBO DE PAGAMENTO";
+      case "expense":
+        return "RECIBO DE PAGAMENTO";
+      case "transfer":
+        return "COMPROVANTE DE TRANSFERÊNCIA";
+      default:
+        return "RECIBO";
+    }
+  };
+
+  const getPartyName = () => {
+    if (!transaction) return "";
+    if (transaction.type === "revenue") {
+      return transaction.customer_name || transaction.contact?.name || "Cliente não informado";
+    } else if (transaction.type === "expense") {
+      return transaction.supplier_name || transaction.contact?.name || "Fornecedor não informado";
+    }
+    return "";
+  };
+
+  const getPartyDocument = () => {
+    if (!transaction?.contact?.document) return "";
+    return formatDocument(transaction.contact.document);
+  };
+
+  const getPaymentDate = () => {
+    if (!transaction) return "";
+    const dateStr = transaction.payment_date || transaction.paid_date || transaction.due_date;
+    return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const generatePDF = () => {
+    if (!transaction || !companyData) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 20;
+
+    // Título
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text(getReceiptType(), pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    // Número do recibo
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const receiptNumber = transaction.reference_number || `#${transaction.id.substring(0, 8).toUpperCase()}`;
+    doc.text(`Nº: ${receiptNumber}`, pageWidth / 2, yPos, { align: "center" });
+    yPos += 10;
+
+    // Valor em destaque
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text(formatCurrency(transaction.amount), pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    // Linha
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, yPos, pageWidth - 20, yPos);
+    yPos += 10;
+
+    // Dados da empresa emissora
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("DADOS DO EMISSOR", 20, yPos);
+    yPos += 7;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Razão Social: ${companyData.legal_name}`, 20, yPos);
+    yPos += 5;
+    doc.text(`CNPJ: ${formatDocument(companyData.cnpj)}`, 20, yPos);
+    yPos += 5;
+
+    if (companyData.address) {
+      const addr = companyData.address;
+      const addressLine = [
+        addr.street,
+        addr.number,
+        addr.complement,
+        addr.neighborhood,
+        addr.city,
+        addr.state
+      ].filter(Boolean).join(", ");
+      if (addressLine) {
+        doc.text(`Endereço: ${addressLine}`, 20, yPos);
+        yPos += 5;
+      }
+    }
+
+    if (companyData.phone) {
+      doc.text(`Telefone: ${companyData.phone}`, 20, yPos);
+      yPos += 5;
+    }
+
+    if (companyData.email) {
+      doc.text(`Email: ${companyData.email}`, 20, yPos);
+      yPos += 5;
+    }
+
+    yPos += 5;
+
+    // Dados do pagador/recebedor (se não for transferência)
+    if (transaction.type !== "transfer") {
+      doc.setFont("helvetica", "bold");
+      const partyLabel = transaction.type === "revenue" ? "DADOS DO PAGADOR" : "DADOS DO RECEBEDOR";
+      doc.text(partyLabel, 20, yPos);
+      yPos += 7;
+
+      doc.setFont("helvetica", "normal");
+      const partyName = getPartyName();
+      doc.text(`Nome: ${partyName}`, 20, yPos);
+      yPos += 5;
+
+      const partyDoc = getPartyDocument();
+      if (partyDoc) {
+        doc.text(`Documento: ${partyDoc}`, 20, yPos);
+        yPos += 5;
+      }
+
+      yPos += 5;
+    }
+
+    // Dados da transação
+    doc.setFont("helvetica", "bold");
+    doc.text("DADOS DO PAGAMENTO", 20, yPos);
+    yPos += 7;
+
+    doc.setFont("helvetica", "normal");
+    doc.text(`Descrição: ${transaction.description}`, 20, yPos);
+    yPos += 5;
+
+    if (transaction.category) {
+      doc.text(`Categoria: ${transaction.category.name}`, 20, yPos);
+      yPos += 5;
+    }
+
+    doc.text(`Data do Pagamento: ${getPaymentDate()}`, 20, yPos);
+    yPos += 5;
+
+    doc.text(`Valor: ${formatCurrency(transaction.amount)}`, 20, yPos);
+    yPos += 5;
+
+    if (transaction.type === "transfer") {
+      doc.text(`Conta Origem: ${transaction.account_from?.bank_name || "N/A"}`, 20, yPos);
+      yPos += 5;
+      doc.text(`Conta Destino: ${transaction.account_to?.bank_name || "N/A"}`, 20, yPos);
+      yPos += 5;
+    } else if (transaction.bank_account) {
+      doc.text(`Conta: ${transaction.bank_account.bank_name}`, 20, yPos);
+      yPos += 5;
+    }
+
+    yPos += 10;
+
+    // Linha
+    doc.line(20, yPos, pageWidth - 20, yPos);
+    yPos += 10;
+
+    // Declaração
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "italic");
+    const declaration = transaction.type === "revenue" 
+      ? `Recebi(emos) de ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
+      : transaction.type === "expense"
+      ? `Paguei(amos) a ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
+      : `Transferência realizada no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`;
+
+    const splitDeclaration = doc.splitTextToSize(declaration, pageWidth - 40);
+    doc.text(splitDeclaration, 20, yPos);
+    yPos += splitDeclaration.length * 5 + 10;
+
+    // Assinatura
+    yPos += 20;
+    doc.line(20, yPos, 90, yPos);
+    yPos += 5;
+    doc.setFontSize(8);
+    doc.text(companyData.name, 20, yPos);
+    doc.text(formatDocument(companyData.cnpj), 20, yPos + 4);
+
+    // Rodapé
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      `Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: "center" }
+    );
+
+    // Salvar PDF
+    const fileName = `Recibo_${receiptNumber}_${format(new Date(), "yyyyMMdd")}.pdf`;
+    doc.save(fileName);
+    toast.success("Recibo gerado com sucesso!");
+  };
+
+  const handlePrint = () => {
+    if (!transaction || !companyData) return;
+    generatePDF();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileText className="h-5 w-5" />
+            Emitir Recibo
+          </DialogTitle>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">
+              Carregando dados...
+            </span>
+          </div>
+        ) : transaction && companyData ? (
+          <div className="space-y-6">
+            {/* Preview do recibo */}
+            <div className="border rounded-lg p-6 bg-background">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold">{getReceiptType()}</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Nº: {transaction.reference_number || `#${transaction.id.substring(0, 8).toUpperCase()}`}
+                </p>
+              </div>
+
+              <div className="text-center mb-6">
+                <p className="text-3xl font-bold text-primary">
+                  {formatCurrency(transaction.amount)}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-semibold mb-2">Dados do Emissor</h3>
+                  <p className="text-sm">{companyData.legal_name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    CNPJ: {formatDocument(companyData.cnpj)}
+                  </p>
+                </div>
+
+                {transaction.type !== "transfer" && (
+                  <div>
+                    <h3 className="font-semibold mb-2">
+                      {transaction.type === "revenue" ? "Dados do Pagador" : "Dados do Recebedor"}
+                    </h3>
+                    <p className="text-sm">{getPartyName()}</p>
+                    {getPartyDocument() && (
+                      <p className="text-sm text-muted-foreground">
+                        Documento: {getPartyDocument()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="font-semibold mb-2">Dados do Pagamento</h3>
+                  <p className="text-sm">
+                    <span className="font-medium">Descrição:</span> {transaction.description}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Data:</span> {getPaymentDate()}
+                  </p>
+                  <p className="text-sm">
+                    <span className="font-medium">Valor:</span> {formatCurrency(transaction.amount)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Botões de ação */}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button onClick={handlePrint}>
+                <Download className="h-4 w-4 mr-2" />
+                Baixar PDF
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="py-8 text-center text-muted-foreground">
+            Dados da transação não disponíveis
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
