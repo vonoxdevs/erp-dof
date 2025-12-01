@@ -30,14 +30,21 @@ export async function createTransaction(transactionData: TransactionData) {
     const company_id = await getUserCompanyId();
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Se o status for 'paid' e não houver payment_date, definir como hoje
+    const dataToInsert = {
+      ...transactionData,
+      company_id,
+      created_by: user?.id,
+      status: transactionData.status || 'pending',
+    };
+
+    if (dataToInsert.status === 'paid' && !dataToInsert.payment_date) {
+      dataToInsert.payment_date = new Date().toISOString().split('T')[0];
+    }
+
     const { data, error } = await supabase
       .from('transactions')
-      .insert({
-        ...transactionData,
-        company_id,
-        created_by: user?.id,
-        status: transactionData.status || 'pending',
-      })
+      .insert(dataToInsert)
       .select()
       .single();
 
@@ -62,9 +69,15 @@ export async function updateTransaction(id: string, transactionData: Partial<Tra
   try {
     const company_id = await getUserCompanyId();
 
+    // Se o status for 'paid' e não houver payment_date, definir como hoje
+    const dataToUpdate = { ...transactionData };
+    if (dataToUpdate.status === 'paid' && !dataToUpdate.payment_date) {
+      dataToUpdate.payment_date = new Date().toISOString().split('T')[0];
+    }
+
     const { data, error } = await supabase
       .from('transactions')
-      .update(transactionData)
+      .update(dataToUpdate)
       .eq('id', id)
       .eq('company_id', company_id) // Garantir que só atualiza da própria empresa
       .select()
