@@ -434,9 +434,14 @@ export function TransactionDialog({ open, onClose, transaction }: Props) {
               <Label>Status *</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, status: value })
-                }
+                onValueChange={(value: any) => {
+                  const newFormData = { ...formData, status: value };
+                  // Se mudou para 'paid' e não tem payment_date, definir como hoje
+                  if (value === 'paid' && !formData.payment_date) {
+                    newFormData.payment_date = getTodayForInput();
+                  }
+                  setFormData(newFormData);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
