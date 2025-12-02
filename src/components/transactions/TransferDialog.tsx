@@ -34,8 +34,8 @@ const transferSchema = z.object({
   description: z.string().min(1, "Descrição é obrigatória"),
   due_date: z.string().min(1, "Data é obrigatória"),
   status: z.enum(["pending", "paid", "overdue", "cancelled"]),
-  account_from_id: z.string().uuid("Selecione a conta de origem"),
-  account_to_id: z.string().uuid("Selecione a conta de destino"),
+  account_from_id: z.string().min(1, "Selecione a conta de origem"),
+  account_to_id: z.string().min(1, "Selecione a conta de destino"),
 }).refine(
   (data) => data.account_from_id !== data.account_to_id,
   { message: "As contas devem ser diferentes", path: ["account_to_id"] }
@@ -70,9 +70,10 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
     amount: undefined as number | undefined,
     description: "",
     due_date: getTodayForInput(),
+    payment_date: "" as string,
     status: "pending" as "pending" | "paid" | "overdue" | "cancelled",
-    account_from_id: null as string | null,
-    account_to_id: null as string | null,
+    account_from_id: "" as string,
+    account_to_id: "" as string,
     is_recurring: false,
     frequency: "monthly",
     total_installments: undefined as number | undefined,
@@ -115,9 +116,10 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
           amount: transaction.amount,
           description: transaction.description,
           due_date: transaction.due_date,
+          payment_date: (transaction as any).payment_date || "",
           status: transaction.status,
-          account_from_id: transaction.account_from_id || null,
-          account_to_id: transaction.account_to_id || null,
+          account_from_id: transaction.account_from_id || "",
+          account_to_id: transaction.account_to_id || "",
           is_recurring: transaction.is_recurring || false,
           frequency: transaction.recurrence_config?.frequency || "monthly",
           total_installments: transaction.recurrence_config?.total_installments || undefined,
@@ -128,9 +130,10 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
           amount: undefined,
           description: "",
           due_date: getTodayForInput(),
+          payment_date: "",
           status: "pending",
-          account_from_id: null,
-          account_to_id: null,
+          account_from_id: "",
+          account_to_id: "",
           is_recurring: false,
           frequency: "monthly",
           total_installments: undefined,
@@ -171,11 +174,17 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
           }
         : null;
 
+      // Se status é paid, garantir que payment_date está preenchido
+      const paymentDate = formData.status === 'paid' 
+        ? (formData.payment_date || getTodayForInput())
+        : null;
+
       const dataToSave = {
         type: "transfer" as const,
         amount: formData.amount,
         description: formData.description,
         due_date: formData.due_date,
+        payment_date: paymentDate,
         status: formData.status,
         company_id: profile.company_id,
         created_by: user.id,
@@ -228,9 +237,14 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
               <Label>Status *</Label>
               <Select
                 value={formData.status}
-                onValueChange={(value: any) =>
-                  setFormData({ ...formData, status: value })
-                }
+                onValueChange={(value: any) => {
+                  const newFormData = { ...formData, status: value };
+                  // Se mudou para pago e não tem data de pagamento, define como hoje
+                  if (value === 'paid' && !newFormData.payment_date) {
+                    newFormData.payment_date = getTodayForInput();
+                  }
+                  setFormData(newFormData);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -299,9 +313,9 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
                   De: Conta de Origem *
                 </Label>
                 <Select 
-                  value={formData.account_from_id || ""}
+                  value={formData.account_from_id}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, account_from_id: value || null })
+                    setFormData({ ...formData, account_from_id: value })
                   }
                   disabled={accountsLoading || !bankAccounts?.length}
                 >
@@ -352,9 +366,9 @@ export function TransferDialog({ open, onClose, transaction }: Props) {
                   Para: Conta de Destino *
                 </Label>
                 <Select 
-                  value={formData.account_to_id || ""}
+                  value={formData.account_to_id}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, account_to_id: value || null })
+                    setFormData({ ...formData, account_to_id: value })
                   }
                   disabled={accountsLoading || !bankAccounts?.length}
                 >
