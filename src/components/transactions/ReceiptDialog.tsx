@@ -17,6 +17,7 @@ import { ptBR } from "date-fns/locale";
 interface Transaction {
   id: string;
   type: "revenue" | "expense" | "transfer";
+  status?: "pending" | "paid" | "overdue" | "cancelled" | null;
   amount: number;
   description: string;
   due_date: string;
@@ -112,16 +113,21 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
 
   const getReceiptType = () => {
     if (!transaction) return "";
-    switch (transaction.type) {
-      case "revenue":
-        return "RECIBO DE PAGAMENTO";
-      case "expense":
-        return "RECIBO DE PAGAMENTO";
-      case "transfer":
-        return "COMPROVANTE DE TRANSFERÊNCIA";
-      default:
-        return "RECIBO";
+    const isPaid = transaction.status === "paid";
+    
+    if (transaction.type === "transfer") {
+      return isPaid ? "COMPROVANTE DE TRANSFERÊNCIA" : "COMPROVANTE DE TRANSFERÊNCIA (PREVISTA)";
     }
+    
+    if (transaction.type === "revenue") {
+      return isPaid ? "RECIBO DE PAGAMENTO" : "DOCUMENTO DE COBRANÇA";
+    }
+    
+    if (transaction.type === "expense") {
+      return isPaid ? "RECIBO DE PAGAMENTO" : "DOCUMENTO A PAGAR";
+    }
+    
+    return "RECIBO";
   };
 
   const getPartyName = () => {
@@ -141,8 +147,16 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
 
   const getPaymentDate = () => {
     if (!transaction) return "";
+    const isPaid = transaction.status === "paid";
     const dateStr = transaction.payment_date || transaction.paid_date || transaction.due_date;
     return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const getDateLabel = () => {
+    if (!transaction) return "Data";
+    if (transaction.status === "paid") return "Data do Pagamento";
+    if (transaction.status === "overdue") return "Data de Vencimento (Vencido)";
+    return "Data de Vencimento";
   };
 
   const generatePDF = () => {
@@ -240,7 +254,8 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
 
     // Dados da transação
     doc.setFont("helvetica", "bold");
-    doc.text("DADOS DO PAGAMENTO", 20, yPos);
+    const sectionTitle = transaction.status === "paid" ? "DADOS DO PAGAMENTO" : "DADOS DA TRANSAÇÃO";
+    doc.text(sectionTitle, 20, yPos);
     yPos += 7;
 
     doc.setFont("helvetica", "normal");
@@ -252,7 +267,7 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
       yPos += 5;
     }
 
-    doc.text(`Data do Pagamento: ${getPaymentDate()}`, 20, yPos);
+    doc.text(`${getDateLabel()}: ${getPaymentDate()}`, 20, yPos);
     yPos += 5;
 
     doc.text(`Valor: ${formatCurrency(transaction.amount)}`, 20, yPos);
@@ -277,11 +292,22 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     // Declaração
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
-    const declaration = transaction.type === "revenue" 
-      ? `Recebi(emos) de ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
-      : transaction.type === "expense"
-      ? `Paguei(amos) a ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
-      : `Transferência realizada no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`;
+    const isPaid = transaction.status === "paid";
+    let declaration = "";
+    
+    if (transaction.type === "revenue") {
+      declaration = isPaid 
+        ? `Recebi(emos) de ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
+        : `Declaramos que ${getPartyName()} deve a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com vencimento em ${getPaymentDate()}.`;
+    } else if (transaction.type === "expense") {
+      declaration = isPaid
+        ? `Paguei(amos) a ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
+        : `Declaramos que devemos a ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com vencimento em ${getPaymentDate()}.`;
+    } else {
+      declaration = isPaid
+        ? `Transferência realizada no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
+        : `Transferência prevista no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com data prevista para ${getPaymentDate()}.`;
+    }
 
     const splitDeclaration = doc.splitTextToSize(declaration, pageWidth - 40);
     doc.text(splitDeclaration, 20, yPos);
@@ -374,16 +400,29 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
                 )}
 
                 <div>
-                  <h3 className="font-semibold mb-2">Dados do Pagamento</h3>
+                  <h3 className="font-semibold mb-2">
+                    {transaction.status === "paid" ? "Dados do Pagamento" : "Dados da Transação"}
+                  </h3>
                   <p className="text-sm">
                     <span className="font-medium">Descrição:</span> {transaction.description}
                   </p>
                   <p className="text-sm">
-                    <span className="font-medium">Data:</span> {getPaymentDate()}
+                    <span className="font-medium">{getDateLabel()}:</span> {getPaymentDate()}
                   </p>
                   <p className="text-sm">
                     <span className="font-medium">Valor:</span> {formatCurrency(transaction.amount)}
                   </p>
+                  {transaction.status && transaction.status !== "paid" && (
+                    <p className="text-sm mt-2">
+                      <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${
+                        transaction.status === "overdue" 
+                          ? "bg-destructive/10 text-destructive" 
+                          : "bg-yellow-500/10 text-yellow-600"
+                      }`}>
+                        {transaction.status === "overdue" ? "Vencido" : "Pendente"}
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
