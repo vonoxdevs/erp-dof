@@ -263,8 +263,8 @@ const Transactions = () => {
   };
 
   const handleEmitReceipt = (transaction: Transaction) => {
-    if (transaction.status !== 'paid') {
-      toast.error('Apenas transações pagas podem gerar recibo');
+    if (!['paid', 'pending', 'overdue'].includes(transaction.status || '')) {
+      toast.error('Apenas transações pagas, pendentes ou vencidas podem gerar recibo');
       return;
     }
     setTransactionForReceipt(transaction);
@@ -1071,7 +1071,7 @@ const Transactions = () => {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          {transaction.status === "paid" && (
+                          {["paid", "pending", "overdue"].includes(transaction.status || "") && (
                             <DropdownMenuItem onClick={() => handleEmitReceipt(transaction)}>
                               Emitir Recibo
                             </DropdownMenuItem>

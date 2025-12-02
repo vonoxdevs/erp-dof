@@ -205,7 +205,7 @@ export function TransactionTable({ transactions, onEdit, onDelete, onEmitReceipt
             <TableCell>{getStatusBadge(transaction.status)}</TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-2">
-                {transaction.status === "paid" && onEmitReceipt && (
+                {onEmitReceipt && ["paid", "pending", "overdue"].includes(transaction.status || "") && (
                   <Button
                     variant="ghost"
                     size="sm"
