@@ -96,6 +96,8 @@ export type Database = {
           is_default: boolean | null
           last_sync: string | null
           overdraft_limit: number | null
+          pix_key: string | null
+          pix_key_type: string | null
           sync_frequency: number | null
           updated_at: string | null
         }
@@ -127,6 +129,8 @@ export type Database = {
           is_default?: boolean | null
           last_sync?: string | null
           overdraft_limit?: number | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           sync_frequency?: number | null
           updated_at?: string | null
         }
@@ -158,6 +162,8 @@ export type Database = {
           is_default?: boolean | null
           last_sync?: string | null
           overdraft_limit?: number | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           sync_frequency?: number | null
           updated_at?: string | null
         }
