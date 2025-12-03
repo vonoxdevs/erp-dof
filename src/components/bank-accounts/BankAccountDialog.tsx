@@ -304,6 +304,24 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
                 placeholder="0000"
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Nome do Titular</Label>
+              <Input
+                value={formData.holder_name || ""}
+                onChange={(e) => setFormData({ ...formData, holder_name: e.target.value })}
+                placeholder="Nome completo ou Razão Social"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>CPF/CNPJ do Titular</Label>
+              <Input
+                value={formData.holder_document || ""}
+                onChange={(e) => setFormData({ ...formData, holder_document: e.target.value })}
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
+              />
+            </div>
           </div>
 
           {/* Campos específicos para Cartão de Crédito */}
