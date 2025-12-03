@@ -204,9 +204,9 @@ const Transactions = () => {
           categoria_receita:categorias!categoria_receita_id(id, nome, cor, icon),
           categoria_despesa:categorias!categoria_despesa_id(id, nome, cor, icon),
           contact:contacts(name, document),
-          bank_account:bank_accounts!transactions_bank_account_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document),
-          account_from:bank_accounts!transactions_account_from_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document),
-          account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document)
+          bank_account:bank_accounts!transactions_bank_account_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document, pix_key, pix_key_type),
+          account_from:bank_accounts!transactions_account_from_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document, pix_key, pix_key_type),
+          account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document, pix_key, pix_key_type)
         `)
         .eq("company_id", profile.company_id)
         .is("deleted_at", null)

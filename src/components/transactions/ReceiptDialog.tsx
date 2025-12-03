@@ -14,6 +14,16 @@ import { formatCurrency } from "@/lib/dateUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface BankAccountData {
+  bank_name: string;
+  account_number?: string;
+  agency_number?: string;
+  holder_name?: string;
+  holder_document?: string;
+  pix_key?: string | null;
+  pix_key_type?: string | null;
+}
+
 interface Transaction {
   id: string;
   type: "revenue" | "expense" | "transfer";
@@ -29,9 +39,9 @@ interface Transaction {
   reference_number?: string | null;
   category?: { name: string } | null;
   contact?: { name: string; document?: string } | null;
-  bank_account?: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null;
-  account_from?: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null;
-  account_to?: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null;
+  bank_account?: BankAccountData | null;
+  account_from?: BankAccountData | null;
+  account_to?: BankAccountData | null;
 }
 
 interface Props {
@@ -163,12 +173,32 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     return { account: transaction.account_to || transaction.bank_account };
   };
 
-  const formatBankAccountDetails = (account: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null | undefined) => {
+  const formatBankAccountDetails = (account: BankAccountData | null | undefined) => {
     if (!account) return "Conta não informada";
     const parts = [account.bank_name];
     if (account.agency_number) parts.push(`Ag: ${account.agency_number}`);
     if (account.account_number) parts.push(`CC: ${account.account_number}`);
     return parts.join(" - ");
+  };
+
+  const formatPixKeyType = (type: string | null | undefined) => {
+    if (!type) return "";
+    const types: Record<string, string> = {
+      cpf: "CPF",
+      cnpj: "CNPJ",
+      email: "E-mail",
+      phone: "Telefone",
+      random: "Chave Aleatória"
+    };
+    return types[type] || type;
+  };
+
+  const getPixInfo = (account: BankAccountData | null | undefined) => {
+    if (!account?.pix_key) return null;
+    return {
+      key: account.pix_key,
+      type: formatPixKeyType(account.pix_key_type)
+    };
   };
 
   const getPaymentDate = () => {
@@ -251,6 +281,14 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
       }
       if (bankInfo.account.holder_document) {
         doc.text(`Documento: ${formatDocument(bankInfo.account.holder_document)}`, 20, yPos);
+        yPos += 5;
+      }
+      // Adicionar Pix
+      const pixInfo = getPixInfo(bankInfo.account);
+      if (pixInfo) {
+        doc.setFont("helvetica", "bold");
+        doc.text(`Pix (${pixInfo.type}): ${pixInfo.key}`, 20, yPos);
+        doc.setFont("helvetica", "normal");
         yPos += 5;
       }
     }
@@ -421,6 +459,7 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
                         </>
                       );
                     } else if (bankInfo && 'account' in bankInfo && bankInfo.account) {
+                      const pixInfo = getPixInfo(bankInfo.account);
                       return (
                         <>
                           <p className="text-sm">{formatBankAccountDetails(bankInfo.account)}</p>
@@ -432,6 +471,11 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
                           {bankInfo.account.holder_document && (
                             <p className="text-sm text-muted-foreground">
                               Documento: {formatDocument(bankInfo.account.holder_document)}
+                            </p>
+                          )}
+                          {pixInfo && (
+                            <p className="text-sm font-medium text-primary mt-1">
+                              <span className="text-muted-foreground">Pix ({pixInfo.type}):</span> {pixInfo.key}
                             </p>
                           )}
                         </>
