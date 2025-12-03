@@ -326,13 +326,22 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     doc.text(splitDeclaration, 20, yPos);
     yPos += splitDeclaration.length * 5 + 10;
 
-    // Assinatura
+    // Assinatura - usar dados do titular da conta bancária
     yPos += 20;
     doc.line(20, yPos, 90, yPos);
     yPos += 5;
     doc.setFontSize(8);
-    doc.text(companyData.name, 20, yPos);
-    doc.text(formatDocument(companyData.cnpj), 20, yPos + 4);
+    
+    // Determinar qual conta usar para assinatura
+    const signerAccount = transaction.type === "transfer" || transaction.type === "expense"
+      ? (transaction.account_from || transaction.bank_account)
+      : (transaction.account_to || transaction.bank_account);
+    
+    const signerName = signerAccount?.holder_name || companyData.name;
+    const signerDocument = signerAccount?.holder_document || companyData.cnpj;
+    
+    doc.text(signerName, 20, yPos);
+    doc.text(formatDocument(signerDocument), 20, yPos + 4);
 
     // Rodapé - usar data/hora de Brasília
     const now = new Date();
