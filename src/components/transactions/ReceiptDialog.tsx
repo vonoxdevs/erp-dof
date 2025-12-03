@@ -173,9 +173,12 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
 
   const getPaymentDate = () => {
     if (!transaction) return "";
-    const isPaid = transaction.status === "paid";
     const dateStr = transaction.payment_date || transaction.paid_date || transaction.due_date;
-    return format(new Date(dateStr), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+    // Parsear a data corretamente para evitar problema de fuso horário
+    // Formato esperado: YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
+    return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
   };
 
   const getDateLabel = () => {
