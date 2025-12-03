@@ -209,6 +209,7 @@ const Transactions = () => {
           account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document)
         `)
         .eq("company_id", profile.company_id)
+        .is("deleted_at", null)
         .gte("due_date", startDate)
         .lte("due_date", endDate)
         .order("due_date", { ascending: false });
