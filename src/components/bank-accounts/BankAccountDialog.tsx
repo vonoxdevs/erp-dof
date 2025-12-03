@@ -54,6 +54,13 @@ const bankAccountSchema = z.object({
     .trim()
     .max(20, "Documento do titular deve ter no máximo 20 caracteres")
     .optional(),
+  pix_key: z.string()
+    .trim()
+    .max(100, "Chave Pix deve ter no máximo 100 caracteres")
+    .optional(),
+  pix_key_type: z.enum(["cpf", "cnpj", "email", "phone", "random", ""], {
+    errorMap: () => ({ message: "Tipo de chave Pix inválido" })
+  }).optional(),
   initial_balance: z.number()
     .min(-999999999999, "Saldo inválido")
     .max(999999999999, "Saldo muito alto")
@@ -72,6 +79,8 @@ interface BankAccount {
   account_type: string;
   holder_name?: string;
   holder_document?: string;
+  pix_key?: string;
+  pix_key_type?: string;
   initial_balance: number;
   current_balance?: number;
   is_active: boolean;
@@ -100,6 +109,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
     credit_limit: 0,
     closing_day: undefined,
     due_day: undefined,
+    pix_key: "",
+    pix_key_type: "",
   });
 
   useEffect(() => {
@@ -117,6 +128,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
           credit_limit: 0,
           closing_day: undefined,
           due_day: undefined,
+          pix_key: "",
+          pix_key_type: "",
         });
       }
     }
@@ -148,6 +161,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         account_type: formData.account_type || "checking",
         holder_name: formData.holder_name,
         holder_document: formData.holder_document,
+        pix_key: formData.pix_key || undefined,
+        pix_key_type: formData.pix_key_type || undefined,
         initial_balance: formData.initial_balance || 0,
         is_active: formData.is_active !== false,
         is_default: formData.is_default || false,
@@ -172,6 +187,8 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
         account_type: validatedData.account_type,
         holder_name: validatedData.holder_name || user.user_metadata?.full_name || "Titular",
         holder_document: validatedData.holder_document || "00000000000",
+        pix_key: validatedData.pix_key || null,
+        pix_key_type: validatedData.pix_key_type || null,
         initial_balance: validatedData.initial_balance,
         is_active: validatedData.is_active,
         is_default: validatedData.is_default,
@@ -320,6 +337,41 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
                 value={formData.holder_document || ""}
                 onChange={(e) => setFormData({ ...formData, holder_document: e.target.value })}
                 placeholder="000.000.000-00 ou 00.000.000/0000-00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Tipo de Chave Pix</Label>
+              <Select
+                value={formData.pix_key_type || ""}
+                onValueChange={(value) => setFormData({ ...formData, pix_key_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="cnpj">CNPJ</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                  <SelectItem value="phone">Telefone</SelectItem>
+                  <SelectItem value="random">Chave Aleatória</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Chave Pix</Label>
+              <Input
+                value={formData.pix_key || ""}
+                onChange={(e) => setFormData({ ...formData, pix_key: e.target.value })}
+                placeholder={
+                  formData.pix_key_type === 'cpf' ? '000.000.000-00' :
+                  formData.pix_key_type === 'cnpj' ? '00.000.000/0000-00' :
+                  formData.pix_key_type === 'email' ? 'email@exemplo.com' :
+                  formData.pix_key_type === 'phone' ? '+55 11 99999-9999' :
+                  formData.pix_key_type === 'random' ? 'Chave aleatória' :
+                  'Digite a chave Pix'
+                }
               />
             </div>
           </div>
