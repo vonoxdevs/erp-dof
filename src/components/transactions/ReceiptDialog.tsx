@@ -7,12 +7,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Download, Printer, FileText } from "lucide-react";
+import { Loader2, Download, FileText, Building2, Wallet, User, CreditCard, Calendar, Hash } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import { formatCurrency } from "@/lib/dateUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Separator } from "@/components/ui/separator";
 
 interface BankAccountData {
   bank_name: string;
@@ -54,6 +55,7 @@ interface CompanyData {
   name: string;
   legal_name: string;
   cnpj: string;
+  logo_url?: string | null;
   address?: {
     street?: string;
     number?: string;
@@ -70,6 +72,7 @@ interface CompanyData {
 export function ReceiptDialog({ open, onClose, transaction }: Props) {
   const [loading, setLoading] = useState(false);
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && transaction) {
@@ -93,12 +96,27 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
 
       const { data: company } = await supabase
         .from("companies")
-        .select("name, legal_name, cnpj, address, phone, email")
+        .select("name, legal_name, cnpj, logo_url, address, phone, email")
         .eq("id", profile.company_id)
         .single();
 
       if (company) {
         setCompanyData(company as CompanyData);
+        
+        // Carregar logo como base64 para o PDF
+        if (company.logo_url) {
+          try {
+            const response = await fetch(company.logo_url);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              setLogoBase64(reader.result as string);
+            };
+            reader.readAsDataURL(blob);
+          } catch (e) {
+            console.log("Não foi possível carregar a logo");
+          }
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar dados da empresa:", error);
@@ -110,15 +128,30 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
 
   const formatDocument = (doc: string) => {
     if (!doc) return "";
-    // Remove caracteres não numéricos
     const numbers = doc.replace(/\D/g, "");
-    // Formata CNPJ ou CPF
     if (numbers.length === 14) {
       return numbers.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
     } else if (numbers.length === 11) {
       return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
     }
     return doc;
+  };
+
+  const formatAddress = (address?: CompanyData["address"]) => {
+    if (!address) return null;
+    const parts = [];
+    if (address.street) {
+      let streetPart = address.street;
+      if (address.number) streetPart += `, ${address.number}`;
+      if (address.complement) streetPart += ` - ${address.complement}`;
+      parts.push(streetPart);
+    }
+    if (address.neighborhood) parts.push(address.neighborhood);
+    if (address.city && address.state) {
+      parts.push(`${address.city}/${address.state}`);
+    }
+    if (address.zip) parts.push(`CEP: ${address.zip}`);
+    return parts.length > 0 ? parts.join(" • ") : null;
   };
 
   const getReceiptType = () => {
@@ -152,7 +185,6 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
 
   const getPartyDocument = () => {
     if (!transaction) return "";
-    // Primeiro tenta o documento do contato
     if (transaction.contact?.document) {
       return formatDocument(transaction.contact.document);
     }
@@ -178,7 +210,7 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     const parts = [account.bank_name];
     if (account.agency_number) parts.push(`Ag: ${account.agency_number}`);
     if (account.account_number) parts.push(`CC: ${account.account_number}`);
-    return parts.join(" - ");
+    return parts.join(" • ");
   };
 
   const formatPixKeyType = (type: string | null | undefined) => {
@@ -204,8 +236,6 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
   const getPaymentDate = () => {
     if (!transaction) return "";
     const dateStr = transaction.payment_date || transaction.paid_date || transaction.due_date;
-    // Parsear a data corretamente para evitar problema de fuso horário
-    // Formato esperado: YYYY-MM-DD
     const [year, month, day] = dateStr.split('-').map(Number);
     const localDate = new Date(year, month - 1, day);
     return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -218,132 +248,183 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     return "Data de Vencimento";
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (!transaction || !companyData) return;
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    let yPos = 20;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPos = margin;
 
-    // Título
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text(getReceiptType(), pageWidth / 2, yPos, { align: "center" });
-    yPos += 15;
+    // Cores
+    const primaryColor = [59, 130, 246]; // Azul
+    const grayColor = [107, 114, 128];
+    const darkColor = [31, 41, 55];
 
-    // Número do recibo
+    // Header com gradiente simulado
+    doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.rect(0, 0, pageWidth, 50, "F");
+
+    // Logo ou nome da empresa no header
+    yPos = 20;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, "PNG", margin, 10, 30, 30);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(companyData.name, margin + 38, 22);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "normal");
+        doc.text(companyData.legal_name, margin + 38, 29);
+        doc.text(`CNPJ: ${formatDocument(companyData.cnpj)}`, margin + 38, 36);
+      } catch (e) {
+        // Se falhar, usa texto
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.setFont("helvetica", "bold");
+        doc.text(companyData.name, margin, 25);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`CNPJ: ${formatDocument(companyData.cnpj)}`, margin, 35);
+      }
+    } else {
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text(companyData.name, margin, 25);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`CNPJ: ${formatDocument(companyData.cnpj)}`, margin, 35);
+    }
+
+    // Tipo do documento no lado direito
     doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
+    doc.setFont("helvetica", "bold");
+    const receiptType = getReceiptType();
+    doc.text(receiptType, pageWidth - margin, 25, { align: "right" });
+    
     const receiptNumber = transaction.reference_number || `#${transaction.id.substring(0, 8).toUpperCase()}`;
-    doc.text(`Nº: ${receiptNumber}`, pageWidth / 2, yPos, { align: "center" });
-    yPos += 10;
+    doc.setFont("helvetica", "normal");
+    doc.text(`Nº ${receiptNumber}`, pageWidth - margin, 35, { align: "right" });
+
+    yPos = 60;
 
     // Valor em destaque
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text(formatCurrency(transaction.amount), pageWidth / 2, yPos, { align: "center" });
-    yPos += 15;
-
-    // Linha
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, yPos, pageWidth - 20, yPos);
-    yPos += 10;
-
-    // Dados da conta bancária
+    doc.setFillColor(249, 250, 251);
+    doc.roundedRect(margin, yPos, pageWidth - 2 * margin, 30, 3, 3, "F");
+    
+    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
     doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    doc.text("VALOR TOTAL", pageWidth / 2, yPos + 10, { align: "center" });
+    
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
-    doc.text("DADOS DA CONTA", 20, yPos);
-    yPos += 7;
+    doc.text(formatCurrency(transaction.amount), pageWidth / 2, yPos + 24, { align: "center" });
 
+    yPos += 40;
+
+    // Grid de informações
+    const colWidth = (pageWidth - 2 * margin) / 2;
+    
+    // Coluna 1 - Dados da Conta
+    doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("DADOS DA CONTA", margin, yPos);
+    yPos += 6;
+    
+    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     
     const bankInfo = getBankAccountInfo();
     if (transaction.type === "transfer" && bankInfo && 'from' in bankInfo) {
-      doc.text(`Conta Origem: ${formatBankAccountDetails(bankInfo.from)}`, 20, yPos);
+      doc.text(`Origem: ${formatBankAccountDetails(bankInfo.from)}`, margin, yPos);
       yPos += 5;
-      if (bankInfo.from?.holder_name) {
-        doc.text(`Titular Origem: ${bankInfo.from.holder_name}`, 20, yPos);
-        yPos += 5;
-      }
-      doc.text(`Conta Destino: ${formatBankAccountDetails(bankInfo.to)}`, 20, yPos);
+      doc.text(`Destino: ${formatBankAccountDetails(bankInfo.to)}`, margin, yPos);
       yPos += 5;
-      if (bankInfo.to?.holder_name) {
-        doc.text(`Titular Destino: ${bankInfo.to.holder_name}`, 20, yPos);
-        yPos += 5;
-      }
     } else if (bankInfo && 'account' in bankInfo && bankInfo.account) {
-      doc.text(`Banco: ${formatBankAccountDetails(bankInfo.account)}`, 20, yPos);
+      doc.text(formatBankAccountDetails(bankInfo.account), margin, yPos);
       yPos += 5;
       if (bankInfo.account.holder_name) {
-        doc.text(`Titular: ${bankInfo.account.holder_name}`, 20, yPos);
+        doc.text(`Titular: ${bankInfo.account.holder_name}`, margin, yPos);
         yPos += 5;
       }
       if (bankInfo.account.holder_document) {
-        doc.text(`Documento: ${formatDocument(bankInfo.account.holder_document)}`, 20, yPos);
+        doc.text(`Doc: ${formatDocument(bankInfo.account.holder_document)}`, margin, yPos);
         yPos += 5;
       }
-      // Adicionar Pix
       const pixInfo = getPixInfo(bankInfo.account);
       if (pixInfo) {
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.setFont("helvetica", "bold");
-        doc.text(`Pix (${pixInfo.type}): ${pixInfo.key}`, 20, yPos);
+        doc.text(`Pix (${pixInfo.type}): ${pixInfo.key}`, margin, yPos);
         doc.setFont("helvetica", "normal");
         yPos += 5;
       }
     }
 
-    yPos += 5;
+    yPos += 8;
 
-    // Dados do pagador/recebedor (se não for transferência)
+    // Dados do Pagador/Recebedor
     if (transaction.type !== "transfer") {
+      doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
       const partyLabel = transaction.type === "revenue" ? "DADOS DO PAGADOR" : "DADOS DO RECEBEDOR";
-      doc.text(partyLabel, 20, yPos);
-      yPos += 7;
-
+      doc.text(partyLabel, margin, yPos);
+      yPos += 6;
+      
+      doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      const partyName = getPartyName();
-      doc.text(`Nome: ${partyName}`, 20, yPos);
+      doc.text(getPartyName(), margin, yPos);
       yPos += 5;
-
+      
       const partyDoc = getPartyDocument();
       if (partyDoc) {
-        doc.text(`Documento: ${partyDoc}`, 20, yPos);
+        doc.text(`Documento: ${partyDoc}`, margin, yPos);
         yPos += 5;
       }
-
-      yPos += 5;
+      
+      yPos += 8;
     }
 
-    // Dados da transação
+    // Dados da Transação
+    doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
     const sectionTitle = transaction.status === "paid" ? "DADOS DO PAGAMENTO" : "DADOS DA TRANSAÇÃO";
-    doc.text(sectionTitle, 20, yPos);
-    yPos += 7;
-
+    doc.text(sectionTitle, margin, yPos);
+    yPos += 6;
+    
+    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Descrição: ${transaction.description}`, 20, yPos);
-    yPos += 5;
-
+    
+    const descLines = doc.splitTextToSize(`Descrição: ${transaction.description}`, pageWidth - 2 * margin);
+    doc.text(descLines, margin, yPos);
+    yPos += descLines.length * 5;
+    
     if (transaction.category) {
-      doc.text(`Categoria: ${transaction.category.name}`, 20, yPos);
+      doc.text(`Categoria: ${transaction.category.name}`, margin, yPos);
       yPos += 5;
     }
-
-    doc.text(`${getDateLabel()}: ${getPaymentDate()}`, 20, yPos);
-    yPos += 5;
-
-    doc.text(`Valor: ${formatCurrency(transaction.amount)}`, 20, yPos);
-    yPos += 5;
-
+    
+    doc.text(`${getDateLabel()}: ${getPaymentDate()}`, margin, yPos);
     yPos += 10;
 
-    // Linha
-    doc.line(20, yPos, pageWidth - 20, yPos);
+    // Linha separadora
+    doc.setDrawColor(229, 231, 235);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 10;
 
     // Declaração
+    doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
     doc.setFontSize(9);
     doc.setFont("helvetica", "italic");
     const isPaid = transaction.status === "paid";
@@ -363,17 +444,15 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
         : `Transferência prevista no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com data prevista para ${getPaymentDate()}.`;
     }
 
-    const splitDeclaration = doc.splitTextToSize(declaration, pageWidth - 40);
-    doc.text(splitDeclaration, 20, yPos);
-    yPos += splitDeclaration.length * 5 + 10;
+    const splitDeclaration = doc.splitTextToSize(declaration, pageWidth - 2 * margin);
+    doc.text(splitDeclaration, margin, yPos);
+    yPos += splitDeclaration.length * 5 + 15;
 
-    // Assinatura - usar dados do titular da conta bancária
-    yPos += 20;
-    doc.line(20, yPos, 90, yPos);
+    // Assinatura
+    doc.setDrawColor(darkColor[0], darkColor[1], darkColor[2]);
+    doc.line(margin, yPos, margin + 80, yPos);
     yPos += 5;
-    doc.setFontSize(8);
     
-    // Determinar qual conta usar para assinatura
     const signerAccount = transaction.type === "transfer" || transaction.type === "expense"
       ? (transaction.account_from || transaction.bank_account)
       : (transaction.account_to || transaction.bank_account);
@@ -381,18 +460,27 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     const signerName = signerAccount?.holder_name || companyData.name;
     const signerDocument = signerAccount?.holder_document || companyData.cnpj;
     
-    doc.text(signerName, 20, yPos);
-    doc.text(formatDocument(signerDocument), 20, yPos + 4);
+    doc.setTextColor(darkColor[0], darkColor[1], darkColor[2]);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text(signerName, margin, yPos);
+    yPos += 4;
+    doc.setFont("helvetica", "normal");
+    doc.text(formatDocument(signerDocument), margin, yPos);
 
-    // Rodapé - usar data/hora de Brasília
+    // Rodapé
+    const footerY = pageHeight - 15;
+    doc.setDrawColor(229, 231, 235);
+    doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+    
     const now = new Date();
     const brasiliaTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
+    doc.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
     doc.text(
       `Documento gerado em ${format(brasiliaTime, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
       pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 10,
+      footerY,
       { align: "center" }
     );
 
@@ -406,6 +494,8 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     if (!transaction || !companyData) return;
     generatePDF();
   };
+
+  const bankInfo = getBankAccountInfo();
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -425,115 +515,165 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
             </span>
           </div>
         ) : transaction && companyData ? (
-          <div className="space-y-6">
-            {/* Preview do recibo */}
-            <div className="border rounded-lg p-6 bg-background">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-bold">{getReceiptType()}</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Nº: {transaction.reference_number || `#${transaction.id.substring(0, 8).toUpperCase()}`}
-                </p>
+          <div className="space-y-4">
+            {/* Preview do recibo - Design moderno */}
+            <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+              {/* Header com cor primária */}
+              <div className="bg-primary px-6 py-4 text-primary-foreground">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    {companyData.logo_url ? (
+                      <img 
+                        src={companyData.logo_url} 
+                        alt={companyData.name}
+                        className="w-12 h-12 rounded-lg bg-white/10 object-contain p-1"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">
+                        <Building2 className="h-6 w-6" />
+                      </div>
+                    )}
+                    <div>
+                      <h3 className="font-bold text-lg">{companyData.name}</h3>
+                      <p className="text-sm opacity-90">{companyData.legal_name}</p>
+                      <p className="text-xs opacity-75">CNPJ: {formatDocument(companyData.cnpj)}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-medium opacity-75">{getReceiptType()}</p>
+                    <p className="text-sm font-mono mt-1">
+                      Nº {transaction.reference_number || `#${transaction.id.substring(0, 8).toUpperCase()}`}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="text-center mb-6">
-                <p className="text-3xl font-bold text-primary">
+              {/* Valor em destaque */}
+              <div className="bg-muted/50 px-6 py-5 text-center border-b">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Valor Total</p>
+                <p className="text-4xl font-bold text-primary">
                   {formatCurrency(transaction.amount)}
                 </p>
+                {transaction.status && transaction.status !== "paid" && (
+                  <span className={`inline-flex mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
+                    transaction.status === "overdue" 
+                      ? "bg-destructive/10 text-destructive" 
+                      : "bg-yellow-500/10 text-yellow-600 dark:text-yellow-500"
+                  }`}>
+                    {transaction.status === "overdue" ? "Vencido" : "Pendente"}
+                  </span>
+                )}
               </div>
 
-              <div className="space-y-4">
-                {/* Dados da Conta Bancária */}
-                <div>
-                  <h3 className="font-semibold mb-2">Dados da Conta</h3>
-                  {(() => {
-                    const bankInfo = getBankAccountInfo();
-                    if (transaction.type === "transfer" && bankInfo && 'from' in bankInfo) {
-                      return (
-                        <>
-                          <p className="text-sm">
-                            <span className="font-medium">Origem:</span> {formatBankAccountDetails(bankInfo.from)}
+              {/* Informações em grid */}
+              <div className="p-6 space-y-5">
+                {/* Dados da Conta */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Wallet className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Dados da Conta</p>
+                    {transaction.type === "transfer" && bankInfo && 'from' in bankInfo ? (
+                      <>
+                        <p className="text-sm font-medium">Origem: {formatBankAccountDetails(bankInfo.from)}</p>
+                        <p className="text-sm font-medium">Destino: {formatBankAccountDetails(bankInfo.to)}</p>
+                      </>
+                    ) : bankInfo && 'account' in bankInfo && bankInfo.account ? (
+                      <>
+                        <p className="text-sm font-medium">{formatBankAccountDetails(bankInfo.account)}</p>
+                        {bankInfo.account.holder_name && (
+                          <p className="text-sm text-muted-foreground">
+                            Titular: {bankInfo.account.holder_name}
                           </p>
-                          <p className="text-sm">
-                            <span className="font-medium">Destino:</span> {formatBankAccountDetails(bankInfo.to)}
+                        )}
+                        {bankInfo.account.holder_document && (
+                          <p className="text-sm text-muted-foreground">
+                            Doc: {formatDocument(bankInfo.account.holder_document)}
                           </p>
-                        </>
-                      );
-                    } else if (bankInfo && 'account' in bankInfo && bankInfo.account) {
-                      const pixInfo = getPixInfo(bankInfo.account);
-                      return (
-                        <>
-                          <p className="text-sm">{formatBankAccountDetails(bankInfo.account)}</p>
-                          {bankInfo.account.holder_name && (
-                            <p className="text-sm text-muted-foreground">
-                              Titular: {bankInfo.account.holder_name}
-                            </p>
-                          )}
-                          {bankInfo.account.holder_document && (
-                            <p className="text-sm text-muted-foreground">
-                              Documento: {formatDocument(bankInfo.account.holder_document)}
-                            </p>
-                          )}
-                          {pixInfo && (
-                            <p className="text-sm font-medium text-primary mt-1">
-                              <span className="text-muted-foreground">Pix ({pixInfo.type}):</span> {pixInfo.key}
-                            </p>
-                          )}
-                        </>
-                      );
-                    }
-                    return <p className="text-sm text-muted-foreground">Conta não informada</p>;
-                  })()}
+                        )}
+                        {(() => {
+                          const pixInfo = getPixInfo(bankInfo.account);
+                          if (pixInfo) {
+                            return (
+                              <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg">
+                                <CreditCard className="h-3.5 w-3.5 text-primary" />
+                                <span className="text-sm font-medium text-primary">
+                                  Pix ({pixInfo.type}): {pixInfo.key}
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Conta não informada</p>
+                    )}
+                  </div>
                 </div>
 
                 {transaction.type !== "transfer" && (
-                  <div>
-                    <h3 className="font-semibold mb-2">
-                      {transaction.type === "revenue" ? "Dados do Pagador" : "Dados do Recebedor"}
-                    </h3>
-                    <p className="text-sm">{getPartyName()}</p>
-                    {getPartyDocument() && (
+                  <>
+                    <Separator />
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                          {transaction.type === "revenue" ? "Dados do Pagador" : "Dados do Recebedor"}
+                        </p>
+                        <p className="text-sm font-medium">{getPartyName()}</p>
+                        {getPartyDocument() && (
+                          <p className="text-sm text-muted-foreground">
+                            Documento: {getPartyDocument()}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <Separator />
+
+                {/* Dados da Transação */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Hash className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+                      {transaction.status === "paid" ? "Dados do Pagamento" : "Dados da Transação"}
+                    </p>
+                    <p className="text-sm font-medium">{transaction.description}</p>
+                    {transaction.category && (
                       <p className="text-sm text-muted-foreground">
-                        Documento: {getPartyDocument()}
+                        Categoria: {transaction.category.name}
                       </p>
                     )}
                   </div>
-                )}
+                </div>
 
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    {transaction.status === "paid" ? "Dados do Pagamento" : "Dados da Transação"}
-                  </h3>
-                  <p className="text-sm">
-                    <span className="font-medium">Descrição:</span> {transaction.description}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">{getDateLabel()}:</span> {getPaymentDate()}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Valor:</span> {formatCurrency(transaction.amount)}
-                  </p>
-                  {transaction.status && transaction.status !== "paid" && (
-                    <p className="text-sm mt-2">
-                      <span className={`inline-flex px-2 py-1 rounded text-xs font-medium ${
-                        transaction.status === "overdue" 
-                          ? "bg-destructive/10 text-destructive" 
-                          : "bg-yellow-500/10 text-yellow-600"
-                      }`}>
-                        {transaction.status === "overdue" ? "Vencido" : "Pendente"}
-                      </span>
-                    </p>
-                  )}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{getDateLabel()}</p>
+                    <p className="text-sm font-medium">{getPaymentDate()}</p>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Botões de ação */}
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button onClick={handlePrint}>
-                <Download className="h-4 w-4 mr-2" />
+              <Button onClick={handlePrint} className="gap-2">
+                <Download className="h-4 w-4" />
                 Baixar PDF
               </Button>
             </div>
