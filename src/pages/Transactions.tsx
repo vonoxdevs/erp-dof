@@ -203,9 +203,10 @@ const Transactions = () => {
           centro_custo:categorias!centro_custo_id(id, nome, cor, icon),
           categoria_receita:categorias!categoria_receita_id(id, nome, cor, icon),
           categoria_despesa:categorias!categoria_despesa_id(id, nome, cor, icon),
-          bank_account:bank_accounts!transactions_bank_account_id_fkey(id, bank_name, account_number),
-          account_from:bank_accounts!transactions_account_from_id_fkey(id, bank_name, account_number),
-          account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number)
+          contact:contacts(name, document),
+          bank_account:bank_accounts!transactions_bank_account_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document),
+          account_from:bank_accounts!transactions_account_from_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document),
+          account_to:bank_accounts!transactions_account_to_id_fkey(id, bank_name, account_number, agency_number, holder_name, holder_document)
         `)
         .eq("company_id", profile.company_id)
         .gte("due_date", startDate)

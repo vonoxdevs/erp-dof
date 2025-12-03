@@ -29,9 +29,9 @@ interface Transaction {
   reference_number?: string | null;
   category?: { name: string } | null;
   contact?: { name: string; document?: string } | null;
-  bank_account?: { bank_name: string } | null;
-  account_from?: { bank_name: string } | null;
-  account_to?: { bank_name: string } | null;
+  bank_account?: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null;
+  account_from?: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null;
+  account_to?: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null;
 }
 
 interface Props {
@@ -133,16 +133,42 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
   const getPartyName = () => {
     if (!transaction) return "";
     if (transaction.type === "revenue") {
-      return transaction.customer_name || transaction.contact?.name || "Cliente não informado";
+      return transaction.contact?.name || transaction.customer_name || "Cliente não informado";
     } else if (transaction.type === "expense") {
-      return transaction.supplier_name || transaction.contact?.name || "Fornecedor não informado";
+      return transaction.contact?.name || transaction.supplier_name || "Fornecedor não informado";
     }
     return "";
   };
 
   const getPartyDocument = () => {
-    if (!transaction?.contact?.document) return "";
-    return formatDocument(transaction.contact.document);
+    if (!transaction) return "";
+    // Primeiro tenta o documento do contato
+    if (transaction.contact?.document) {
+      return formatDocument(transaction.contact.document);
+    }
+    return "";
+  };
+
+  const getBankAccountInfo = () => {
+    if (!transaction) return null;
+    if (transaction.type === "transfer") {
+      return {
+        from: transaction.account_from,
+        to: transaction.account_to
+      };
+    }
+    if (transaction.type === "expense") {
+      return { account: transaction.account_from || transaction.bank_account };
+    }
+    return { account: transaction.account_to || transaction.bank_account };
+  };
+
+  const formatBankAccountDetails = (account: { bank_name: string; account_number?: string; agency_number?: string; holder_name?: string; holder_document?: string } | null | undefined) => {
+    if (!account) return "Conta não informada";
+    const parts = [account.bank_name];
+    if (account.agency_number) parts.push(`Ag: ${account.agency_number}`);
+    if (account.account_number) parts.push(`CC: ${account.account_number}`);
+    return parts.join(" - ");
   };
 
   const getPaymentDate = () => {
@@ -190,43 +216,40 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     doc.line(20, yPos, pageWidth - 20, yPos);
     yPos += 10;
 
-    // Dados da empresa emissora
+    // Dados da conta bancária
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("DADOS DO EMISSOR", 20, yPos);
+    doc.text("DADOS DA CONTA", 20, yPos);
     yPos += 7;
 
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Razão Social: ${companyData.legal_name}`, 20, yPos);
-    yPos += 5;
-    doc.text(`CNPJ: ${formatDocument(companyData.cnpj)}`, 20, yPos);
-    yPos += 5;
-
-    if (companyData.address) {
-      const addr = companyData.address;
-      const addressLine = [
-        addr.street,
-        addr.number,
-        addr.complement,
-        addr.neighborhood,
-        addr.city,
-        addr.state
-      ].filter(Boolean).join(", ");
-      if (addressLine) {
-        doc.text(`Endereço: ${addressLine}`, 20, yPos);
+    
+    const bankInfo = getBankAccountInfo();
+    if (transaction.type === "transfer" && bankInfo && 'from' in bankInfo) {
+      doc.text(`Conta Origem: ${formatBankAccountDetails(bankInfo.from)}`, 20, yPos);
+      yPos += 5;
+      if (bankInfo.from?.holder_name) {
+        doc.text(`Titular Origem: ${bankInfo.from.holder_name}`, 20, yPos);
         yPos += 5;
       }
-    }
-
-    if (companyData.phone) {
-      doc.text(`Telefone: ${companyData.phone}`, 20, yPos);
+      doc.text(`Conta Destino: ${formatBankAccountDetails(bankInfo.to)}`, 20, yPos);
       yPos += 5;
-    }
-
-    if (companyData.email) {
-      doc.text(`Email: ${companyData.email}`, 20, yPos);
+      if (bankInfo.to?.holder_name) {
+        doc.text(`Titular Destino: ${bankInfo.to.holder_name}`, 20, yPos);
+        yPos += 5;
+      }
+    } else if (bankInfo && 'account' in bankInfo && bankInfo.account) {
+      doc.text(`Banco: ${formatBankAccountDetails(bankInfo.account)}`, 20, yPos);
       yPos += 5;
+      if (bankInfo.account.holder_name) {
+        doc.text(`Titular: ${bankInfo.account.holder_name}`, 20, yPos);
+        yPos += 5;
+      }
+      if (bankInfo.account.holder_document) {
+        doc.text(`Documento: ${formatDocument(bankInfo.account.holder_document)}`, 20, yPos);
+        yPos += 5;
+      }
     }
 
     yPos += 5;
@@ -273,16 +296,6 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     doc.text(`Valor: ${formatCurrency(transaction.amount)}`, 20, yPos);
     yPos += 5;
 
-    if (transaction.type === "transfer") {
-      doc.text(`Conta Origem: ${transaction.account_from?.bank_name || "N/A"}`, 20, yPos);
-      yPos += 5;
-      doc.text(`Conta Destino: ${transaction.account_to?.bank_name || "N/A"}`, 20, yPos);
-      yPos += 5;
-    } else if (transaction.bank_account) {
-      doc.text(`Conta: ${transaction.bank_account.bank_name}`, 20, yPos);
-      yPos += 5;
-    }
-
     yPos += 10;
 
     // Linha
@@ -321,11 +334,13 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     doc.text(companyData.name, 20, yPos);
     doc.text(formatDocument(companyData.cnpj), 20, yPos + 4);
 
-    // Rodapé
+    // Rodapé - usar data/hora de Brasília
+    const now = new Date();
+    const brasiliaTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text(
-      `Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+      `Documento gerado em ${format(brasiliaTime, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
       pageWidth / 2,
       doc.internal.pageSize.getHeight() - 10,
       { align: "center" }
@@ -377,12 +392,41 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
               </div>
 
               <div className="space-y-4">
+                {/* Dados da Conta Bancária */}
                 <div>
-                  <h3 className="font-semibold mb-2">Dados do Emissor</h3>
-                  <p className="text-sm">{companyData.legal_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    CNPJ: {formatDocument(companyData.cnpj)}
-                  </p>
+                  <h3 className="font-semibold mb-2">Dados da Conta</h3>
+                  {(() => {
+                    const bankInfo = getBankAccountInfo();
+                    if (transaction.type === "transfer" && bankInfo && 'from' in bankInfo) {
+                      return (
+                        <>
+                          <p className="text-sm">
+                            <span className="font-medium">Origem:</span> {formatBankAccountDetails(bankInfo.from)}
+                          </p>
+                          <p className="text-sm">
+                            <span className="font-medium">Destino:</span> {formatBankAccountDetails(bankInfo.to)}
+                          </p>
+                        </>
+                      );
+                    } else if (bankInfo && 'account' in bankInfo && bankInfo.account) {
+                      return (
+                        <>
+                          <p className="text-sm">{formatBankAccountDetails(bankInfo.account)}</p>
+                          {bankInfo.account.holder_name && (
+                            <p className="text-sm text-muted-foreground">
+                              Titular: {bankInfo.account.holder_name}
+                            </p>
+                          )}
+                          {bankInfo.account.holder_document && (
+                            <p className="text-sm text-muted-foreground">
+                              Documento: {formatDocument(bankInfo.account.holder_document)}
+                            </p>
+                          )}
+                        </>
+                      );
+                    }
+                    return <p className="text-sm text-muted-foreground">Conta não informada</p>;
+                  })()}
                 </div>
 
                 {transaction.type !== "transfer" && (
