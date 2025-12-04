@@ -294,12 +294,23 @@ const Transactions = () => {
     if (!transactionToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from("transactions")
-        .delete()
-        .eq("id", transactionToDelete.id);
-        
-      if (error) throw error;
+      // Se a transação é de contrato, usar soft delete para evitar regeneração
+      if (transactionToDelete.contract_id) {
+        const { error } = await supabase
+          .from("transactions")
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", transactionToDelete.id);
+          
+        if (error) throw error;
+      } else {
+        // Transações sem contrato podem ser hard deleted
+        const { error } = await supabase
+          .from("transactions")
+          .delete()
+          .eq("id", transactionToDelete.id);
+          
+        if (error) throw error;
+      }
       
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
@@ -317,11 +328,11 @@ const Transactions = () => {
     if (!transactionToDelete) return;
 
     try {
-      // Se tem contract_id, excluir todas as transações desse contrato
+      // Se tem contract_id, soft delete todas as transações desse contrato
       if (transactionToDelete.contract_id) {
         const { error } = await supabase
           .from("transactions")
-          .delete()
+          .update({ deleted_at: new Date().toISOString() })
           .eq("contract_id", transactionToDelete.contract_id);
           
         if (error) throw error;
@@ -372,11 +383,11 @@ const Transactions = () => {
     if (!transactionToDelete) return;
 
     try {
-      // Se tem contract_id, excluir desta parcela em diante do contrato
+      // Se tem contract_id, soft delete desta parcela em diante do contrato
       if (transactionToDelete.contract_id) {
         const { error } = await supabase
           .from("transactions")
-          .delete()
+          .update({ deleted_at: new Date().toISOString() })
           .eq("contract_id", transactionToDelete.contract_id)
           .gte("due_date", transactionToDelete.due_date);
           
@@ -476,12 +487,30 @@ const Transactions = () => {
 
   const executeBulkDelete = async (ids: string[]) => {
     try {
-      const { error } = await supabase
-        .from("transactions")
-        .delete()
-        .in('id', ids);
-        
-      if (error) throw error;
+      // Verificar quais transações são de contrato para soft delete
+      const selectedTransactions = transactions.filter(t => ids.includes(t.id));
+      const contractIds = selectedTransactions.filter(t => t.contract_id).map(t => t.id);
+      const nonContractIds = selectedTransactions.filter(t => !t.contract_id).map(t => t.id);
+      
+      // Soft delete para transações de contrato
+      if (contractIds.length > 0) {
+        const { error } = await supabase
+          .from("transactions")
+          .update({ deleted_at: new Date().toISOString() })
+          .in('id', contractIds);
+          
+        if (error) throw error;
+      }
+      
+      // Hard delete para transações normais
+      if (nonContractIds.length > 0) {
+        const { error } = await supabase
+          .from("transactions")
+          .delete()
+          .in('id', nonContractIds);
+          
+        if (error) throw error;
+      }
       
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),
