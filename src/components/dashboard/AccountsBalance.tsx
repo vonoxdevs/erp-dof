@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, TrendingUp, TrendingDown, Wallet, CreditCard } from "lucide-react";
+import { Building2, TrendingUp, TrendingDown, CreditCard } from "lucide-react";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
-import { usePendingTransactions } from "@/hooks/usePendingTransactions";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,8 +12,6 @@ export function AccountsBalance() {
     totalBalance,
     isLoading
   } = useBankAccounts();
-  
-  const { getProjectedBalance, getPendingRevenue, getPendingExpense } = usePendingTransactions();
 
   // Separar contas normais de cartões de crédito
   const regularAccounts = accounts?.filter(acc => acc.account_type !== 'credit_card') || [];
@@ -126,69 +123,27 @@ export function AccountsBalance() {
             Contas Bancárias
           </h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {regularAccounts.slice(0, 3).map(account => {
-              const projectedBalance = getProjectedBalance(account.id);
-              const pendingRevenue = getPendingRevenue(account.id);
-              const pendingExpense = getPendingExpense(account.id);
-              const hasPending = pendingRevenue > 0 || pendingExpense > 0;
-              
-              return (
-                <Card key={account.id} className="border-l-4 border-l-muted">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      {account.bank_name}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Saldo Atual</p>
-                      <div className={cn("text-xl font-bold", (account.current_balance ?? 0) >= 0 ? "text-foreground" : "text-destructive")}>
-                        {formatCurrency(account.current_balance ?? 0)}
-                      </div>
+            {regularAccounts.slice(0, 3).map(account => (
+              <Card key={account.id} className="border-l-4 border-l-muted">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    {account.bank_name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Saldo Atual</p>
+                    <div className={cn("text-xl font-bold", (account.current_balance ?? 0) >= 0 ? "text-foreground" : "text-destructive")}>
+                      {formatCurrency(account.current_balance ?? 0)}
                     </div>
-                    {hasPending && projectedBalance !== null && (
-                      <div className="pt-2 border-t space-y-1">
-                        {pendingRevenue > 0 && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-accent flex items-center gap-1">
-                              <TrendingUp className="h-3 w-3" />
-                              A receber
-                            </span>
-                            <span className="text-accent font-medium">
-                              +{formatCurrency(pendingRevenue)}
-                            </span>
-                          </div>
-                        )}
-                        {pendingExpense > 0 && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-destructive flex items-center gap-1">
-                              <TrendingDown className="h-3 w-3" />
-                              A pagar
-                            </span>
-                            <span className="text-destructive font-medium">
-                              -{formatCurrency(pendingExpense)}
-                            </span>
-                          </div>
-                        )}
-                        <div className="flex justify-between items-center pt-1 border-t">
-                          <span className="text-xs font-semibold">Previsto</span>
-                          <span className={cn(
-                            "text-sm font-bold",
-                            projectedBalance >= 0 ? "text-primary" : "text-destructive"
-                          )}>
-                            {formatCurrency(projectedBalance)}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Conta {account.account_number}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Conta {account.account_number}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>}
 
