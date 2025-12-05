@@ -1,9 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Star, CreditCard, Calendar, Calculator, TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
+import { Edit, Trash2, Star, CreditCard, Calendar, Calculator, RefreshCw } from "lucide-react";
 import { useUserRole } from "@/hooks/useUserRole";
-import { usePendingTransactions } from "@/hooks/usePendingTransactions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -33,7 +32,6 @@ interface Props {
 
 export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance, onRecalculate }: Props) {
   const { isAdmin } = useUserRole();
-  const { getProjectedBalance, getPendingRevenue, getPendingExpense } = usePendingTransactions();
   const [recalculating, setRecalculating] = useState(false);
   
   const getAccountTypeLabel = (type: string) => {
@@ -48,10 +46,6 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance, on
   };
 
   const isCreditCard = account.account_type === 'credit_card';
-  const projectedBalance = getProjectedBalance(account.id);
-  const pendingRevenue = getPendingRevenue(account.id);
-  const pendingExpense = getPendingExpense(account.id);
-  const hasPendingTransactions = pendingRevenue > 0 || pendingExpense > 0;
 
   const handleRecalculate = async () => {
     setRecalculating(true);
@@ -170,37 +164,6 @@ export function BankAccountCard({ account, onEdit, onDelete, onAdjustBalance, on
                 })}
               </p>
             </div>
-            
-            {hasPendingTransactions && projectedBalance !== null && (
-              <div className="border-t pt-3 space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="flex items-center gap-1 text-accent">
-                    <TrendingUp className="w-3 h-3" />
-                    Receitas Pendentes
-                  </span>
-                  <span className="font-medium text-accent">
-                    + R$ {pendingRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="flex items-center gap-1 text-destructive">
-                    <TrendingDown className="w-3 h-3" />
-                    Despesas Pendentes
-                  </span>
-                  <span className="font-medium text-destructive">
-                    - R$ {pendingExpense.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t">
-                  <span className="text-sm font-semibold">Saldo Previsto</span>
-                  <span className={`text-lg font-bold ${
-                    projectedBalance >= 0 ? "text-primary" : "text-destructive"
-                  }`}>
-                    R$ {projectedBalance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-            )}
             
             <div className="text-xs text-muted-foreground border-t pt-2">
               <p>Saldo Inicial: R$ {Number(account.initial_balance).toLocaleString("pt-BR", {
