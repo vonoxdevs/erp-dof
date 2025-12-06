@@ -233,12 +233,26 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     };
   };
 
-  const getPaymentDate = () => {
-    if (!transaction) return "";
-    const dateStr = transaction.payment_date || transaction.paid_date || transaction.due_date;
+  const formatDateFromString = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     const localDate = new Date(year, month - 1, day);
     return format(localDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const getDisplayDate = () => {
+    if (!transaction) return "";
+    // Para transações pagas, usa a data de pagamento
+    if (transaction.status === "paid") {
+      const dateStr = transaction.payment_date || transaction.paid_date || transaction.due_date;
+      return formatDateFromString(dateStr);
+    }
+    // Para pendentes/vencidas, sempre usa a data de vencimento
+    return formatDateFromString(transaction.due_date);
+  };
+
+  const getDueDate = () => {
+    if (!transaction) return "";
+    return formatDateFromString(transaction.due_date);
   };
 
   const getDateLabel = () => {
@@ -415,7 +429,7 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
       yPos += 5;
     }
     
-    doc.text(`${getDateLabel()}: ${getPaymentDate()}`, margin, yPos);
+    doc.text(`${getDateLabel()}: ${getDisplayDate()}`, margin, yPos);
     yPos += 10;
 
     // Linha separadora
@@ -433,15 +447,15 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
     if (transaction.type === "revenue") {
       declaration = isPaid 
         ? `Recebi(emos) de ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
-        : `Declaramos que ${getPartyName()} deve a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com vencimento em ${getPaymentDate()}.`;
+        : `Declaramos que ${getPartyName()} deve a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com vencimento em ${getDueDate()}.`;
     } else if (transaction.type === "expense") {
       declaration = isPaid
         ? `Paguei(amos) a ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
-        : `Declaramos que devemos a ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com vencimento em ${getPaymentDate()}.`;
+        : `Declaramos que devemos a ${getPartyName()} a quantia de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com vencimento em ${getDueDate()}.`;
     } else {
       declaration = isPaid
         ? `Transferência realizada no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}.`
-        : `Transferência prevista no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com data prevista para ${getPaymentDate()}.`;
+        : `Transferência prevista no valor de ${formatCurrency(transaction.amount)} referente a ${transaction.description}, com data prevista para ${getDueDate()}.`;
     }
 
     const splitDeclaration = doc.splitTextToSize(declaration, pageWidth - 2 * margin);
@@ -661,7 +675,7 @@ export function ReceiptDialog({ open, onClose, transaction }: Props) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{getDateLabel()}</p>
-                    <p className="text-sm font-medium">{getPaymentDate()}</p>
+                    <p className="text-sm font-medium">{getDisplayDate()}</p>
                   </div>
                 </div>
               </div>
