@@ -127,22 +127,28 @@ serve(async (req) => {
     }
 
     console.log('✅ CNPJ válido');
-    console.log('🔍 Validating CPF:', responsible.cpf);
+    
+    // Validar CPF do responsável (apenas se fornecido)
+    const responsibleCpf = responsible.cpf?.replace(/\D/g, '') || '';
+    console.log('🔍 Validating CPF:', responsibleCpf || '(não informado)');
 
-    // Validar CPF do responsável
-    if (!validateCPF(responsible.cpf)) {
-      console.error('❌ Invalid CPF:', responsible.cpf);
-      return new Response(
-        JSON.stringify({ 
-          error: 'CPF do responsável inválido. Verifique os dígitos e tente novamente.',
-          details: 'O CPF fornecido não passou na validação dos dígitos verificadores. Use um CPF válido.',
-          received: responsible.cpf
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (responsibleCpf && responsibleCpf.length > 0) {
+      if (!validateCPF(responsibleCpf)) {
+        console.error('❌ Invalid CPF:', responsibleCpf);
+        return new Response(
+          JSON.stringify({ 
+            error: 'CPF do responsável inválido. Verifique os dígitos e tente novamente.',
+            details: 'O CPF fornecido não passou na validação dos dígitos verificadores. Use um CPF válido.',
+            received: responsible.cpf
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      console.log('✅ CPF válido');
+    } else {
+      console.log('⚠️ CPF não informado, continuando sem validação');
     }
-
-    console.log('✅ CPF válido');
+    
     console.log('✅ Validações passaram, processando dados...');
 
     // Verificar se usuário já tem empresa
