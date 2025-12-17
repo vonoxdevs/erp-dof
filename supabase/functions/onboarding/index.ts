@@ -311,23 +311,27 @@ serve(async (req) => {
 
     console.log('✅ User profile created/updated with company_id');
 
-    // 3. Criar role de admin (dono da empresa)
+    // 3. Garantir role de admin (dono da empresa)
     const { error: roleError } = await supabase
       .from('user_roles')
-      .insert({
-        user_id: user.id,
-        role: 'admin'
-      });
+      .upsert(
+        {
+          user_id: user.id,
+          role: 'admin'
+        },
+        { onConflict: 'user_id,role' }
+      );
 
+    // Se já existir, o upsert não deve falhar. Se falhar por outro motivo, rollback.
     if (roleError) {
       console.error('Error creating role:', roleError);
-      // Rollback
-      await supabase.from('user_profiles').delete().eq('id', user.id);
+      // Rollback mínimo: desvincular usuário e remover empresa criada
+      await supabase.from('user_profiles').update({ company_id: null }).eq('id', user.id);
       await supabase.from('companies').delete().eq('id', newCompany.id);
       throw new Error('Erro ao criar role');
     }
 
-    console.log('User role created');
+    console.log('✅ User role ensured (admin)');
 
     // 4. Criar categorias padrão
     const defaultCategories = [
