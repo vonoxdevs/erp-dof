@@ -277,13 +277,11 @@ export default function CompanyOnboardingForm() {
       
       toast.success('Empresa cadastrada com sucesso! Bem-vindo ao ERP Financeiro DOF!');
       
-      // Atualizar perfil do usuário no contexto
-      await refreshProfile();
+      // Navegar primeiro para evitar conflitos de estado
+      navigate('/dashboard', { replace: true });
       
-      // Pequeno delay para garantir que os dados foram atualizados
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 500);
+      // Atualizar perfil após navegação
+      refreshProfile();
 
     } catch (error: any) {
       toast.error(error.message || 'Erro ao cadastrar empresa. Tente novamente.');
@@ -339,11 +337,8 @@ export default function CompanyOnboardingForm() {
                     onClick={handleCNPJSearch}
                     disabled={loading || searchingCNPJ || !formData.cnpj}
                   >
-                    {searchingCNPJ ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Search className="w-4 h-4" />
-                    )}
+                    <Loader2 className={`w-4 h-4 animate-spin ${searchingCNPJ ? 'inline' : 'hidden'}`} />
+                    <Search className={`w-4 h-4 ${searchingCNPJ ? 'hidden' : 'inline'}`} />
                   </Button>
                 </div>
                 {errors.cnpj && (
@@ -536,14 +531,8 @@ export default function CompanyOnboardingForm() {
                 size="lg"
                 disabled={loading}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Cadastrando empresa...
-                  </>
-                ) : (
-                  "Cadastrar Empresa"
-                )}
+                <Loader2 className={`mr-2 h-5 w-5 animate-spin ${loading ? 'inline' : 'hidden'}`} />
+                <span>{loading ? "Cadastrando empresa..." : "Cadastrar Empresa"}</span>
               </Button>
             </form>
           </CardContent>
