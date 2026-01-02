@@ -334,12 +334,28 @@ const Transactions = () => {
     if (!transactionToDelete) return;
 
     try {
+      // Buscar company_id do usuário para garantir isolamento
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (!profile?.company_id) {
+        toast.error("Erro ao identificar empresa");
+        return;
+      }
+
       // Se tem contract_id, soft delete todas as transações desse contrato
       if (transactionToDelete.contract_id) {
         const { error } = await supabase
           .from("transactions")
           .update({ deleted_at: new Date().toISOString() })
-          .eq("contract_id", transactionToDelete.contract_id);
+          .eq("contract_id", transactionToDelete.contract_id)
+          .eq("company_id", profile.company_id);
           
         if (error) throw error;
         
@@ -365,11 +381,27 @@ const Transactions = () => {
         return;
       }
 
-      // Excluir a original e todas as geradas
+      // Primeiro buscar os IDs exatos das transações dessa série (mesma empresa)
+      const { data: seriesToDelete, error: fetchError } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("company_id", profile.company_id)
+        .or(`id.eq.${referenceId},reference_number.eq.${referenceId}`);
+      
+      if (fetchError) throw fetchError;
+      
+      if (!seriesToDelete || seriesToDelete.length === 0) {
+        toast.error("Nenhuma transação encontrada para excluir");
+        return;
+      }
+      
+      const idsToDelete = seriesToDelete.map(t => t.id);
+      
+      // Excluir apenas as transações encontradas (por ID explícito)
       const { error } = await supabase
         .from("transactions")
         .delete()
-        .or(`id.eq.${referenceId},reference_number.eq.${referenceId}`);
+        .in("id", idsToDelete);
         
       if (error) throw error;
       
@@ -378,7 +410,7 @@ const Transactions = () => {
         queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
       ]);
       
-      toast.success("Todas as recorrências foram excluídas!");
+      toast.success(`${idsToDelete.length} recorrências excluídas!`);
       loadTransactions();
     } catch (error: any) {
       toast.error(sanitizeError(error));
@@ -389,12 +421,28 @@ const Transactions = () => {
     if (!transactionToDelete) return;
 
     try {
+      // Buscar company_id do usuário para garantir isolamento
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("company_id")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (!profile?.company_id) {
+        toast.error("Erro ao identificar empresa");
+        return;
+      }
+
       // Se tem contract_id, soft delete desta parcela em diante do contrato
       if (transactionToDelete.contract_id) {
         const { error } = await supabase
           .from("transactions")
           .update({ deleted_at: new Date().toISOString() })
           .eq("contract_id", transactionToDelete.contract_id)
+          .eq("company_id", profile.company_id)
           .gte("due_date", transactionToDelete.due_date);
           
         if (error) throw error;
@@ -418,12 +466,28 @@ const Transactions = () => {
         return;
       }
 
-      // Excluir esta e todas as futuras (com due_date >= data desta)
+      // Primeiro buscar os IDs exatos das transações dessa série (mesma empresa, a partir desta data)
+      const { data: seriesToDelete, error: fetchError } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("company_id", profile.company_id)
+        .or(`id.eq.${referenceId},reference_number.eq.${referenceId}`)
+        .gte("due_date", transactionToDelete.due_date);
+      
+      if (fetchError) throw fetchError;
+      
+      if (!seriesToDelete || seriesToDelete.length === 0) {
+        toast.error("Nenhuma transação encontrada para excluir");
+        return;
+      }
+      
+      const idsToDelete = seriesToDelete.map(t => t.id);
+      
+      // Excluir apenas as transações encontradas (por ID explícito)
       const { error } = await supabase
         .from("transactions")
         .delete()
-        .or(`id.eq.${referenceId},reference_number.eq.${referenceId}`)
-        .gte("due_date", transactionToDelete.due_date);
+        .in("id", idsToDelete);
         
       if (error) throw error;
       
@@ -432,12 +496,13 @@ const Transactions = () => {
         queryClient.invalidateQueries({ queryKey: ['pending-transactions'] })
       ]);
       
-      toast.success("Transações futuras excluídas com sucesso!");
+      toast.success(`${idsToDelete.length} transações futuras excluídas!`);
       loadTransactions();
     } catch (error: any) {
       toast.error(sanitizeError(error));
     }
   };
+
 
   const handleBulkMarkAsPaid = async () => {
     // Verificar se alguma das transações selecionadas é recorrente
