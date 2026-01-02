@@ -328,20 +328,9 @@ export function ContractDialog({ open, onClose, contract }: Props) {
         }
       }
 
-      // Se for edição, regenerar transações pendentes
-      if (contract) {
-        toast.info("Atualizando transações recorrentes...");
-        const { error: regenerateError } = await supabase.functions.invoke(
-          "generate-contract-transactions",
-          {
-            body: { contractId: contract.id }
-          }
-        );
 
-        if (regenerateError) {
-          console.error("Erro ao atualizar transações:", regenerateError);
-        }
-      }
+      // Em edição, não regenerar automaticamente aqui para evitar duplicação.
+      // As parcelas existentes (pendentes/futuras) já foram atualizadas acima.
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['bank-accounts'] }),

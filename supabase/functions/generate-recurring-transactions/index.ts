@@ -165,11 +165,11 @@ serve(async (req) => {
         for (const dateToGenerate of datesToGenerate) {
           const dateStr = dateToGenerate.toISOString().split('T')[0];
           
-          // Verificar se já existe transação para essa data
+          // Verificar se já existe transação para essa data (inclui a original e as geradas)
           const { data: existing } = await supabaseClient
             .from('transactions')
             .select('id')
-            .eq('reference_number', transaction.id)
+            .or(`id.eq.${transaction.id},reference_number.eq.${transaction.id}`)
             .eq('due_date', dateStr)
             .maybeSingle();
 
