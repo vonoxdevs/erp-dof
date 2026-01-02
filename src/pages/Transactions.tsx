@@ -153,8 +153,14 @@ const Transactions = () => {
 
   useEffect(() => {
     loadTransactions();
-    generateRecurringTransactions();
   }, [currentPeriod, selectedAccounts, dateRange]);
+
+  // Gerar recorrências apenas uma vez ao abrir a página (evita duplicação em trocas de filtros)
+  useEffect(() => {
+    generateRecurringTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const generateRecurringTransactions = async () => {
     try {
