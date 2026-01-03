@@ -266,16 +266,10 @@ export default function LoginPage() {
                             Cancelar
                           </Button>
                           <Button type="submit" disabled={resetLoading || cooldown > 0}>
-                            {resetLoading ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Enviando...
-                              </>
-                            ) : cooldown > 0 ? (
-                              `Aguarde ${cooldown}s`
-                            ) : (
-                              "Enviar Email"
-                            )}
+                            <Loader2 className={`mr-2 h-4 w-4 animate-spin ${resetLoading ? 'inline' : 'hidden'}`} />
+                            <span className={resetLoading ? 'inline' : 'hidden'}>Enviando...</span>
+                            <span className={!resetLoading && cooldown > 0 ? 'inline' : 'hidden'}>Aguarde {cooldown}s</span>
+                            <span className={!resetLoading && cooldown === 0 ? 'inline' : 'hidden'}>Enviar Email</span>
                           </Button>
                         </div>
                       </form>
@@ -299,14 +293,9 @@ export default function LoginPage() {
                 className="w-full h-11 text-base font-medium" 
                 disabled={loading}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Entrando...
-                  </>
-                ) : (
-                  "Entrar"
-                )}
+                <Loader2 className={`mr-2 h-5 w-5 animate-spin ${loading ? 'inline' : 'hidden'}`} />
+                <span className={loading ? 'inline' : 'hidden'}>Entrando...</span>
+                <span className={loading ? 'hidden' : 'inline'}>Entrar</span>
               </Button>
 
               <div className="text-center mt-2">
