@@ -280,21 +280,23 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
 
             <div className="space-y-2">
               <Label>Tipo de Conta *</Label>
-              <Select
+              {/*
+                Radix Select dentro de Dialog pode gerar erros intermitentes de DOM (removeChild)
+                em alguns navegadores/situações. Para este campo, usamos um <select> nativo
+                para máxima estabilidade sem alterar a regra de negócio.
+              */}
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 value={formData.account_type || "checking"}
-                onValueChange={(value) => setFormData({ ...formData, account_type: value })}
+                onChange={(e) => setFormData({ ...formData, account_type: e.target.value })}
+                required
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover" position="popper" sideOffset={4}>
-                  <SelectItem value="checking">Conta Corrente</SelectItem>
-                  <SelectItem value="savings">Poupança</SelectItem>
-                  <SelectItem value="investment">Investimento</SelectItem>
-                  <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                  <SelectItem value="cdb">CDB</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="checking">Conta Corrente</option>
+                <option value="savings">Poupança</option>
+                <option value="investment">Investimento</option>
+                <option value="credit_card">Cartão de Crédito</option>
+                <option value="cdb">CDB</option>
+              </select>
             </div>
 
             <div className="space-y-2">
@@ -352,7 +354,11 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover" position="popper" sideOffset={4}>
+                <SelectContent
+                  className="bg-popover"
+                  position="popper"
+                  sideOffset={4}
+                >
                   <SelectItem value="cpf">CPF</SelectItem>
                   <SelectItem value="cnpj">CNPJ</SelectItem>
                   <SelectItem value="email">E-mail</SelectItem>
