@@ -244,8 +244,11 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
     }
   };
 
+  // Key para forçar remontagem limpa do Dialog
+  const dialogKey = account?.id || 'new';
+
   return (
-    <Dialog open={open} onOpenChange={() => onClose()}>
+    <Dialog key={dialogKey} open={open} onOpenChange={() => onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
@@ -284,7 +287,7 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover">
+                <SelectContent className="bg-popover" position="popper" sideOffset={4}>
                   <SelectItem value="checking">Conta Corrente</SelectItem>
                   <SelectItem value="savings">Poupança</SelectItem>
                   <SelectItem value="investment">Investimento</SelectItem>
@@ -349,7 +352,7 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
-                <SelectContent className="bg-popover">
+                <SelectContent className="bg-popover" position="popper" sideOffset={4}>
                   <SelectItem value="cpf">CPF</SelectItem>
                   <SelectItem value="cnpj">CNPJ</SelectItem>
                   <SelectItem value="email">E-mail</SelectItem>
