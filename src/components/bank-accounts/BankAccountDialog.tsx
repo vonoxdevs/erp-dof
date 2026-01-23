@@ -278,13 +278,13 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
             <div className="space-y-2">
               <Label>Tipo de Conta *</Label>
               <Select
-                value={formData.account_type}
+                value={formData.account_type || "checking"}
                 onValueChange={(value) => setFormData({ ...formData, account_type: value })}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover">
                   <SelectItem value="checking">Conta Corrente</SelectItem>
                   <SelectItem value="savings">Poupança</SelectItem>
                   <SelectItem value="investment">Investimento</SelectItem>
@@ -343,13 +343,13 @@ export function BankAccountDialog({ open, onClose, account }: Props) {
             <div className="space-y-2">
               <Label>Tipo de Chave Pix</Label>
               <Select
-                value={formData.pix_key_type || ""}
+                value={formData.pix_key_type || undefined}
                 onValueChange={(value) => setFormData({ ...formData, pix_key_type: value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover">
                   <SelectItem value="cpf">CPF</SelectItem>
                   <SelectItem value="cnpj">CNPJ</SelectItem>
                   <SelectItem value="email">E-mail</SelectItem>
