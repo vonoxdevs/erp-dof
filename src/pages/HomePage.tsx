@@ -137,7 +137,7 @@ export default function HomePage() {
                   Conta PJ
                 </button>
                 <Link to="/signup" className="w-full">
-                  <Button size="lg" className="w-full">Teste Grátis</Button>
+                  <Button size="lg" className="w-full">Criar Conta</Button>
                 </Link>
               </div>
             </div>
@@ -163,7 +163,7 @@ export default function HomePage() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link to="/signup">
                   <Button size="lg" className="w-full sm:w-auto h-14 px-8 text-lg shadow-xl hover:shadow-2xl transition-all">
-                    Começar agora gratuitamente
+                    Começar agora
                   </Button>
                 </Link>
                 <Button 
@@ -180,15 +180,15 @@ export default function HomePage() {
               <div className="flex flex-wrap gap-6 pt-4">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary" />
-                  <span>14 dias grátis</span>
+                  <span>Configuração rápida</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary" />
-                  <span>Sem cartão de crédito</span>
+                  <span>Suporte brasileiro</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Check className="w-5 h-5 text-primary" />
-                  <span>Cancele quando quiser</span>
+                  <span>Dados protegidos</span>
                 </div>
               </div>
             </div>
@@ -298,7 +298,7 @@ export default function HomePage() {
               variant="secondary"
               className="h-14 px-10 text-lg shadow-xl hover:shadow-2xl bg-white text-primary hover:bg-white/90"
             >
-              Comece agora gratuitamente
+              Comece agora
             </Button>
           </Link>
           

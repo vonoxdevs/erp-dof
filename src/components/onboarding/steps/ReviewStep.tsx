@@ -117,10 +117,9 @@ export const ReviewStep = ({ personalData, companyData, onBack, onConfirm, loadi
         <div className="flex items-start gap-3">
           <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
           <div className="text-sm">
-            <p className="font-medium mb-1">Teste Grátis por 3 dias</p>
+            <p className="font-medium mb-1">Acesso Completo</p>
             <p className="text-muted-foreground">
-              Você terá acesso completo a todas as funcionalidades do sistema. 
-              Não é necessário cartão de crédito.
+              Você terá acesso a todas as funcionalidades do sistema conforme seu plano.
             </p>
           </div>
         </div>
@@ -139,7 +138,7 @@ export const ReviewStep = ({ personalData, companyData, onBack, onConfirm, loadi
             </>
           ) : (
             <>
-              Iniciar Teste Grátis
+              Criar Conta
               <CheckCircle2 className="w-5 h-5 ml-2" />
             </>
           )}
